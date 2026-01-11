@@ -99,7 +99,10 @@ export default function HomeScreen() {
           <Text className="text-gray-900 dark:text-white text-lg font-bold mb-4">Nos Services</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-8" contentContainerStyle={{ gap: 16 }}>
             {/* Service 1: Omra Badal */}
-            <TouchableOpacity className="bg-white dark:bg-zinc-800 rounded-2xl w-48 shadow-sm border border-gray-100 dark:border-white/5 overflow-hidden pb-4">
+            <TouchableOpacity
+              className="bg-white dark:bg-zinc-800 rounded-2xl w-48 shadow-sm border border-gray-100 dark:border-white/5 overflow-hidden pb-4"
+              onPress={() => router.push('/service/omra-badal')}
+            >
               <View className="h-32 relative">
                 <Image
                   source={require('@/assets/images/mecca.jpg')}

@@ -87,3 +87,28 @@ export const MESSAGES = [
         avatar: require('@/assets/images/profil.jpeg'),
     },
 ];
+
+export const SERVICES = [
+    {
+        id: 'omra-badal',
+        title: 'Omra Badal',
+        titleArabic: 'Omra par Procuration', // Changed to French as requested to have "text in French"
+        shortDescription: 'Une Miséricorde pour vos proches',
+        description: 'Accomplissez une Omra au nom d\'un proche décédé ou malade, une œuvre pieuse d\'une immense valeur spirituelle.',
+        mainText: 'Un voyage de foi vers les lieux les plus purs de la Terre, qui efface les péchés et purifie le cœur. De l\'Ihram au Tawaf autour de la Kaaba, jusqu\'au Sa\'i entre Safa et Marwa.',
+        details: 'Félicitations à vous pour ce voyage de foi grandiose. Vous laissez derrière vous les soucis d\'ici-bas pour atteindre La Mecque honorée, la terre bénie qu\'Allah a magnifiée.',
+        hadith: 'Le Prophète ﷺ a dit : "La Omra efface les péchés commis entre elle et la précédente."',
+        image: require('@/assets/images/mecca.jpg'),
+    },
+    {
+        id: 'visite-guidee',
+        title: 'Visites Guidées',
+        titleArabic: 'Visite de Médine',
+        shortDescription: 'Découvrez l\'histoire sacrée',
+        description: 'Explorez les lieux saints de Médine et La Mecque avec des guides experts pour comprendre l\'histoire prophétique.',
+        mainText: 'Visiter les sites historiques de La Mecque et Médine vous relie à la vie du Prophète ﷺ et de ses compagnons.',
+        details: 'Visitez la montagne de Uhud, la mosquée de Quba, et les sites historiques de la bataille du Fossé. Une immersion totale dans l\'histoire de l\'Islam.',
+        hadith: 'Une prière dans ma mosquée est meilleure que mille prières ailleurs, sauf la Mosquée Sacrée.',
+        image: require('@/assets/images/medina.jpeg'),
+    }
+];
