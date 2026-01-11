@@ -112,3 +112,30 @@ export const SERVICES = [
         image: require('@/assets/images/medina.jpeg'),
     }
 ];
+
+export const RESERVATIONS = [
+    {
+        id: 'r1',
+        guideId: '1',
+        guideName: 'Ahmed Al-Farsi',
+        serviceName: 'Visite Historique',
+        date: '15 Jan 2026',
+        time: '08:00',
+        status: 'upcoming', // upcoming, completed, cancelled
+        price: '200 SAR',
+        image: require('@/assets/images/profil.jpeg'),
+        location: 'Hôtel Makkah',
+    },
+    {
+        id: 'r2',
+        guideId: '2',
+        guideName: 'Karim Benali',
+        serviceName: 'Omra Badal',
+        date: '10 Jan 2026',
+        time: '14:00',
+        status: 'completed',
+        price: '450 SAR',
+        image: require('@/assets/images/profil.jpeg'),
+        location: 'Gare Haramain',
+    },
+];

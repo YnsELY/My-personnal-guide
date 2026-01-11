@@ -1,17 +1,14 @@
-import { GUIDES } from '@/constants/data';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Send } from 'lucide-react-native';
+import { Stack, useRouter } from 'expo-router';
+import { ArrowLeft, Headphones, Send } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { FlatList, Image, KeyboardAvoidingView, Platform, StatusBar, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { FlatList, KeyboardAvoidingView, Platform, StatusBar, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-export default function ChatScreen() {
-    const { id } = useLocalSearchParams();
+export default function SupportScreen() {
     const router = useRouter();
-    const guide = GUIDES.find(g => g.id === id) || GUIDES[0];
 
     const [messages, setMessages] = useState([
-        { id: '1', text: 'Salam Alaykoum, bienvenue ! Comment puis-je vous aider ?', sender: 'guide' },
+        { id: '1', text: 'Bonjour ! Comment pouvons-nous vous aider aujourd\'hui ?', sender: 'support' },
     ]);
     const [inputText, setInputText] = useState('');
 
@@ -21,8 +18,8 @@ export default function ChatScreen() {
             setInputText('');
             // Simulate reply
             setTimeout(() => {
-                setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), text: "Je suis disponible, merci de me donner plus de détails.", sender: 'guide' }]);
-            }, 1000);
+                setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), text: "Un agent va prendre en charge votre demande dans quelques instants.", sender: 'support' }]);
+            }, 1500);
         }
     };
 
@@ -35,12 +32,14 @@ export default function ChatScreen() {
                 {/* Header */}
                 <View className="flex-row items-center px-4 py-3 border-b border-gray-100 dark:border-white/5 bg-white dark:bg-zinc-900 z-10">
                     <TouchableOpacity onPress={() => router.back()} className="mr-3">
-                        <ArrowLeft size={24} className="text-white" />
+                        <ArrowLeft size={24} className="text-gray-900 dark:text-white" />
                     </TouchableOpacity>
-                    <Image source={guide.image} className="w-10 h-10 rounded-full mr-3" />
+                    <View className="w-10 h-10 rounded-full bg-primary items-center justify-center mr-3">
+                        <Headphones color="white" size={20} />
+                    </View>
                     <View>
-                        <Text className="text-gray-900 dark:text-white font-bold text-base">{guide.name}</Text>
-                        <Text className="text-green-500 text-xs">En ligne</Text>
+                        <Text className="text-gray-900 dark:text-white font-bold text-base">Service Client</Text>
+                        <Text className="text-green-500 text-xs">En ligne 24/7</Text>
                     </View>
                 </View>
 
@@ -53,8 +52,8 @@ export default function ChatScreen() {
                     renderItem={({ item }) => (
                         <View className={`mb-4 max-w-[80%] ${item.sender === 'user' ? 'self-end' : 'self-start'}`}>
                             <View className={`p-4 rounded-2xl ${item.sender === 'user'
-                                ? 'bg-[#b39164] rounded-br-none'
-                                : 'bg-gray-100 dark:bg-zinc-800 rounded-bl-none'
+                                    ? 'bg-[#b39164] rounded-br-none'
+                                    : 'bg-gray-100 dark:bg-zinc-800 rounded-bl-none'
                                 }`}>
                                 <Text className={`text-base ${item.sender === 'user' ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
                                     {item.text}
@@ -69,7 +68,7 @@ export default function ChatScreen() {
                     <View className="px-4 py-3 border-t border-gray-100 dark:border-white/5 bg-white dark:bg-zinc-900 flex-row items-end">
                         <TextInput
                             className="flex-1 bg-gray-100 dark:bg-zinc-800 rounded-2xl px-4 py-3 text-gray-900 dark:text-white min-h-[50px] max-h-[100px]"
-                            placeholder="Votre message..."
+                            placeholder="Écrivez votre message..."
                             placeholderTextColor="#9CA3AF"
                             multiline
                             value={inputText}

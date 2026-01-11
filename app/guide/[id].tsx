@@ -116,7 +116,7 @@ export default function GuideDetails() {
             <View className="absolute bottom-0 left-0 right-0 bg-white/90 dark:bg-zinc-900/90 p-6 border-t border-gray-100 dark:border-white/5 backdrop-blur-xl">
                 <SafeAreaView edges={['bottom']} className="flex-row gap-4">
                     <TouchableOpacity className="bg-gray-100 dark:bg-zinc-800 p-4 rounded-2xl items-center justify-center border border-gray-200 dark:border-white/10">
-                        <MessageCircle size={24} className="text-gray-700 dark:text-white" />
+                        <MessageCircle size={24} className="text-white" />
                     </TouchableOpacity>
                     <TouchableOpacity
                         className="bg-primary flex-1 p-4 rounded-2xl items-center justify-center shadow-lg shadow-primary/20"
