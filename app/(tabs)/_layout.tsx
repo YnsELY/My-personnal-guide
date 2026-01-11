@@ -1,9 +1,10 @@
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
 import { Home, MessageCircle, Search, User } from 'lucide-react-native';
 import React from 'react';
 import { useColorScheme } from 'react-native';
 
 export default function TabLayout() {
+  const router = useRouter();
   // Use React Native's hook to detect theme
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -41,6 +42,12 @@ export default function TabLayout() {
           title: 'Explorer',
           tabBarIcon: ({ color }) => <Search size={24} color={color} />,
         }}
+        listeners={() => ({
+          tabPress: (e) => {
+            e.preventDefault();
+            router.push('/date-select');
+          },
+        })}
       />
       <Tabs.Screen
         name="messages"
