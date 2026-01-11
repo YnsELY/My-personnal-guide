@@ -59,7 +59,7 @@ export default function HomeScreen() {
           {/* Primary Action Card (Permis in design -> Find Guide here) */}
           <TouchableOpacity
             className="bg-white dark:bg-zinc-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-white/5 mb-4 overflow-hidden relative"
-            onPress={() => router.push('/(tabs)/search')}
+            onPress={() => router.push('/date-select')}
           >
             <ImageBackground
               source={{ uri: 'https://www.transparenttextures.com/patterns/arabesque.png' }}

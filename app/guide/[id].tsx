@@ -1,14 +1,16 @@
+import BookingModal from '@/components/BookingModal';
 import { GUIDES } from '@/constants/data';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, MessageCircle, ShieldCheck, Star } from 'lucide-react-native';
-import React from 'react';
+import React, { useState } from 'react';
 import { Image, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function GuideDetails() {
-    const { id } = useLocalSearchParams();
+    const { id, startDate, endDate } = useLocalSearchParams();
     const router = useRouter();
     const guide = GUIDES.find(g => g.id === id) || GUIDES[0];
+    const [isBookingModalVisible, setBookingModalVisible] = useState(false);
 
     return (
         <View className="flex-1 bg-white dark:bg-zinc-900">
@@ -116,11 +118,23 @@ export default function GuideDetails() {
                     <TouchableOpacity className="bg-gray-100 dark:bg-zinc-800 p-4 rounded-2xl items-center justify-center border border-gray-200 dark:border-white/10">
                         <MessageCircle size={24} className="text-gray-700 dark:text-white" />
                     </TouchableOpacity>
-                    <TouchableOpacity className="bg-primary flex-1 p-4 rounded-2xl items-center justify-center shadow-lg shadow-primary/20">
+                    <TouchableOpacity
+                        className="bg-primary flex-1 p-4 rounded-2xl items-center justify-center shadow-lg shadow-primary/20"
+                        onPress={() => setBookingModalVisible(true)}
+                    >
                         <Text className="text-white dark:text-black font-bold text-lg">Réserver maintenant</Text>
                     </TouchableOpacity>
                 </SafeAreaView>
             </View>
+
+            {/* Booking Modal */}
+            <BookingModal
+                visible={isBookingModalVisible}
+                onClose={() => setBookingModalVisible(false)}
+                startDate={startDate ? Number(startDate) : undefined}
+                endDate={endDate ? Number(endDate) : undefined}
+                guideName={guide.name}
+            />
         </View>
     );
 }

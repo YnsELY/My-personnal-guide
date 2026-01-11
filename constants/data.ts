@@ -1,9 +1,9 @@
 export const CATEGORIES = [
-    { id: '1', name: 'French Speaker', icon: 'mic' },
-    { id: '2', name: 'History Expert', icon: 'book' },
-    { id: '3', name: 'Luxury Car', icon: 'car' },
-    { id: '4', name: 'Group Guide', icon: 'users' },
-    { id: '5', name: 'Female Guide', icon: 'user' },
+    { id: '1', name: 'Omra Badal', icon: 'heart' },
+    { id: '2', name: 'Visite Guidée', icon: 'map' },
+    { id: '3', name: 'Transport', icon: 'car' },
+    { id: '4', name: 'Omra PMR', icon: 'accessibility' },
+    { id: '5', name: 'Famille', icon: 'users' },
 ];
 
 export const GUIDES = [
