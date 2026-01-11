@@ -1,98 +1,180 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { GuideCard } from '@/components/GuideCard';
+import { GUIDES } from '@/constants/data';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import { Award, ChevronRight, Heart, MapPin, MessageCircle } from 'lucide-react-native';
+import React from 'react';
+import { Image, ImageBackground, ScrollView, StatusBar, Text, TouchableOpacity, View, useColorScheme } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const router = useRouter();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  return (
+    <View className="flex-1 bg-gray-50 dark:bg-zinc-900">
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+        {/* Full Screen Header Background */}
+        <View className="h-80 relative">
+          <Image
+            source={require('@/assets/images/hero.jpg')}
+            className="w-full h-full object-cover"
+          />
+          {/* Subtle dark overlay for text readability */}
+          <View className="absolute inset-0 bg-black/30" />
+
+          {/* Fade to bottom gradient */}
+          <LinearGradient
+            colors={['transparent', isDark ? '#18181b' : '#f9fafb']} // zinc-900 or gray-50
+            style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 160 }}
+          />
+
+          {/* Content Overlay */}
+          <SafeAreaView className="absolute inset-0 px-6 pt-2">
+            <View className="flex-row justify-between items-center mb-6">
+              <TouchableOpacity onPress={() => router.back()}>
+                {/* <ChevronLeft color="white" size={28} /> */}
+              </TouchableOpacity>
+              <View className="flex-row gap-4">
+                <View className="bg-green-500/20 px-3 py-1 rounded-full border border-green-500/30 flex-row items-center">
+                  <View className="w-2 h-2 bg-green-500 rounded-full mr-2" />
+                  <Text className="text-green-500 text-xs font-bold">7:15</Text>
+                </View>
+              </View>
+            </View>
+
+            <View className="mt-4">
+              <Text className="text-white text-3xl font-serif font-medium mb-1">Bienvenue YANIS</Text>
+              <Text className="text-gray-200 text-sm w-3/4 leading-5 shadow-sm">
+                Bienvenue au lieu de la révélation et à l'origine du message divin
+              </Text>
+            </View>
+          </SafeAreaView>
+        </View>
+
+        <View className="-mt-20 px-6">
+          {/* Primary Action Card (Permis in design -> Find Guide here) */}
+          <TouchableOpacity
+            className="bg-white dark:bg-zinc-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-white/5 mb-4 overflow-hidden relative"
+            onPress={() => router.push('/(tabs)/search')}
+          >
+            <ImageBackground
+              source={{ uri: 'https://www.transparenttextures.com/patterns/arabesque.png' }}
+              className="absolute inset-0 opacity-5"
+              resizeMode="repeat"
+            />
+            <View className="flex-row items-center justify-between">
+              <View className="flex-row items-center">
+                <View className="bg-white/10 p-3 rounded-full mr-4">
+                  <MapPin color="white" size={24} />
+                </View>
+                <View>
+                  <Text className="text-gray-900 dark:text-white text-lg font-medium">Trouver un Guide</Text>
+                  <Text className="text-gray-500 dark:text-gray-400 text-xs mt-1">Réservez votre accompagnateur</Text>
+                </View>
+              </View>
+              <ChevronRight color="#9CA3AF" size={20} />
+            </View>
+          </TouchableOpacity>
+
+          {/* Secondary Card (Reservations) */}
+          <TouchableOpacity className="bg-white dark:bg-zinc-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-white/5 mb-4 flex-row items-center justify-between">
+            <View className="flex-row items-center">
+              <View className="bg-primary/10 p-3 rounded-full mr-4">
+                {/* Icon approximating the 'clipboard' or 'ticket' */}
+                <View className="w-6 h-4 border-2 border-primary rounded-sm" />
+              </View>
+              <View>
+                <Text className="text-gray-900 dark:text-white text-lg font-medium">Vos réservations</Text>
+                <Text className="text-gray-500 dark:text-gray-400 text-xs mt-1">Voir les guides réservés</Text>
+              </View>
+            </View>
+            <ChevronRight color="#9CA3AF" size={20} />
+          </TouchableOpacity>
+
+          {/* Services Section */}
+          <Text className="text-gray-900 dark:text-white text-lg font-bold mb-4">Nos Services</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-8" contentContainerStyle={{ gap: 16 }}>
+            {/* Service 1: Omra Badal */}
+            <TouchableOpacity className="bg-white dark:bg-zinc-800 rounded-2xl w-48 shadow-sm border border-gray-100 dark:border-white/5 overflow-hidden pb-4">
+              <View className="h-32 relative">
+                <Image
+                  source={require('@/assets/images/mecca.jpg')}
+                  className="w-full h-full object-cover"
+                />
+                <View className="absolute inset-0 bg-black/10" />
+              </View>
+              <View className="items-center -mt-8">
+                <View className="bg-primary h-16 w-16 rounded-full items-center justify-center border-4 border-white dark:border-zinc-800 shadow-md">
+                  <Heart color="white" fill="white" size={24} />
+                </View>
+                <Text className="text-gray-900 dark:text-white font-bold text-lg mt-2">Omra Badal</Text>
+                <Text className="text-gray-500 dark:text-gray-400 text-xs text-center px-2 mt-1">Par procuration</Text>
+              </View>
+            </TouchableOpacity>
+
+            {/* Service 2: Visites Guidées */}
+            <TouchableOpacity className="bg-white dark:bg-zinc-800 rounded-2xl w-48 shadow-sm border border-gray-100 dark:border-white/5 overflow-hidden pb-4">
+              <View className="h-32 relative">
+                <Image
+                  source={require('@/assets/images/medina.jpeg')}
+                  className="w-full h-full object-cover"
+                />
+                <View className="absolute inset-0 bg-black/10" />
+              </View>
+              <View className="items-center -mt-8">
+                <View className="bg-primary h-16 w-16 rounded-full items-center justify-center border-4 border-white dark:border-zinc-800 shadow-md">
+                  <MapPin color="white" fill="white" size={24} />
+                </View>
+                <Text className="text-gray-900 dark:text-white font-bold text-lg mt-2">Visites Guidées</Text>
+                <Text className="text-gray-500 dark:text-gray-400 text-xs text-center px-2 mt-1">Ziyara Lieux Saints</Text>
+              </View>
+            </TouchableOpacity>
+
+            {/* Service 3: Transport VIP (Bonus) */}
+            <TouchableOpacity className="bg-white dark:bg-zinc-800 rounded-2xl w-48 shadow-sm border border-gray-100 dark:border-white/5 overflow-hidden pb-4">
+              <View className="h-32 relative">
+                <Image
+                  source={{ uri: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?q=80&w=1000&auto=format&fit=crop' }}
+                  className="w-full h-full object-cover"
+                />
+                <View className="absolute inset-0 bg-black/10" />
+              </View>
+              <View className="items-center -mt-8">
+                <View className="bg-primary h-16 w-16 rounded-full items-center justify-center border-4 border-white dark:border-zinc-800 shadow-md">
+                  <Award color="white" fill="white" size={24} />
+                </View>
+                <Text className="text-gray-900 dark:text-white font-bold text-lg mt-2">Transport VIP</Text>
+                <Text className="text-gray-500 dark:text-gray-400 text-xs text-center px-2 mt-1">Confort & Luxe</Text>
+              </View>
+            </TouchableOpacity>
+          </ScrollView>
+
+          {/* Recommended Section (Mini) */}
+          <Text className="text-gray-900 dark:text-white text-lg font-bold mb-4">Guides Recommandés</Text>
+          {GUIDES.slice(0, 2).map((guide) => (
+            <GuideCard key={guide.id} guide={guide} />
+          ))}
+
+          <View className="h-24" />
+        </View>
+      </ScrollView>
+
+      {/* Floating Support Button / or Support Section */}
+      <View className="absolute bottom-6 left-6 right-6">
+        <TouchableOpacity className="bg-white dark:bg-zinc-800 p-4 rounded-2xl border border-gray-100 dark:border-white/10 flex-row items-center justify-between shadow-lg">
+          <View className="flex-row items-center">
+            <View className="bg-primary p-2 rounded-full mr-3">
+              <MessageCircle color="white" size={20} />
+            </View>
+            <Text className="text-gray-900 dark:text-white font-medium">Besoin d'aide ?</Text>
+          </View>
+          <ChevronRight className="text-gray-400" size={20} />
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
-});
