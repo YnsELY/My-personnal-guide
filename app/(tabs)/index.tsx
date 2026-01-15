@@ -37,7 +37,7 @@ export default function HomeScreen() {
             className="w-full h-full object-cover"
           />
           {/* Subtle dark overlay for text readability */}
-          <View className="absolute inset-0 bg-black/30" />
+          <View className="absolute inset-0 bg-black/20" />
 
           {/* Fade to bottom gradient */}
           <LinearGradient
@@ -81,8 +81,8 @@ export default function HomeScreen() {
             />
             <View className="flex-row items-center justify-between">
               <View className="flex-row items-center">
-                <View className="bg-white/10 p-3 rounded-full mr-4">
-                  <MapPin color="white" size={24} />
+                <View className="bg-[#b39164]/10 p-3 rounded-full mr-4">
+                  <MapPin color="#b39164" size={24} />
                 </View>
                 <View>
                   <Text className="text-gray-900 dark:text-white text-lg font-medium">Trouver un Guide</Text>
@@ -96,7 +96,7 @@ export default function HomeScreen() {
           {/* Secondary Card (Reservations) */}
           <TouchableOpacity
             className="bg-white dark:bg-zinc-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-white/5 mb-4 flex-row items-center justify-between"
-            onPress={() => router.push('/reservations')}
+            onPress={() => router.push('/my-reservations')}
           >
             <View className="flex-row items-center">
               <View className="bg-primary/10 p-3 rounded-full mr-4">

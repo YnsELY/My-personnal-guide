@@ -1,3 +1,4 @@
+import { createReservation } from '@/lib/api';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, CheckCircle, MapPin, User, Wallet } from 'lucide-react-native';
 import React from 'react';
@@ -9,6 +10,7 @@ export default function BookingSummaryScreen() {
     const params = useLocalSearchParams();
 
     // Parse params
+    const guideId = params.guideId as string;
     const guideName = params.guideName as string;
     const startDate = params.startDate;
     const endDate = params.endDate;
@@ -17,14 +19,25 @@ export default function BookingSummaryScreen() {
     const totalPrice = params.totalPrice;
     const pilgrims = params.pilgrims ? JSON.parse(params.pilgrims as string) : [];
 
-    const handlePayment = () => {
-        Alert.alert(
-            "Paiement",
-            "Redirection vers la passerelle de paiement sécurisée...",
-            [
-                { text: "OK", onPress: () => router.push('/') }
-            ]
-        );
+    const handlePayment = async () => {
+        try {
+            await createReservation({
+                guideId,
+                serviceName: service,
+                startDate,
+                endDate,
+                price: totalPrice,
+                location,
+                pilgrims
+            });
+            Alert.alert(
+                "Réservation confirmée",
+                "Votre demande a été envoyée au guide. Vous recevrez une confirmation bientôt.",
+                [{ text: "OK", onPress: () => router.push('/') }]
+            );
+        } catch (error: any) {
+            Alert.alert("Erreur", "Impossible de créer la réservation: " + error.message);
+        }
     };
 
     return (

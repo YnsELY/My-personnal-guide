@@ -1,16 +1,49 @@
 import BookingModal from '@/components/BookingModal';
-import { GUIDES } from '@/constants/data';
+import { createReview, getGuideById, getReviews } from '@/lib/api';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, MessageCircle, ShieldCheck, Star } from 'lucide-react-native';
+import { ArrowLeft, ShieldCheck, Star } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { Image, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, ScrollView, StatusBar, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function GuideDetails() {
-    const { id, startDate, endDate } = useLocalSearchParams();
+    const { id, startDate, endDate, servicePrice, serviceLocation, serviceImage } = useLocalSearchParams();
     const router = useRouter();
-    const guide = GUIDES.find(g => g.id === id) || GUIDES[0];
+
+    const [guide, setGuide] = useState<any>(null);
+    const [reviews, setReviews] = useState<any[]>([]);
     const [isBookingModalVisible, setBookingModalVisible] = useState(false);
+
+    // Review Form State
+    const [comment, setComment] = useState('');
+    const [userRating, setUserRating] = useState(5);
+
+    React.useEffect(() => {
+        if (id) {
+            getGuideById(id as string).then(setGuide).catch(e => console.error("Err Guide:", e));
+            getReviews(id as string).then(setReviews).catch(e => console.error("Err Reviews:", e));
+        }
+    }, [id]);
+
+    const handleAddReview = async () => {
+        try {
+            await createReview({ guideId: guide.id, rating: userRating, comment });
+            setComment('');
+            const r = await getReviews(guide.id);
+            setReviews(r);
+            Alert.alert("Succès", "Merci pour votre avis !");
+        } catch (e: any) {
+            Alert.alert("Erreur", e.message);
+        }
+    };
+
+    if (!guide) {
+        return (
+            <View className="flex-1 bg-white items-center justify-center">
+                <Text>Chargement...</Text>
+            </View>
+        );
+    }
 
     return (
         <View className="flex-1 bg-white dark:bg-zinc-900">
@@ -21,9 +54,11 @@ export default function GuideDetails() {
                 {/* Header Image */}
                 <View className="relative h-64">
                     <Image
-                        source={guide.location.toLowerCase().includes('medina')
-                            ? require('@/assets/images/medina.jpeg')
-                            : require('@/assets/images/mecca.jpg')
+                        source={serviceImage
+                            ? { uri: serviceImage as string }
+                            : ((serviceLocation || guide.location).toLowerCase().includes('medina') || (serviceLocation || guide.location).toLowerCase().includes('médine')
+                                ? require('@/assets/images/medina.jpeg')
+                                : require('@/assets/images/mecca.jpg'))
                         }
                         className="w-full h-full object-cover"
                     />
@@ -66,12 +101,12 @@ export default function GuideDetails() {
 
                     <View className="mb-6">
                         <Text className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{guide.name}</Text>
-                        <Text className="text-gray-500 dark:text-gray-400 text-lg">{guide.role} • {guide.location}</Text>
+                        <Text className="text-gray-500 dark:text-gray-400 text-lg">{guide.role} • {serviceLocation || guide.location}</Text>
                     </View>
 
                     <View className="flex-row items-center mb-6">
-                        <Text className="text-3xl font-bold text-primary">{guide.price}</Text>
-                        <Text className="text-gray-500 dark:text-gray-400 text-sm ml-2 self-end mb-1">{guide.priceUnit}</Text>
+                        <Text className="text-3xl font-bold text-primary">{servicePrice ? `${servicePrice} SAR` : guide.price}</Text>
+                        <Text className="text-gray-500 dark:text-gray-400 text-sm ml-2 self-end mb-1">{servicePrice ? '' : guide.priceUnit}</Text>
                     </View>
 
                     {/* Stats Row */}
@@ -90,7 +125,7 @@ export default function GuideDetails() {
                         </View>
 
                         <View className="items-center flex-1">
-                            <Text className="text-xl font-bold text-gray-900 dark:text-white">{guide.location}</Text>
+                            <Text className="text-xl font-bold text-gray-900 dark:text-white">{serviceLocation || guide.location}</Text>
                             <Text className="text-gray-500 text-xs mt-1">Lieu</Text>
                         </View>
                     </View>
@@ -103,11 +138,53 @@ export default function GuideDetails() {
 
                     <Text className="text-xl font-bold text-gray-900 dark:text-white mb-3">Langues</Text>
                     <View className="flex-row flex-wrap gap-2 mb-6">
-                        {guide.languages.map((lang, idx) => (
+                        {guide.languages.map((lang: string, idx: number) => (
                             <View key={idx} className="bg-white dark:bg-zinc-800 px-5 py-3 rounded-xl border border-gray-200 dark:border-white/5 shadow-sm">
                                 <Text className="text-gray-600 dark:text-gray-300 font-medium">{lang}</Text>
                             </View>
                         ))}
+                    </View>
+
+                    {/* Reviews Section */}
+                    <Text className="text-xl font-bold text-gray-900 dark:text-white mb-3 mt-4">Avis ({reviews.length})</Text>
+                    <View className="mb-6">
+                        {reviews.length === 0 && <Text className="text-gray-500 italic mb-4">Aucun avis pour le moment.</Text>}
+                        {reviews.map((r, i) => (
+                            <View key={i} className="bg-gray-50 dark:bg-zinc-800 p-4 rounded-xl mb-3">
+                                <View className="flex-row justify-between mb-2">
+                                    <Text className="font-bold text-gray-900 dark:text-white">{r.user}</Text>
+                                    <View className="flex-row gap-1 items-center">
+                                        <Star size={14} color="#b39164" fill="#b39164" />
+                                        <Text className="text-xs text-gray-500">{r.rating}</Text>
+                                    </View>
+                                </View>
+                                <Text className="text-gray-600 dark:text-gray-300">{r.comment}</Text>
+                            </View>
+                        ))}
+                    </View>
+
+                    {/* Add Review */}
+                    <View className="bg-gray-50 dark:bg-zinc-800 p-4 rounded-xl border border-gray-200 dark:border-white/5 mb-8">
+                        <Text className="font-bold text-gray-900 dark:text-white mb-2">Laisser un avis</Text>
+                        <View className="flex-row gap-2 mb-3">
+                            {[1, 2, 3, 4, 5].map(star => (
+                                <TouchableOpacity key={star} onPress={() => setUserRating(star)}>
+                                    <Star size={24} color={star <= userRating ? "#b39164" : "#D4D4D8"} fill={star <= userRating ? "#b39164" : "transparent"} />
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                        <TextInput
+                            value={comment}
+                            onChangeText={setComment}
+                            placeholder="Partagez votre expérience..."
+                            placeholderTextColor="#9CA3AF"
+                            className="bg-white dark:bg-zinc-900 p-3 rounded-lg border border-gray-200 dark:border-white/10 min-h-[80px] text-gray-900 dark:text-white mb-3"
+                            multiline
+                            textAlignVertical="top"
+                        />
+                        <TouchableOpacity onPress={handleAddReview} className="bg-[#b39164] p-3 rounded-lg items-center shadow-sm">
+                            <Text className="text-white font-bold">Publier</Text>
+                        </TouchableOpacity>
                     </View>
                 </View>
             </ScrollView>
@@ -115,14 +192,11 @@ export default function GuideDetails() {
             {/* Bottom Action Bar */}
             <View className="absolute bottom-0 left-0 right-0 bg-white/90 dark:bg-zinc-900/90 p-6 border-t border-gray-100 dark:border-white/5 backdrop-blur-xl">
                 <SafeAreaView edges={['bottom']} className="flex-row gap-4">
-                    <TouchableOpacity className="bg-gray-100 dark:bg-zinc-800 p-4 rounded-2xl items-center justify-center border border-gray-200 dark:border-white/10">
-                        <MessageCircle size={24} className="text-white" />
-                    </TouchableOpacity>
                     <TouchableOpacity
                         className="bg-primary flex-1 p-4 rounded-2xl items-center justify-center shadow-lg shadow-primary/20"
                         onPress={() => setBookingModalVisible(true)}
                     >
-                        <Text className="text-white dark:text-black font-bold text-lg">Réserver maintenant</Text>
+                        <Text className="text-white font-bold text-lg">Réserver maintenant</Text>
                     </TouchableOpacity>
                 </SafeAreaView>
             </View>
@@ -134,6 +208,7 @@ export default function GuideDetails() {
                 startDate={startDate ? Number(startDate) : undefined}
                 endDate={endDate ? Number(endDate) : undefined}
                 guideName={guide.name}
+                guideId={guide.id}
             />
         </View>
     );

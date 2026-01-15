@@ -41,7 +41,7 @@ export function GuideCard({ guide }: { guide: GuideProps }) {
                 </View>
 
                 <View className="flex-row items-center mt-2">
-                    <MapPin size={14} className="text-gray-400 dark:text-gray-500" />
+                    <MapPin size={14} color="white" />
                     <Text className="text-gray-400 text-xs ml-1">{guide.location}</Text>
                 </View>
 

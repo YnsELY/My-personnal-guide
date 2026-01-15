@@ -1,4 +1,6 @@
+import CalendarPicker from '@/components/CalendarPicker';
 import { CATEGORIES } from '@/constants/data';
+import { createReservation } from '@/lib/api';
 import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 import { Calendar, MapPin, Plus, Trash2, User, X } from 'lucide-react-native';
@@ -12,6 +14,7 @@ interface BookingModalProps {
     startDate?: number | null;
     endDate?: number | null;
     guideName: string;
+    guideId: string;
     basePrice?: number;
 }
 
@@ -22,12 +25,16 @@ const PICKUP_LOCATIONS = [
     'Jabal Omar'
 ];
 
-export default function BookingModal({ visible, onClose, startDate, endDate, guideName, basePrice = 200 }: BookingModalProps) {
+export default function BookingModal({ visible, onClose, startDate, endDate, guideName, guideId, basePrice = 200 }: BookingModalProps) {
     const router = useRouter();
     const [selectedService, setSelectedService] = useState(CATEGORIES[1].name);
     const [pilgrims, setPilgrims] = useState<string[]>(['Moi-même']); // Default to self
     const [newPilgrimName, setNewPilgrimName] = useState('');
     const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
+    const [visitDate, setVisitDate] = useState<number | null>(null);
+    const [visitTime, setVisitTime] = useState<string | null>(null);
+    const [showCalendar, setShowCalendar] = useState(false);
+    const [loading, setLoading] = useState(false);
 
     // Price Logic: Base + 50 SAR per extra pilgrim
     const extraPilgrims = Math.max(0, pilgrims.length - 1);
@@ -46,27 +53,52 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
         setPilgrims(newPilgrims);
     };
 
-    const handleValidate = () => {
+    const handleValidate = async () => {
         if (!selectedLocation) {
             Alert.alert("Lieu manquant", "Veuillez sélectionner un lieu de prise en charge.");
             return;
         }
+        if (!visitDate) {
+            Alert.alert("Date manquante", "Veuillez sélectionner une date de visite.");
+            return;
+        }
+        if (!visitTime) {
+            Alert.alert("Heure manquante", "Veuillez sélectionner une heure de visite.");
+            return;
+        }
 
-        onClose(); // Close modal first
-
-        // Navigate to Summary
-        router.push({
-            pathname: '/booking-summary',
-            params: {
-                guideName,
-                startDate,
-                endDate,
-                service: selectedService,
+        setLoading(true);
+        try {
+            await createReservation({
+                guideId,
+                serviceName: selectedService,
+                date: visitDate, // Kept for safety if api uses it
+                startDate: visitDate,
+                endDate: visitDate,
+                // Single day visit
+                price: totalPrice,
                 location: selectedLocation,
-                pilgrims: JSON.stringify(pilgrims),
-                totalPrice,
-            }
-        } as any);
+                visitTime: visitTime,
+                pilgrims: pilgrims
+            });
+            onClose();
+            router.push({
+                pathname: '/booking-confirmation',
+                params: {
+                    serviceName: selectedService,
+                    date: visitDate,
+                    time: visitTime,
+                    price: totalPrice,
+                    location: selectedLocation || 'Makkah',
+                    guideName: guideName
+                }
+            });
+        } catch (error: any) {
+            console.error(error);
+            Alert.alert("Erreur", error.message || "Une erreur est survenue lors de la réservation.");
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -95,15 +127,35 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
 
                         <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
 
-                            {/* Date Pill */}
-                            {startDate && endDate && (
-                                <View className="flex-row items-center justify-center bg-[#b39164]/20 py-3 px-4 rounded-xl mb-8 border border-[#b39164]/30">
-                                    <Calendar color="#b39164" size={20} className="mr-3" />
-                                    <Text className="text-[#b39164] font-bold text-base">
-                                        Du {startDate} au {endDate} Janvier 2026
-                                    </Text>
-                                </View>
-                            )}
+                            {/* Date Selection */}
+                            <Text className="text-white font-bold text-lg mb-4">Date de la visite</Text>
+                            <TouchableOpacity
+                                onPress={() => setShowCalendar(true)}
+                                className={`flex-row items-center bg-zinc-800 border ${visitDate ? 'border-[#b39164]' : 'border-white/5'} rounded-xl p-4 mb-8`}
+                            >
+                                <Calendar color={visitDate ? "#b39164" : "#A1A1AA"} size={20} className="mr-3" />
+                                <Text className={`font-medium text-base ${visitDate ? 'text-[#b39164]' : 'text-zinc-400'}`}>
+                                    {visitDate ? `Le ${visitDate} Janvier 2026` : 'Sélectionner une date précise'}
+                                </Text>
+                            </TouchableOpacity>
+
+                            {/* Time Selection */}
+                            <Text className="text-white font-bold text-lg mb-4">Heure de la visite</Text>
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-8" contentContainerStyle={{ paddingRight: 20 }}>
+                                {Array.from({ length: 15 }, (_, i) => i + 8).map((hour) => {
+                                    const time = `${hour < 10 ? '0' + hour : hour}:00`;
+                                    const isSelected = visitTime === time;
+                                    return (
+                                        <TouchableOpacity
+                                            key={time}
+                                            onPress={() => setVisitTime(time)}
+                                            className={`mr-3 px-5 py-3 rounded-xl border ${isSelected ? 'bg-[#b39164] border-[#b39164]' : 'bg-zinc-800 border-white/5'}`}
+                                        >
+                                            <Text className={`font-medium ${isSelected ? 'text-white' : 'text-zinc-400'}`}>{time}</Text>
+                                        </TouchableOpacity>
+                                    );
+                                })}
+                            </ScrollView>
 
                             {/* Service Type */}
                             <Text className="text-white font-bold text-lg mb-4">Type de service</Text>
@@ -202,9 +254,27 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                             </TouchableOpacity>
                         </View>
 
+
+
                     </SafeAreaView>
                 </BlurView>
             </View>
-        </Modal>
+
+            {/* Nested Calendar Modal */}
+            <Modal visible={showCalendar} animationType="slide" transparent>
+                <View className="flex-1 bg-black/80 justify-end">
+                    <View className="h-[85%] bg-zinc-900 rounded-t-3xl overflow-hidden">
+                        <CalendarPicker
+                            onCancel={() => setShowCalendar(false)}
+                            onConfirm={(start, end) => {
+                                setVisitDate(start);
+                                setShowCalendar(false);
+                            }}
+                            initialStart={visitDate}
+                        />
+                    </View>
+                </View>
+            </Modal>
+        </Modal >
     );
 }
