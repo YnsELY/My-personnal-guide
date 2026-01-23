@@ -81,6 +81,7 @@ CREATE TABLE public.services (
   location TEXT, -- City/Location of the service
   availability_start TIMESTAMPTZ, 
   availability_end TIMESTAMPTZ,
+  meeting_points JSONB, -- Array of {name: string, supplement: number}
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

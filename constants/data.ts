@@ -139,3 +139,34 @@ export const RESERVATIONS = [
         location: 'Gare Haramain',
     },
 ];
+
+export const HADITHS = [
+    {
+        text: "Les actions ne valent que par leurs intentions, et chacun n'aura que ce qu'il a eu l'intention d'avoir.",
+        source: "Bukhari & Muslim"
+    },
+    {
+        text: "Le meilleur d'entre vous est celui qui apprend le Coran et l'enseigne.",
+        source: "Bukhari"
+    },
+    {
+        text: "Méfiez-vous de l'injustice, car l'injustice sera ténèbres le Jour de la Résurrection.",
+        source: "Muslim"
+    },
+    {
+        text: "La patience est une lumière.",
+        source: "Muslim"
+    },
+    {
+        text: "Celui qui ne remercie pas les gens ne remercie pas Allah.",
+        source: "Tirmidhi"
+    },
+    {
+        text: "Souris à ton frère est une aumône.",
+        source: "Tirmidhi"
+    },
+    {
+        text: "La richesse ne consiste pas en l'abondance des biens, mais la vraie richesse est celle de l'âme.",
+        source: "Bukhari & Muslim"
+    }
+];

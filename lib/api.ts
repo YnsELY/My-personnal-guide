@@ -159,7 +159,26 @@ export const getServices = async () => {
         guideAvatar: s.profiles?.avatar_url,
         startDate: s.availability_start,
         endDate: s.availability_end,
+        meetingPoints: s.meeting_points || [], // Add this
         image: s.image_url ? { uri: s.image_url } : null
+    }));
+};
+
+export const getGuideServices = async (guideId: string) => {
+    const { data, error } = await supabase
+        .from('services')
+        .select('*')
+        .eq('guide_id', guideId)
+        .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    return data.map((s: any) => ({
+        id: s.id,
+        title: s.title,
+        category: s.category,
+        price: s.price_override,
+        meetingPoints: s.meeting_points || []
     }));
 };
 
@@ -307,24 +326,34 @@ export const createReview = async (reviewData: { guideId: string, rating: number
     return data;
 };
 
-export const createService = async (serviceData: { title: string, category: string, description: string, price: number, location: string, availability_start: string, availability_end: string, image?: string, max_participants?: number }) => {
+export const createService = async (serviceData: {
+    title: string, category: string, description: string, price: number, location: string, availability_start: string;
+    availability_end: string;
+    image?: string;
+    max_participants?: number;
+    meeting_points?: { name: string; supplement: number }[];
+}) => {
     const userId = await ensureUser();
-    if (!userId) throw new Error("Unauthorized");
+    if (!userId) throw new Error("Vous devez être connecté.");
 
-    // We assume backend checks if user is guide via RLS or we check profile locally before calling
+    // Check if user is a guide
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', userId).single();
+    if (profile?.role !== 'guide') throw new Error("Seuls les guides peuvent créer des services.");
+
     const { data, error } = await supabase
         .from('services')
         .insert({
+            guide_id: userId,
             title: serviceData.title,
             category: serviceData.category,
             description: serviceData.description,
             price_override: serviceData.price,
-            guide_id: userId,
             location: serviceData.location,
             availability_start: serviceData.availability_start,
             availability_end: serviceData.availability_end,
             image_url: serviceData.image || null,
-            max_participants: serviceData.max_participants
+            max_participants: serviceData.max_participants,
+            meeting_points: serviceData.meeting_points
         })
         .select()
         .single();
@@ -425,4 +454,17 @@ export const getConversations = async () => {
     }
 
     return Array.from(conversations.values());
+};
+
+export const getPrayerTimes = async (city: string, country: string) => {
+    try {
+        const response = await fetch(`http://api.aladhan.com/v1/timingsByCity?city=${city}&country=${country}&method=4`);
+        const data = await response.json();
+        if (data.code === 200) {
+            return data.data.timings;
+        }
+        return null;
+    } catch (e) {
+        console.error(e);
+    }
 };

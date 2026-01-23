@@ -3,7 +3,7 @@ import { CATEGORIES } from '@/constants/data';
 import { createService, uploadImage } from '@/lib/api';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, Calendar, Camera, DollarSign, MapPin, Minus, Plus, Type, Users } from 'lucide-react-native';
+import { ArrowLeft, Calendar, Camera, DollarSign, MapPin, Minus, Plus, Trash2, Type, Users } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { Alert, Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StatusBar, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -25,6 +25,21 @@ export default function CreateServiceScreen() {
     const [endDate, setEndDate] = useState<number | null>(null);
 
     const [loading, setLoading] = useState(false);
+
+    // Meeting Points State
+    const [meetingPoints, setMeetingPoints] = useState<{ name: string, supplement: string }[]>([{ name: '', supplement: '' }]);
+
+    const addPoint = () => setMeetingPoints([...meetingPoints, { name: '', supplement: '' }]);
+    const removePoint = (index: number) => {
+        const newPoints = [...meetingPoints];
+        newPoints.splice(index, 1);
+        setMeetingPoints(newPoints);
+    };
+    const updatePoint = (index: number, field: 'name' | 'supplement', value: string) => {
+        const newPoints = [...meetingPoints];
+        newPoints[index] = { ...newPoints[index], [field]: value };
+        setMeetingPoints(newPoints);
+    };
 
     const pickImage = async () => {
         const result = await ImagePicker.launchImageLibraryAsync({
@@ -64,6 +79,12 @@ export default function CreateServiceScreen() {
                 description,
                 price: parseInt(price),
                 location,
+                meeting_points: meetingPoints
+                    .filter(p => p.name.trim() !== '')
+                    .map(p => ({
+                        name: p.name,
+                        supplement: p.supplement ? parseInt(p.supplement) : 0
+                    })),
                 availability_start: startIso,
                 availability_end: endIso,
                 image: imageUrl || undefined,
@@ -211,6 +232,46 @@ export default function CreateServiceScreen() {
                                     />
                                 </View>
                             </View>
+
+                            {/* Meeting Points */}
+                            <View>
+                                <Text className="text-gray-500 mb-2 font-medium">Points de rendez-vous & Suppléments</Text>
+                                <View className="gap-3">
+                                    {meetingPoints.map((point, index) => (
+                                        <View key={index} className="flex-row gap-2 items-start">
+                                            <View className="flex-1 gap-2">
+                                                <TextInput
+                                                    placeholder="Lieu (ex: Hôtel, Gare...)"
+                                                    placeholderTextColor="#9CA3AF"
+                                                    className="bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white"
+                                                    value={point.name}
+                                                    onChangeText={(t) => updatePoint(index, 'name', t)}
+                                                />
+                                            </View>
+                                            <View className="w-24">
+                                                <TextInput
+                                                    placeholder="+SAR"
+                                                    placeholderTextColor="#9CA3AF"
+                                                    keyboardType="numeric"
+                                                    className="bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white"
+                                                    value={point.supplement}
+                                                    onChangeText={(t) => updatePoint(index, 'supplement', t)}
+                                                />
+                                            </View>
+                                            {meetingPoints.length > 1 && (
+                                                <TouchableOpacity onPress={() => removePoint(index)} className="bg-red-500/10 p-3 rounded-xl justify-center items-center h-12 w-12 border border-red-500/20">
+                                                    <Trash2 size={20} color="#EF4444" />
+                                                </TouchableOpacity>
+                                            )}
+                                        </View>
+                                    ))}
+                                    <TouchableOpacity onPress={addPoint} className="flex-row items-center justify-center bg-gray-50 dark:bg-zinc-800 border border-dashed border-gray-300 dark:border-white/20 p-3 rounded-xl">
+                                        <Plus size={20} color="#9CA3AF" className="mr-2" />
+                                        <Text className="text-gray-500 font-medium">Ajouter un point de rendez-vous</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+
                             {/* Date Range */}
                             <View>
                                 <Text className="text-gray-500 mb-2 font-medium">Disponibilité</Text>

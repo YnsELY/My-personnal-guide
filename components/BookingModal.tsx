@@ -4,7 +4,7 @@ import { createReservation } from '@/lib/api';
 import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 import { Calendar, MapPin, Plus, Trash2, User, X } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -28,22 +28,43 @@ const PICKUP_LOCATIONS = [
 export default function BookingModal({ visible, onClose, startDate, endDate, guideName, guideId, basePrice = 200 }: BookingModalProps) {
     const router = useRouter();
     const [selectedService, setSelectedService] = useState(CATEGORIES[1].name);
-    const [pilgrims, setPilgrims] = useState<string[]>(['Moi-même']); // Default to self
+    const [pilgrims, setPilgrims] = useState<{ name: string, age: string }[]>([{ name: 'Moi-même', age: '' }]); // Default to self
     const [newPilgrimName, setNewPilgrimName] = useState('');
-    const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
+    const [newPilgrimAge, setNewPilgrimAge] = useState('');
+    const [selectedLocation, setSelectedLocation] = useState<{ name: string, supplement: number } | null>(null);
     const [visitDate, setVisitDate] = useState<number | null>(null);
     const [visitTime, setVisitTime] = useState<string | null>(null);
     const [showCalendar, setShowCalendar] = useState(false);
     const [loading, setLoading] = useState(false);
 
-    // Price Logic: Base + 50 SAR per extra pilgrim
+    // Dynamic Services
+    const [guideServices, setGuideServices] = useState<any[]>([]);
+
+    useEffect(() => {
+        // Fetch services for this guide
+        import('@/lib/api').then(({ getGuideServices }) => {
+            getGuideServices(guideId).then(setGuideServices).catch(console.error);
+        });
+    }, [guideId]);
+
+    // Derived meeting points based on selected service category
+    const activeService = guideServices.find(s => s.category === selectedService);
+    // Use guide's specific locations if available, otherwise fallback (or empty if creating completely dynamic)
+    const availableLocations = activeService?.meetingPoints?.length > 0
+        ? activeService.meetingPoints
+        : [];
+
+    // Price Logic: Base + 50 SAR per extra pilgrim + Supplement
     const extraPilgrims = Math.max(0, pilgrims.length - 1);
-    const totalPrice = basePrice + (extraPilgrims * 50);
+    const LOCATION_SUPPLEMENT = selectedLocation?.supplement || 0;
+    const itemPrice = activeService?.price || basePrice || 200;
+    const totalPrice = itemPrice + (extraPilgrims * 50) + LOCATION_SUPPLEMENT;
 
     const handleAddPilgrim = () => {
         if (newPilgrimName.trim().length > 0) {
-            setPilgrims([...pilgrims, newPilgrimName.trim()]);
+            setPilgrims([...pilgrims, { name: newPilgrimName.trim(), age: newPilgrimAge.trim() }]);
             setNewPilgrimName('');
+            setNewPilgrimAge('');
         }
     };
 
@@ -69,17 +90,19 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
 
         setLoading(true);
         try {
+            // Format pilgrims as string for now: "Name (Age ans)" or just Name if no age
+            const formattedPilgrims = pilgrims.map(p => p.age ? `${p.name} (${p.age} ans)` : p.name);
+
             await createReservation({
                 guideId,
                 serviceName: selectedService,
-                date: visitDate, // Kept for safety if api uses it
+                date: visitDate,
                 startDate: visitDate,
                 endDate: visitDate,
-                // Single day visit
                 price: totalPrice,
-                location: selectedLocation,
+                location: selectedLocation.name,
                 visitTime: visitTime,
-                pilgrims: pilgrims
+                pilgrims: formattedPilgrims
             });
             onClose();
             router.push({
@@ -89,7 +112,7 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                     date: visitDate,
                     time: visitTime,
                     price: totalPrice,
-                    location: selectedLocation || 'Makkah',
+                    location: selectedLocation.name || 'Makkah',
                     guideName: guideName
                 }
             });
@@ -163,7 +186,10 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                                 {CATEGORIES.filter(c => c.name !== 'Tout').map((cat, idx) => (
                                     <TouchableOpacity
                                         key={idx}
-                                        onPress={() => setSelectedService(cat.name)}
+                                        onPress={() => {
+                                            setSelectedService(cat.name);
+                                            setSelectedLocation(null); // Reset location on service change
+                                        }}
                                         className={`px-4 py-3 rounded-xl border ${selectedService === cat.name ? 'bg-[#b39164] border-[#b39164]' : 'bg-zinc-800 border-white/5'}`}
                                     >
                                         <Text className={`font-medium ${selectedService === cat.name ? 'text-white' : 'text-zinc-400'}`}>{cat.name}</Text>
@@ -176,15 +202,27 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                             <View className="bg-zinc-800 rounded-2xl p-4 mb-2 border border-white/5">
                                 {/* Add Pilgrim Input */}
                                 <View className="flex-row items-center mb-4 gap-3">
-                                    <View className="flex-1 bg-zinc-900 rounded-xl px-4 py-3 flex-row items-center border border-white/5">
-                                        <User size={18} color="#71717A" />
-                                        <TextInput
-                                            placeholder="Nom du pèlerin"
-                                            placeholderTextColor="#52525B"
-                                            className="flex-1 ml-3 text-white text-base"
-                                            value={newPilgrimName}
-                                            onChangeText={setNewPilgrimName}
-                                        />
+                                    <View className="flex-1 flex-row gap-2">
+                                        <View className="flex-1 bg-zinc-900 rounded-xl px-4 py-3 flex-row items-center border border-white/5">
+                                            <User size={18} color="#71717A" />
+                                            <TextInput
+                                                placeholder="Nom"
+                                                placeholderTextColor="#52525B"
+                                                className="flex-1 ml-3 text-white text-base"
+                                                value={newPilgrimName}
+                                                onChangeText={setNewPilgrimName}
+                                            />
+                                        </View>
+                                        <View className="w-24 bg-zinc-900 rounded-xl px-4 py-3 border border-white/5 justify-center">
+                                            <TextInput
+                                                placeholder="Age"
+                                                placeholderTextColor="#52525B"
+                                                className="text-white text-base text-center"
+                                                value={newPilgrimAge}
+                                                onChangeText={setNewPilgrimAge}
+                                                keyboardType="numeric"
+                                            />
+                                        </View>
                                     </View>
                                     <TouchableOpacity
                                         onPress={handleAddPilgrim}
@@ -196,13 +234,15 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
 
                                 {/* List */}
                                 <View className="gap-3">
-                                    {pilgrims.map((name, index) => (
+                                    {pilgrims.map((pilgrim, index) => (
                                         <View key={index} className="flex-row items-center justify-between bg-zinc-900/50 p-3 rounded-xl">
                                             <View className="flex-row items-center">
                                                 <User size={16} color="#A1A1AA" />
-                                                <Text className="text-zinc-300 ml-3 font-medium">{name}</Text>
+                                                <Text className="text-zinc-300 ml-3 font-medium">
+                                                    {pilgrim.name} {pilgrim.age ? `(${pilgrim.age} ans)` : ''}
+                                                </Text>
                                             </View>
-                                            {index > 0 && ( // Prevent deleting the first user (Moi-même) usually, or allow it. I'll allow but keeping logic simple.
+                                            {index > 0 && (
                                                 <TouchableOpacity onPress={() => handleRemovePilgrim(index)}>
                                                     <Trash2 size={18} color="#EF4444" />
                                                 </TouchableOpacity>
@@ -219,18 +259,24 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                             <View className="mb-8" />
 
                             {/* Location Section */}
-                            <Text className="text-white font-bold text-lg mb-4">Lieu de prise en charge</Text>
+                            <Text className="text-white font-bold text-lg mb-4">Lieu de prise en charge {activeService && activeService.meetingPoints.length > 0 ? '(Défini par le guide)' : ''}</Text>
                             <View className="flex-row flex-wrap gap-3 mb-8">
-                                {PICKUP_LOCATIONS.map((loc, idx) => (
-                                    <TouchableOpacity
-                                        key={idx}
-                                        onPress={() => setSelectedLocation(loc)}
-                                        className={`px-4 py-3 rounded-xl border flex-row items-center ${selectedLocation === loc ? 'bg-primary/20 border-primary' : 'bg-zinc-800 border-white/5'}`}
-                                    >
-                                        <MapPin size={16} color={selectedLocation === loc ? '#b39164' : '#A1A1AA'} />
-                                        <Text className={`ml-2 font-medium ${selectedLocation === loc ? 'text-primary' : 'text-zinc-400'}`}>{loc}</Text>
-                                    </TouchableOpacity>
-                                ))}
+                                {availableLocations.map((loc, idx) => {
+                                    const isSelected = selectedLocation?.name === loc.name;
+                                    return (
+                                        <TouchableOpacity
+                                            key={idx}
+                                            onPress={() => setSelectedLocation(loc)}
+                                            className={`px-4 py-3 rounded-xl border flex-row items-center ${isSelected ? 'bg-primary/20 border-primary' : 'bg-zinc-800 border-white/5'}`}
+                                        >
+                                            <MapPin size={16} color={isSelected ? '#b39164' : '#A1A1AA'} />
+                                            <Text className={`ml-2 font-medium ${isSelected ? 'text-primary' : 'text-zinc-400'}`}>{loc.name}</Text>
+                                            {loc.supplement > 0 && (
+                                                <Text className="ml-1 text-xs text-zinc-500 italic">+{loc.supplement} SAR</Text>
+                                            )}
+                                        </TouchableOpacity>
+                                    );
+                                })}
                             </View>
 
                         </ScrollView>
@@ -238,7 +284,12 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                         {/* Footer */}
                         <View className="pt-4 border-t border-white/5 mt-auto">
                             <View className="flex-row justify-between items-end mb-4 px-2">
-                                <Text className="text-zinc-400 text-lg">Total estimé</Text>
+                                <View>
+                                    <Text className="text-zinc-400 text-lg">Total estimé</Text>
+                                    {LOCATION_SUPPLEMENT > 0 && (
+                                        <Text className="text-zinc-500 text-xs">+ {LOCATION_SUPPLEMENT} SAR (Lieu)</Text>
+                                    )}
+                                </View>
                                 <View className="items-end">
                                     <Text className="text-white font-bold text-3xl">{totalPrice} <Text className="text-primary text-xl">SAR</Text></Text>
                                 </View>
@@ -253,13 +304,9 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                                 </Text>
                             </TouchableOpacity>
                         </View>
-
-
-
                     </SafeAreaView>
                 </BlurView>
             </View>
-
             {/* Nested Calendar Modal */}
             <Modal visible={showCalendar} animationType="slide" transparent>
                 <View className="flex-1 bg-black/80 justify-end">
@@ -275,6 +322,6 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                     </View>
                 </View>
             </Modal>
-        </Modal >
+        </Modal>
     );
-}
+};

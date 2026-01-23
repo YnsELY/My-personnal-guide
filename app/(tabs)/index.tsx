@@ -1,4 +1,6 @@
 import { GuideCard } from '@/components/GuideCard';
+import { HadithWidget } from '@/components/HadithWidget';
+import { PrayerTimesWidget } from '@/components/PrayerTimesWidget';
 import { GUIDES } from '@/constants/data';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -110,6 +112,12 @@ export default function HomeScreen() {
             </View>
             <ChevronRight color="#9CA3AF" size={20} />
           </TouchableOpacity>
+
+          {/* Prayer Times Section */}
+          <PrayerTimesWidget />
+
+          {/* Hadith Section */}
+          <HadithWidget />
 
           {/* Services Section */}
           <Text className="text-gray-900 dark:text-white text-lg font-bold mb-4">Nos Services</Text>
