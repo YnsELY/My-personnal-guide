@@ -32,10 +32,17 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
     const [newPilgrimName, setNewPilgrimName] = useState('');
     const [newPilgrimAge, setNewPilgrimAge] = useState('');
     const [selectedLocation, setSelectedLocation] = useState<{ name: string, supplement: number } | null>(null);
-    const [visitDate, setVisitDate] = useState<number | null>(null);
+    const [visitDate, setVisitDate] = useState<number | null>(startDate || null);
     const [visitTime, setVisitTime] = useState<string | null>(null);
     const [showCalendar, setShowCalendar] = useState(false);
     const [loading, setLoading] = useState(false);
+
+    // Sync state with props when modal opens/changes
+    useEffect(() => {
+        if (startDate) {
+            setVisitDate(startDate);
+        }
+    }, [startDate]);
 
     // Dynamic Services
     const [guideServices, setGuideServices] = useState<any[]>([]);
@@ -124,6 +131,11 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
         }
     };
 
+    // Helper for display
+    const formattedVisitDate = visitDate
+        ? new Date(visitDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+        : null;
+
     return (
         <Modal
             visible={visible}
@@ -158,7 +170,7 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                             >
                                 <Calendar color={visitDate ? "#b39164" : "#A1A1AA"} size={20} className="mr-3" />
                                 <Text className={`font-medium text-base ${visitDate ? 'text-[#b39164]' : 'text-zinc-400'}`}>
-                                    {visitDate ? `Le ${visitDate} Janvier 2026` : 'Sélectionner une date précise'}
+                                    {formattedVisitDate ? `Le ${formattedVisitDate}` : 'Sélectionner une date précise'}
                                 </Text>
                             </TouchableOpacity>
 

@@ -170,3 +170,63 @@ export const HADITHS = [
         source: "Bukhari & Muslim"
     }
 ];
+
+export const GUIDE_VISITS = [
+    {
+        id: '1',
+        pilgrimName: 'Amine Z.',
+        date: '25 Jan 2026',
+        time: '09:00',
+        location: 'Hôtel Makkah',
+        service: 'Ziyara Historique',
+        status: 'upcoming'
+    },
+    {
+        id: '2',
+        pilgrimName: 'Sarah B.',
+        date: '26 Jan 2026',
+        time: '14:30',
+        location: 'Mosquée Quba',
+        service: 'Visite Guidée',
+        status: 'upcoming'
+    },
+    {
+        id: '3',
+        pilgrimName: 'Famille K.',
+        date: '28 Jan 2026',
+        time: '08:00',
+        location: 'Mont Uhud',
+        service: 'Transport VIP',
+        status: 'upcoming'
+    }
+];
+
+export const GUIDE_REQUESTS = [
+    {
+        id: 'r1',
+        pilgrimName: 'Yassir M.',
+        date: '30 Jan 2026',
+        service: 'Omra Badal',
+        price: '450 SAR',
+        time: '10:00',
+        status: 'pending'
+    },
+    {
+        id: 'r2',
+        pilgrimName: 'Noura T.',
+        date: '02 Feb 2026',
+        service: 'Ziyara Médine',
+        price: '200 SAR',
+        time: '15:00',
+        status: 'pending'
+    },
+    {
+        id: 'r3',
+        pilgrimName: 'Karim L.',
+        date: '05 Feb 2026',
+        service: 'Accompagnement',
+        price: '300 SAR',
+        time: '09:00',
+        status: 'pending'
+    }
+];

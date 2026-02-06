@@ -1,10 +1,12 @@
 import { GuideCard } from '@/components/GuideCard';
 import { HadithWidget } from '@/components/HadithWidget';
 import { PrayerTimesWidget } from '@/components/PrayerTimesWidget';
-import { GUIDES } from '@/constants/data';
+import { useAuth } from '@/context/AuthContext';
+import { useReservations } from '@/context/ReservationsContext';
+import { getGuides } from '@/lib/api';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { Award, ChevronRight, Heart, MapPin, MessageCircle } from 'lucide-react-native';
+import { Award, ChevronRight, Clock, Heart, MapPin, MessageCircle, User } from 'lucide-react-native';
 import React, { useEffect, useRef } from 'react';
 import { Animated, Image, ImageBackground, ScrollView, StatusBar, Text, TouchableOpacity, View, useColorScheme } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -13,6 +15,19 @@ export default function HomeScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const { profile } = useAuth();
+  const { getReservationsByRole } = useReservations();
+  const [guides, setGuides] = React.useState<any[]>([]);
+
+  useEffect(() => {
+    getGuides().then(setGuides).catch(console.error);
+  }, []);
+
+  // Get data from context
+  const guideReservations = getReservationsByRole('guide', profile?.id || '1');
+  const pendingRequests = guideReservations.filter(r => r.status === 'pending');
+  const upcomingVisits = guideReservations.filter(r => r.status === 'confirmed');
+
 
   // Animation for FAB
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -71,47 +86,51 @@ export default function HomeScreen() {
         </View>
 
         <View className="-mt-12 px-6">
-          {/* Primary Action Card (Permis in design -> Find Guide here) */}
-          <TouchableOpacity
-            className="bg-white dark:bg-zinc-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-white/5 mb-4 overflow-hidden relative"
-            onPress={() => router.push('/date-select')}
-          >
-            <ImageBackground
-              source={{ uri: 'https://www.transparenttextures.com/patterns/arabesque.png' }}
-              className="absolute inset-0 opacity-5"
-              resizeMode="repeat"
-            />
-            <View className="flex-row items-center justify-between">
-              <View className="flex-row items-center">
-                <View className="bg-[#b39164]/10 p-3 rounded-full mr-4">
-                  <MapPin color="#b39164" size={24} />
+          {profile?.role !== 'guide' && (
+            <>
+              {/* Primary Action Card (Permis in design -> Find Guide here) */}
+              <TouchableOpacity
+                className="bg-white dark:bg-zinc-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-white/5 mb-4 overflow-hidden relative"
+                onPress={() => router.push('/date-select')}
+              >
+                <ImageBackground
+                  source={{ uri: 'https://www.transparenttextures.com/patterns/arabesque.png' }}
+                  className="absolute inset-0 opacity-5"
+                  resizeMode="repeat"
+                />
+                <View className="flex-row items-center justify-between">
+                  <View className="flex-row items-center">
+                    <View className="bg-[#b39164]/10 p-3 rounded-full mr-4">
+                      <MapPin color="#b39164" size={24} />
+                    </View>
+                    <View>
+                      <Text className="text-gray-900 dark:text-white text-lg font-medium">Trouver un Guide</Text>
+                      <Text className="text-gray-500 dark:text-gray-400 text-xs mt-1">Réservez votre accompagnateur</Text>
+                    </View>
+                  </View>
+                  <ChevronRight color="#9CA3AF" size={20} />
                 </View>
-                <View>
-                  <Text className="text-gray-900 dark:text-white text-lg font-medium">Trouver un Guide</Text>
-                  <Text className="text-gray-500 dark:text-gray-400 text-xs mt-1">Réservez votre accompagnateur</Text>
-                </View>
-              </View>
-              <ChevronRight color="#9CA3AF" size={20} />
-            </View>
-          </TouchableOpacity>
+              </TouchableOpacity>
 
-          {/* Secondary Card (Reservations) */}
-          <TouchableOpacity
-            className="bg-white dark:bg-zinc-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-white/5 mb-4 flex-row items-center justify-between"
-            onPress={() => router.push('/my-reservations')}
-          >
-            <View className="flex-row items-center">
-              <View className="bg-primary/10 p-3 rounded-full mr-4">
-                {/* Icon approximating the 'clipboard' or 'ticket' */}
-                <View className="w-6 h-4 border-2 border-primary rounded-sm" />
-              </View>
-              <View>
-                <Text className="text-gray-900 dark:text-white text-lg font-medium">Vos réservations</Text>
-                <Text className="text-gray-500 dark:text-gray-400 text-xs mt-1">Voir les guides réservés</Text>
-              </View>
-            </View>
-            <ChevronRight color="#9CA3AF" size={20} />
-          </TouchableOpacity>
+              {/* Secondary Card (Reservations) */}
+              <TouchableOpacity
+                className="bg-white dark:bg-zinc-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-white/5 mb-4 flex-row items-center justify-between"
+                onPress={() => router.push('/my-reservations')}
+              >
+                <View className="flex-row items-center">
+                  <View className="bg-primary/10 p-3 rounded-full mr-4">
+                    {/* Icon approximating the 'clipboard' or 'ticket' */}
+                    <View className="w-6 h-4 border-2 border-primary rounded-sm" />
+                  </View>
+                  <View>
+                    <Text className="text-gray-900 dark:text-white text-lg font-medium">Vos réservations</Text>
+                    <Text className="text-gray-500 dark:text-gray-400 text-xs mt-1">Voir les guides réservés</Text>
+                  </View>
+                </View>
+                <ChevronRight color="#9CA3AF" size={20} />
+              </TouchableOpacity>
+            </>
+          )}
 
           {/* Prayer Times Section */}
           <PrayerTimesWidget />
@@ -119,72 +138,153 @@ export default function HomeScreen() {
           {/* Hadith Section */}
           <HadithWidget />
 
-          {/* Services Section */}
-          <Text className="text-gray-900 dark:text-white text-lg font-bold mb-4">Nos Services</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-8" contentContainerStyle={{ gap: 16 }}>
-            {/* Service 1: Omra Badal */}
-            <TouchableOpacity
-              className="bg-white dark:bg-zinc-800 rounded-2xl w-64 shadow-sm border border-gray-100 dark:border-white/5 overflow-hidden pb-4"
-              onPress={() => router.push('/service/omra-badal')}
-            >
-              <View className="h-60 relative">
-                <Image
-                  source={require('@/assets/images/mecca.jpg')}
-                  className="w-full h-full object-cover"
-                />
-                <View className="absolute inset-0 bg-black/10" />
-              </View>
-              <View className="items-center -mt-8">
-                <View className="bg-primary h-16 w-16 rounded-full items-center justify-center border-4 border-white dark:border-zinc-800 shadow-md">
-                  <Heart color="white" fill="white" size={24} />
-                </View>
-                <Text className="text-gray-900 dark:text-white font-bold text-lg mt-2">Omra Badal</Text>
-                <Text className="text-gray-500 dark:text-gray-400 text-xs text-center px-2 mt-1">Par procuration</Text>
-              </View>
-            </TouchableOpacity>
 
-            {/* Service 2: Visites Guidées */}
-            <TouchableOpacity className="bg-white dark:bg-zinc-800 rounded-2xl w-64 shadow-sm border border-gray-100 dark:border-white/5 overflow-hidden pb-4">
-              <View className="h-60 relative">
-                <Image
-                  source={require('@/assets/images/medina.jpeg')}
-                  className="w-full h-full object-cover"
-                />
-                <View className="absolute inset-0 bg-black/10" />
-              </View>
-              <View className="items-center -mt-8">
-                <View className="bg-primary h-16 w-16 rounded-full items-center justify-center border-4 border-white dark:border-zinc-800 shadow-md">
-                  <MapPin color="white" fill="white" size={24} />
-                </View>
-                <Text className="text-gray-900 dark:text-white font-bold text-lg mt-2">Visites Guidées</Text>
-                <Text className="text-500 dark:text-gray-400 text-xs text-center px-2 mt-1">Ziyara Lieux Saints</Text>
-              </View>
-            </TouchableOpacity>
+          {/* Pilgrim Sections */}
+          {profile?.role !== 'guide' && (
+            <>
+              {/* Services Section */}
+              <Text className="text-gray-900 dark:text-white text-lg font-bold mb-4">Nos Services</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-8" contentContainerStyle={{ gap: 16 }}>
+                {/* Service 1: Omra Badal */}
+                <TouchableOpacity
+                  className="bg-white dark:bg-zinc-800 rounded-2xl w-64 shadow-sm border border-gray-100 dark:border-white/5 overflow-hidden pb-4"
+                  onPress={() => router.push('/service/omra-badal')}
+                >
+                  <View className="h-60 relative">
+                    <Image
+                      source={require('@/assets/images/mecca.jpg')}
+                      className="w-full h-full object-cover"
+                    />
+                    <View className="absolute inset-0 bg-black/10" />
+                  </View>
+                  <View className="items-center -mt-8">
+                    <View className="bg-primary h-16 w-16 rounded-full items-center justify-center border-4 border-white dark:border-zinc-800 shadow-md">
+                      <Heart color="white" fill="white" size={24} />
+                    </View>
+                    <Text className="text-gray-900 dark:text-white font-bold text-lg mt-2">Omra Badal</Text>
+                    <Text className="text-gray-500 dark:text-gray-400 text-xs text-center px-2 mt-1">Par procuration</Text>
+                  </View>
+                </TouchableOpacity>
 
-            {/* Service 3: Transport VIP (Bonus) */}
-            <TouchableOpacity className="bg-white dark:bg-zinc-800 rounded-2xl w-64 shadow-sm border border-gray-100 dark:border-white/5 overflow-hidden pb-4">
-              <View className="h-60 relative">
-                <Image
-                  source={{ uri: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?q=80&w=1000&auto=format&fit=crop' }}
-                  className="w-full h-full object-cover"
-                />
-                <View className="absolute inset-0 bg-black/10" />
-              </View>
-              <View className="items-center -mt-8">
-                <View className="bg-primary h-16 w-16 rounded-full items-center justify-center border-4 border-white dark:border-zinc-800 shadow-md">
-                  <Award color="white" fill="white" size={24} />
-                </View>
-                <Text className="text-gray-900 dark:text-white font-bold text-lg mt-2">Transport VIP</Text>
-                <Text className="text-gray-500 dark:text-gray-400 text-xs text-center px-2 mt-1">Confort & Luxe</Text>
-              </View>
-            </TouchableOpacity>
-          </ScrollView>
+                {/* Service 2: Visites Guidées */}
+                <TouchableOpacity className="bg-white dark:bg-zinc-800 rounded-2xl w-64 shadow-sm border border-gray-100 dark:border-white/5 overflow-hidden pb-4">
+                  <View className="h-60 relative">
+                    <Image
+                      source={require('@/assets/images/medina.jpeg')}
+                      className="w-full h-full object-cover"
+                    />
+                    <View className="absolute inset-0 bg-black/10" />
+                  </View>
+                  <View className="items-center -mt-8">
+                    <View className="bg-primary h-16 w-16 rounded-full items-center justify-center border-4 border-white dark:border-zinc-800 shadow-md">
+                      <MapPin color="white" fill="white" size={24} />
+                    </View>
+                    <Text className="text-gray-900 dark:text-white font-bold text-lg mt-2">Visites Guidées</Text>
+                    <Text className="text-500 dark:text-gray-400 text-xs text-center px-2 mt-1">Ziyara Lieux Saints</Text>
+                  </View>
+                </TouchableOpacity>
 
-          {/* Recommended Section (Mini) */}
-          <Text className="text-gray-900 dark:text-white text-lg font-bold mb-4">Guides Recommandés</Text>
-          {GUIDES.slice(0, 2).map((guide) => (
-            <GuideCard key={guide.id} guide={guide} />
-          ))}
+                {/* Service 3: Transport VIP (Bonus) */}
+                <TouchableOpacity className="bg-white dark:bg-zinc-800 rounded-2xl w-64 shadow-sm border border-gray-100 dark:border-white/5 overflow-hidden pb-4">
+                  <View className="h-60 relative">
+                    <Image
+                      source={{ uri: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?q=80&w=1000&auto=format&fit=crop' }}
+                      className="w-full h-full object-cover"
+                    />
+                    <View className="absolute inset-0 bg-black/10" />
+                  </View>
+                  <View className="items-center -mt-8">
+                    <View className="bg-primary h-16 w-16 rounded-full items-center justify-center border-4 border-white dark:border-zinc-800 shadow-md">
+                      <Award color="white" fill="white" size={24} />
+                    </View>
+                    <Text className="text-gray-900 dark:text-white font-bold text-lg mt-2">Transport VIP</Text>
+                    <Text className="text-gray-500 dark:text-gray-400 text-xs text-center px-2 mt-1">Confort & Luxe</Text>
+                  </View>
+                </TouchableOpacity>
+              </ScrollView>
+
+              {/* Recommended Section (Mini) */}
+              <Text className="text-gray-900 dark:text-white text-lg font-bold mb-4">Guides Recommandés</Text>
+              {guides.length > 0 ? (
+                guides.slice(0, 2).map((guide) => (
+                  <GuideCard key={guide.id} guide={guide} />
+                ))
+              ) : (
+                <Text className="text-gray-500 text-sm">Chargement des guides...</Text>
+              )}
+            </>
+          )}
+
+          {/* Guide Sections */}
+          {profile?.role === 'guide' && (
+            <>
+              {/* Upcoming Visits */}
+              <View className="flex-row items-center justify-between mb-4 mt-2">
+                <Text className="text-gray-900 dark:text-white text-lg font-bold">Mes prochaines visites</Text>
+                <TouchableOpacity onPress={() => router.push('/guide-dashboard')}>
+                  <Text className="text-[#b39164] text-sm font-medium">Voir toutes mes visites</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View className="gap-3 mb-8">
+                {upcomingVisits.length > 0 ? upcomingVisits.map((visit) => (
+                  <View key={visit.id} className="bg-white dark:bg-zinc-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-white/5 flex-row items-center justify-between">
+                    <View className="flex-row items-center flex-1">
+                      <View className="bg-green-500/10 p-3 rounded-full mr-3">
+                        <User color="#22c55e" size={20} />
+                      </View>
+                      <View className="flex-1">
+                        <Text className="text-gray-900 dark:text-white font-medium">{visit.pilgrimName}</Text>
+                        <Text className="text-gray-500 dark:text-gray-400 text-xs mt-0.5">{visit.serviceName} • {visit.date}</Text>
+                        <View className="flex-row items-center mt-1">
+                          <MapPin size={10} color="#9CA3AF" />
+                          <Text className="text-gray-400 text-[10px] ml-1">{visit.location || 'Lieu à définir'}</Text>
+                        </View>
+                      </View>
+                    </View>
+                    <View className="items-end">
+                      <Text className="text-gray-900 dark:text-white font-bold">{visit.time}</Text>
+                      <View className="bg-green-500/20 px-2 py-0.5 rounded-full mt-1">
+                        <Text className="text-green-600 text-[10px] font-medium">Confirmé</Text>
+                      </View>
+                    </View>
+                  </View>
+                )) : (
+                  <Text className="text-gray-400 text-sm text-center py-4">Aucune visite à venir</Text>
+                )}
+              </View>
+
+              {/* Guide Requests */}
+              <View className="flex-row items-center justify-between mb-4">
+                <Text className="text-gray-900 dark:text-white text-lg font-bold">Mes demandes</Text>
+                <TouchableOpacity onPress={() => router.push('/guide-dashboard')}>
+                  <Text className="text-[#b39164] text-sm font-medium">Voir toutes mes demandes</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View className="gap-3">
+                {pendingRequests.length > 0 ? pendingRequests.map((req) => (
+                  <View key={req.id} className="bg-white dark:bg-zinc-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-white/5 flex-row items-center justify-between">
+                    <View className="flex-row items-center flex-1">
+                      <View className="bg-[#b39164]/10 p-3 rounded-full mr-3">
+                        <Clock color="#b39164" size={20} />
+                      </View>
+                      <View className="flex-1">
+                        <Text className="text-gray-900 dark:text-white font-medium">{req.pilgrimName}</Text>
+                        <Text className="text-gray-500 dark:text-gray-400 text-xs mt-0.5">{req.serviceName}</Text>
+                        <Text className="text-gray-500 dark:text-gray-400 text-xs">{req.date} à {req.time}</Text>
+                      </View>
+                    </View>
+                    <View className="items-end">
+                      <Text className="text-[#b39164] font-bold">{req.price}</Text>
+                    </View>
+                  </View>
+                )) : (
+                  <Text className="text-gray-400 text-sm text-center py-4">Aucune demande en attente</Text>
+                )}
+              </View>
+            </>
+          )}
 
           <View className="h-24" />
         </View>

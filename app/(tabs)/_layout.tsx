@@ -1,5 +1,6 @@
+import { useAuth } from '@/context/AuthContext';
 import { Tabs, useRouter } from 'expo-router';
-import { Home, MessageCircle, Search, User } from 'lucide-react-native';
+import { Briefcase, Home, MessageCircle, Search, User } from 'lucide-react-native';
 import React from 'react';
 import { useColorScheme } from 'react-native';
 
@@ -8,6 +9,7 @@ export default function TabLayout() {
   // Use React Native's hook to detect theme
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const { profile } = useAuth();
 
   return (
     <Tabs
@@ -41,6 +43,7 @@ export default function TabLayout() {
         options={{
           title: 'Explorer',
           tabBarIcon: ({ color }) => <Search size={24} color={color} />,
+          href: profile?.role === 'guide' ? null : undefined,
         }}
         listeners={() => ({
           tabPress: (e) => {
@@ -54,6 +57,14 @@ export default function TabLayout() {
         options={{
           title: 'Messages',
           tabBarIcon: ({ color }) => <MessageCircle size={24} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="guide-dashboard"
+        options={{
+          title: 'Gestion',
+          tabBarIcon: ({ color }) => <Briefcase size={24} color={color} />,
+          href: profile?.role === 'guide' ? undefined : null,
         }}
       />
       <Tabs.Screen

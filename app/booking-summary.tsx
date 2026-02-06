@@ -1,4 +1,5 @@
-import { createReservation } from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
+import { useReservations } from '@/context/ReservationsContext';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, CheckCircle, MapPin, User, Wallet } from 'lucide-react-native';
 import React from 'react';
@@ -8,6 +9,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function BookingSummaryScreen() {
     const router = useRouter();
     const params = useLocalSearchParams();
+    const { addReservation } = useReservations();
+    const { user } = useAuth(); // To get current user ID
 
     // Parse params
     const guideId = params.guideId as string;
@@ -16,20 +19,25 @@ export default function BookingSummaryScreen() {
     const endDate = params.endDate;
     const service = params.service as string;
     const location = params.location as string;
-    const totalPrice = params.totalPrice;
+    const totalPrice = params.totalPrice as string;
     const pilgrims = params.pilgrims ? JSON.parse(params.pilgrims as string) : [];
 
     const handlePayment = async () => {
         try {
-            await createReservation({
+            // Using Context for Mock/State management flow
+            addReservation({
                 guideId,
+                guideName,
+                pilgrimId: user?.id || 'p1', // Use actual user ID or fallback for mock
+                pilgrimName: user?.user_metadata?.full_name || 'Moi',
                 serviceName: service,
-                startDate,
-                endDate,
+                date: `${startDate} - ${endDate} Jan`, // Simplified date format for display
+                time: '09:00', // Default time for now
                 price: totalPrice,
                 location,
-                pilgrims
+                image: require('@/assets/images/mecque.png') // Placeholder
             });
+
             Alert.alert(
                 "Réservation confirmée",
                 "Votre demande a été envoyée au guide. Vous recevrez une confirmation bientôt.",

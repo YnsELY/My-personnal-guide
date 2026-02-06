@@ -70,6 +70,28 @@ export default function SearchScreen() {
     return matchesSearch && matchesCategory && matchesCity && matchesLanguage && matchesPrice;
   });
 
+  // Date Formatting Helper
+  const formatDateDisplay = () => {
+    if (!startDate || !endDate) return null;
+
+    const start = new Date(Number(startDate));
+    const end = new Date(Number(endDate));
+
+    // Check if valid dates
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      // Fallback for legacy simple numbers if necessary (or just return raw)
+      return `Du ${startDate} au ${endDate} janvier 2026`;
+    }
+
+    if (startDate === endDate) {
+      return `Le ${start.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+    }
+
+    return `Du ${start.toLocaleDateString('fr-FR', { day: 'numeric' })} au ${end.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+  };
+
+  const formattedDateRange = formatDateDisplay();
+
   return (
     <View className="flex-1 bg-gray-50 dark:bg-zinc-900">
       <StatusBar barStyle="default" />
@@ -78,14 +100,14 @@ export default function SearchScreen() {
           <Text className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Explorer</Text>
 
           {/* Date Range Pill */}
-          {startDate && endDate && (
+          {formattedDateRange && (
             <TouchableOpacity
               className="flex-row items-center justify-center bg-[#b39164] py-2 px-4 rounded-full mb-6 self-center w-full"
               onPress={() => router.push({ pathname: '/date-select', params: { startDate, endDate } })}
             >
               <Calendar color="white" size={18} className="mr-3" />
               <Text className="text-white font-medium text-sm">
-                Du {startDate} au {endDate} janvier 2026
+                {formattedDateRange}
               </Text>
             </TouchableOpacity>
           )}

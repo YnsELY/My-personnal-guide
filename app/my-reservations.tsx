@@ -1,30 +1,17 @@
-import { getReservations } from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
+import { useReservations } from '@/context/ReservationsContext';
 import { Stack, useRouter } from 'expo-router';
 import { ArrowLeft, Calendar, MapPin, MessageCircle } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { ActivityIndicator, Image, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ReservationsScreen() {
     const router = useRouter();
-    const [reservations, setReservations] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
+    const { getReservationsByRole, isLoading } = useReservations();
+    const { user } = useAuth();
 
-    const loadData = async () => {
-        setLoading(true);
-        try {
-            const data = await getReservations();
-            setReservations(data);
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        loadData();
-    }, []);
+    const reservations = getReservationsByRole('pilgrim', user?.id || 'p1');
 
     const getStatusColor = (status: string) => {
         switch (status) {
@@ -56,7 +43,7 @@ export default function ReservationsScreen() {
                     <Text className="text-xl font-bold text-gray-900 dark:text-white">Mes Réservations</Text>
                 </View>
 
-                {loading ? (
+                {isLoading ? (
                     <View className="flex-1 justify-center items-center">
                         <ActivityIndicator size="large" color="#b39164" />
                     </View>

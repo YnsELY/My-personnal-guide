@@ -50,6 +50,7 @@ CREATE TABLE public.guides (
   rating NUMERIC DEFAULT 0,
   reviews_count INTEGER DEFAULT 0,
   specialty TEXT, -- e.g. 'Historical Guide', 'Transport & Ziyara'
+  experience_since TIMESTAMPTZ, -- Guide since date
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

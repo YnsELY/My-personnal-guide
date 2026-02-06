@@ -1,4 +1,5 @@
 import { AuthProvider } from '@/context/AuthContext';
+import { ReservationsProvider } from '@/context/ReservationsContext';
 import { DarkTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -20,23 +21,25 @@ export default function RootLayout() {
     // Force dark mode
     setColorScheme('dark');
 
-    import('@/lib/api').then(({ seedGuides }) => seedGuides().catch(console.error));
+    // import('@/lib/api').then(({ seedGuides }) => seedGuides().catch(console.error));
   }, []);
 
   return (
     <AuthProvider>
-      <ThemeProvider value={DarkTheme}>
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          <Stack.Screen name="guide/create-service" options={{ headerShown: false, presentation: 'modal' }} />
-          <Stack.Screen name="guide/[id]" options={{ headerShown: false }} />
-          <Stack.Screen name="date-select" options={{ headerShown: false }} />
-          <Stack.Screen name="booking-summary" options={{ headerShown: false }} />
-          <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-        </Stack>
-        <StatusBar style="light" />
-      </ThemeProvider>
+      <ReservationsProvider>
+        <ThemeProvider value={DarkTheme}>
+          <Stack>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+            <Stack.Screen name="guide/create-service" options={{ headerShown: false, presentation: 'modal' }} />
+            <Stack.Screen name="guide/[id]" options={{ headerShown: false }} />
+            <Stack.Screen name="date-select" options={{ headerShown: false }} />
+            <Stack.Screen name="booking-summary" options={{ headerShown: false }} />
+            <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+          </Stack>
+          <StatusBar style="light" />
+        </ThemeProvider>
+      </ReservationsProvider>
     </AuthProvider>
   );
 }

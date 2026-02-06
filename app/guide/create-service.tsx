@@ -1,8 +1,8 @@
 import CalendarPicker from '@/components/CalendarPicker';
 import { CATEGORIES } from '@/constants/data';
-import { createService, uploadImage } from '@/lib/api';
+import { createService, updateService, uploadImage } from '@/lib/api';
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Calendar, Camera, DollarSign, MapPin, Minus, Plus, Trash2, Type, Users } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { Alert, Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StatusBar, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -11,23 +11,29 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function CreateServiceScreen() {
     const router = useRouter();
 
-    const [title, setTitle] = useState('');
-    const [category, setCategory] = useState(CATEGORIES[1].name);
-    const [description, setDescription] = useState('');
-    const [price, setPrice] = useState('');
-    const [location, setLocation] = useState('');
-    const [maxParticipants, setMaxParticipants] = useState('');
-    const [image, setImage] = useState<string | null>(null);
+    const { service } = useLocalSearchParams();
+    const serviceToEdit = service ? JSON.parse(service as string) : null;
+    const isEditing = !!serviceToEdit;
+
+    const [title, setTitle] = useState(serviceToEdit?.title || '');
+    const [category, setCategory] = useState(serviceToEdit?.category || CATEGORIES[1].name);
+    const [description, setDescription] = useState(serviceToEdit?.description || '');
+    const [price, setPrice] = useState(serviceToEdit?.price?.toString() || '');
+    const [location, setLocation] = useState(serviceToEdit?.location || '');
+    const [maxParticipants, setMaxParticipants] = useState(serviceToEdit?.maxParticipants?.toString() || '');
+    const [image, setImage] = useState<string | null>(serviceToEdit?.image?.uri || null);
 
     // Date Range State
     const [showCalendar, setShowCalendar] = useState(false);
-    const [startDate, setStartDate] = useState<number | null>(null);
-    const [endDate, setEndDate] = useState<number | null>(null);
+    const [startDate, setStartDate] = useState<number | null>(serviceToEdit?.startDate ? new Date(serviceToEdit.startDate).getTime() : null);
+    const [endDate, setEndDate] = useState<number | null>(serviceToEdit?.endDate ? new Date(serviceToEdit.endDate).getTime() : null);
 
     const [loading, setLoading] = useState(false);
 
     // Meeting Points State
-    const [meetingPoints, setMeetingPoints] = useState<{ name: string, supplement: string }[]>([{ name: '', supplement: '' }]);
+    const [meetingPoints, setMeetingPoints] = useState<{ name: string, supplement: string }[]>(
+        serviceToEdit?.meetingPoints?.map((p: any) => ({ name: p.name, supplement: p.supplement?.toString() || '' })) || [{ name: '', supplement: '' }]
+    );
 
     const addPoint = () => setMeetingPoints([...meetingPoints, { name: '', supplement: '' }]);
     const removePoint = (index: number) => {
@@ -54,7 +60,7 @@ export default function CreateServiceScreen() {
         }
     };
 
-    const handleCreate = async () => {
+    const handleCreateOrUpdate = async () => {
         if (!title || !description || !price || !location || !startDate) {
             Alert.alert("Erreur", "Veuillez remplir tous les champs (y compris la date)");
             return;
@@ -62,18 +68,17 @@ export default function CreateServiceScreen() {
 
         setLoading(true);
         try {
-            let imageUrl = null;
-            if (image) {
-                // Upload to ImgBB
+            let imageUrl = image;
+            if (image && image !== serviceToEdit?.image?.uri && !image.startsWith('http')) {
+                // Only upload if it's a new local image
                 imageUrl = await uploadImage(image);
             }
 
-            // Convert mock days to ISO dates for 2026-01 (Janvier 2026) as per component
-            // ideally we use real date objects but sticking to mock consistency
-            const startIso = new Date(2026, 0, startDate).toISOString();
-            const endIso = endDate ? new Date(2026, 0, endDate).toISOString() : new Date(2026, 0, startDate).toISOString(); // Single date = same start/end
+            // Convert timestamps to ISO dates
+            const startIso = new Date(startDate).toISOString();
+            const endIso = endDate ? new Date(endDate).toISOString() : startIso; // Single date = same start/end
 
-            await createService({
+            const serviceData = {
                 title,
                 category,
                 description,
@@ -87,14 +92,26 @@ export default function CreateServiceScreen() {
                     })),
                 availability_start: startIso,
                 availability_end: endIso,
-                image: imageUrl || undefined,
+                image_url: imageUrl,
                 max_participants: maxParticipants ? parseInt(maxParticipants) : undefined
-            });
-            Alert.alert("Succès", "Votre service a été créé avec succès !", [
-                { text: "OK", onPress: () => router.back() }
-            ]);
+            };
+
+            if (isEditing) {
+                await updateService(serviceToEdit.id, {
+                    ...serviceData,
+                    price_override: serviceData.price // Map to correct DB column
+                });
+                Alert.alert("Succès", "Votre service a été modifié avec succès !", [
+                    { text: "OK", onPress: () => router.back() }
+                ]);
+            } else {
+                await createService(serviceData);
+                Alert.alert("Succès", "Votre service a été créé avec succès !", [
+                    { text: "OK", onPress: () => router.back() }
+                ]);
+            }
         } catch (e: any) {
-            Alert.alert("Erreur", "Impossible de créer le service : " + e.message);
+            Alert.alert("Erreur", "Impossible d'enregistrer le service : " + e.message);
         } finally {
             setLoading(false);
         }
@@ -109,7 +126,7 @@ export default function CreateServiceScreen() {
                     <TouchableOpacity onPress={() => router.back()} className="p-2 -ml-2">
                         <ArrowLeft size={24} color="white" />
                     </TouchableOpacity>
-                    <Text className="text-xl font-bold text-gray-900 dark:text-white">Nouveau Service</Text>
+                    <Text className="text-xl font-bold text-gray-900 dark:text-white">{isEditing ? 'Modifier Service' : 'Nouveau Service'}</Text>
                     <View className="w-10" />
                 </View>
                 <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
@@ -282,7 +299,7 @@ export default function CreateServiceScreen() {
                                     <Calendar size={20} color="#9CA3AF" />
                                     <Text className="flex-1 ml-3 text-gray-900 dark:text-white">
                                         {startDate
-                                            ? `Du ${startDate} ${endDate ? 'au ' + endDate : ''} Janvier 2026`
+                                            ? `Du ${new Date(startDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} ${endDate ? 'au ' + new Date(endDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}`
                                             : "Sélectionner une période"}
                                     </Text>
                                 </TouchableOpacity>
@@ -300,6 +317,7 @@ export default function CreateServiceScreen() {
                                         }}
                                         initialStart={startDate}
                                         initialEnd={endDate}
+                                        mode="range"
                                     />
                                 </View>
                             </Modal>
@@ -321,11 +339,11 @@ export default function CreateServiceScreen() {
                             </View>
 
                             <TouchableOpacity
-                                onPress={handleCreate}
+                                onPress={handleCreateOrUpdate}
                                 disabled={loading}
                                 className="bg-[#b39164] py-4 rounded-xl items-center shadow-lg shadow-[#b39164]/20 mt-2 active:bg-[#a08055]"
                             >
-                                <Text className="text-white font-bold text-lg">{loading ? 'Création...' : 'Publier le service'}</Text>
+                                <Text className="text-white font-bold text-lg">{loading ? 'Enregistrement...' : (isEditing ? 'Modifier le service' : 'Publier le service')}</Text>
                             </TouchableOpacity>
                         </View>
                     </ScrollView>

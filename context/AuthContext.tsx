@@ -38,8 +38,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             } else {
                 setProfile(null);
             }
-        } catch (e) {
-            console.error(e);
+        } catch (e: any) {
+            console.error("AuthContext initialization error:", e);
+            // Don't crash the app, just stay logged out
+            setUser(null);
+            setProfile(null);
         } finally {
             setIsLoading(false);
         }

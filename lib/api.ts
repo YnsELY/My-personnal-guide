@@ -112,6 +112,52 @@ export const seedGuides = async () => {
     }
 };
 
+export const createGuideProfile = async (guideData: {
+    bio: string,
+    location: string,
+    languages: string[],
+    specialty: string,
+    experience_since: string
+}) => {
+    const userId = await ensureUser();
+    if (!userId) throw new Error("User not found");
+
+    const { data, error } = await supabase
+        .from('guides')
+        .upsert({
+            id: userId,
+            bio: guideData.bio,
+            location: guideData.location,
+            languages: guideData.languages,
+            specialty: guideData.specialty,
+            experience_since: guideData.experience_since,
+            verified: false,
+            rating: 0,
+            reviews_count: 0,
+            price_per_day: 0, // Default until set elsewhere
+            price_unit: '/hour'
+        })
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data;
+};
+
+export const getCurrentGuideProfile = async () => {
+    const userId = await ensureUser();
+    if (!userId) return null;
+
+    const { data, error } = await supabase
+        .from('guides')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+    if (error) return null;
+    return data;
+};
+
 
 // --- Data Access ---
 
@@ -257,6 +303,21 @@ export const createReservation = async (reservationData: any) => {
     return data;
 };
 
+export const updateReservationStatus = async (id: string, status: string) => {
+    const userId = await ensureUser();
+    if (!userId) throw new Error("Vous devez être connecté.");
+
+    const { data, error } = await supabase
+        .from('reservations')
+        .update({ status })
+        .eq('id', id)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data;
+};
+
 export const getReservations = async () => {
     const userId = await ensureUser();
     if (!userId) return [];
@@ -268,6 +329,10 @@ export const getReservations = async () => {
             guide_profile:profiles!reservations_guide_id_fkey (
                 full_name,
                 avatar_url
+            ),
+            pilgrim_profile:profiles!reservations_user_id_fkey (
+                full_name,
+                avatar_url
             )
         `)
         .order('created_at', { ascending: false });
@@ -277,6 +342,7 @@ export const getReservations = async () => {
     return data.map((r: any) => ({
         id: r.id,
         guideId: r.guide_id,
+        pilgrimId: r.user_id,
         serviceName: r.service_name,
         date: new Date(r.start_date).toLocaleDateString(),
         time: r.visit_time,
@@ -285,6 +351,8 @@ export const getReservations = async () => {
         location: r.location,
         guideName: r.guide_profile?.full_name || 'Guide Inconnu',
         guideAvatar: r.guide_profile?.avatar_url,
+        pilgrimName: r.pilgrim_profile?.full_name || 'Pèlerin Inconnu',
+        pilgrimAvatar: r.pilgrim_profile?.avatar_url,
     }));
 };
 
@@ -360,6 +428,41 @@ export const createService = async (serviceData: {
 
     if (error) throw error;
     return data;
+};
+
+export const updateService = async (serviceId: string, updates: any) => {
+    const userId = await ensureUser();
+    if (!userId) throw new Error("Vous devez être connecté.");
+
+    // Check ownership
+    const { data: service } = await supabase.from('services').select('guide_id').eq('id', serviceId).single();
+    if (!service || service.guide_id !== userId) throw new Error("Vous ne pouvez modifier que vos propres services.");
+
+    const { data, error } = await supabase
+        .from('services')
+        .update(updates)
+        .eq('id', serviceId)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data;
+};
+
+export const deleteService = async (serviceId: string) => {
+    const userId = await ensureUser();
+    if (!userId) throw new Error("Vous devez être connecté.");
+
+    // Check ownership
+    const { data: service } = await supabase.from('services').select('guide_id').eq('id', serviceId).single();
+    if (!service || service.guide_id !== userId) throw new Error("Vous ne pouvez supprimer que vos propres services.");
+
+    const { error } = await supabase
+        .from('services')
+        .delete()
+        .eq('id', serviceId);
+
+    if (error) throw error;
 };
 
 export const uploadImage = async (uri: string) => {

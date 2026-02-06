@@ -24,7 +24,16 @@ export default function RegisterScreen() {
         try {
             await signUp(email, password, fullName, role);
             Alert.alert("Compte créé", "Veuillez vérifier votre email pour confirmer votre compte (si activé) ou connectez-vous.", [
-                { text: "OK", onPress: () => router.replace('/(tabs)') }
+                {
+                    text: "OK",
+                    onPress: () => {
+                        if (role === 'guide') {
+                            router.replace('/guide/complete-profile');
+                        } else {
+                            router.replace('/(tabs)');
+                        }
+                    }
+                }
             ]);
         } catch (e: any) {
             Alert.alert("Erreur d'inscription", e.message);

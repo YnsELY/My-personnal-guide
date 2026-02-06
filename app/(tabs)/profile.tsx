@@ -9,7 +9,7 @@ import {
     User
 } from 'lucide-react-native';
 import React from 'react';
-import { Image, ScrollView, StatusBar, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, ScrollView, StatusBar, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/AuthContext';
@@ -70,9 +70,7 @@ export default function ProfileScreen() {
                         <Text className="text-2xl font-bold text-white mt-3 mb-1">{profile?.full_name || 'Utilisateur'}</Text>
                         <Text className="text-gray-300 text-sm">{user.email}</Text>
                         <View className="flex-row gap-2 mt-4">
-                            <TouchableOpacity className="bg-white/10 px-5 py-2 rounded-full border border-white/20">
-                                <Text className="text-white text-xs font-semibold">Modifier le profil</Text>
-                            </TouchableOpacity>
+
                             {profile?.role === 'guide' && (
                                 <TouchableOpacity
                                     onPress={() => router.push('/guide/create-service')}
@@ -90,9 +88,31 @@ export default function ProfileScreen() {
                         {/* Section: Account */}
                         <Text className="text-gray-500 dark:text-gray-400 font-bold mb-3 mt-4 ml-1">COMPTE</Text>
                         <View className="bg-white dark:bg-zinc-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-white/5">
-                            <MenuItem icon={User} label="Informations personnelles" />
+                            <MenuItem
+                                icon={User}
+                                label="Modifier mes informations"
+                                onPress={() => {
+                                    if (profile?.role === 'guide') {
+                                        router.push('/guide/complete-profile');
+                                    } else {
+                                        Alert.alert("Info", "L'édition du profil pèlerin arrive bientôt.");
+                                    }
+                                }}
+                            />
                             <Separator />
-                            <MenuItem icon={Calendar} label="Mes Réservations" onPress={() => router.push('/my-reservations')} />
+                            {profile?.role === 'guide' ? (
+                                <MenuItem
+                                    icon={Calendar}
+                                    label="Mes Services"
+                                    onPress={() => router.push('/guide/my-services')}
+                                />
+                            ) : (
+                                <MenuItem
+                                    icon={Calendar}
+                                    label="Mes Réservations"
+                                    onPress={() => router.push('/my-reservations')}
+                                />
+                            )}
                             <Separator />
                             <MenuItem icon={Bell} label="Notifications"
                                 rightElement={
