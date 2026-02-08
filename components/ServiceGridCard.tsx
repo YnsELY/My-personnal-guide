@@ -19,7 +19,9 @@ export function ServiceGridCard({ service }: ServiceGridCardProps) {
                 id: service.guideId,
                 servicePrice: service.price,
                 serviceLocation: service.location,
-                serviceImage: service.image?.uri
+                serviceImage: service.image?.uri,
+                serviceTitle: service.title,
+                serviceId: service.id // Add this
             }
         }} asChild>
             <TouchableOpacity className="w-[48%] bg-white dark:bg-zinc-800 rounded-2xl mb-4 shadow-sm border border-gray-100 dark:border-white/5 overflow-hidden">

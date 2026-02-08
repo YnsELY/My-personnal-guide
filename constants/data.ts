@@ -1,9 +1,48 @@
 export const CATEGORIES = [
-    { id: '1', name: 'Omra Badal', icon: 'heart' },
-    { id: '2', name: 'Visite Guidée', icon: 'map' },
-    { id: '3', name: 'Transport', icon: 'car' },
-    { id: '4', name: 'Omra PMR', icon: 'accessibility' },
-    { id: '5', name: 'Famille', icon: 'users' },
+    { id: '1', name: 'Omra accompagnée', icon: 'users' },
+    { id: '2', name: 'Omra Badal', icon: 'user-check' }, // Changed icon to valid Lucide icon name if needed, or keep 'hands-praying' if valid in set
+    { id: '3', name: 'Visites guidées', icon: 'map' },
+    { id: '4', name: 'Transport VIP', icon: 'car' },
+    { id: '5', name: 'Hébergement', icon: 'home' }, // Changed 'hotel' to 'home' as generic or 'bed' if available
+];
+
+export const SERVICE_OPTIONS = [
+    {
+        category: 'Omra accompagnée (hors Ramadan)',
+        options: [
+            { label: 'Omra seul ou en couple', price: 200 },
+            { label: 'Omra en famille (3 à 7 personnes)', price: 250 },
+            { label: 'Omra en groupe', price: 300 }
+        ]
+    },
+    {
+        category: 'Omra accompagnée Ramadan',
+        options: [
+            { label: 'Omra seul ou en couple', price: 300 },
+            { label: 'Omra en famille (3 à 7 personnes)', price: 350 },
+            { label: 'Omra en groupe', price: 400 }
+        ]
+    },
+    {
+        category: 'Omra PMR ♿',
+        options: [
+            { label: 'Standard', price: 200 },
+            { label: 'Ramadan', price: 300 }
+        ]
+    },
+    {
+        category: 'Omra Badal',
+        options: [
+            { label: 'Standard', price: 150 },
+            { label: 'Ramadan', price: 250 }
+        ]
+    },
+    {
+        category: 'Visites guidées légiféré Médine ou Makkah',
+        options: [
+            { label: 'Standard', price: 150 }
+        ]
+    }
 ];
 
 export const GUIDES = [
@@ -21,6 +60,7 @@ export const GUIDES = [
         location: 'Mecca',
         verified: true,
         bio: 'Specialized in the history of Mecca and the Seerah. 10 years of experience taking pilgrims to historical sites.',
+        gender: 'male'
     },
     {
         id: '2',
@@ -36,6 +76,7 @@ export const GUIDES = [
         location: 'Medina',
         verified: true,
         bio: 'Comfortable transport for Ziyara in Medina. Knowledgeable about all holy sites and best times to visit.',
+        gender: 'male'
     },
     {
         id: '3',
@@ -51,6 +92,7 @@ export const GUIDES = [
         location: 'Mecca',
         verified: true,
         bio: 'Dedicated guide for sisters performing Omra. Assisting with rituals, shopping, and navigating the Haram.',
+        gender: 'female'
     },
     {
         id: '4',
@@ -66,6 +108,7 @@ export const GUIDES = [
         location: 'Mecca',
         verified: true,
         bio: 'Luxury experience for VIP pilgrims. Private car, exclusive access assistance, and 24/7 support.',
+        gender: 'male'
     },
 ];
 

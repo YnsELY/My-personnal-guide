@@ -1,6 +1,7 @@
 import { FilterModal, FilterState } from '@/components/FilterModal';
 import { ServiceGridCard } from '@/components/ServiceGridCard';
 import { CATEGORIES } from '@/constants/data';
+import { useAuth } from '@/context/AuthContext';
 import { getServices } from '@/lib/api'; // Changed import
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Accessibility, Calendar, Car, Heart, Map as MapIcon, Search as SearchIcon, SlidersHorizontal, Users, X } from 'lucide-react-native';
@@ -18,6 +19,7 @@ const iconMap: { [key: string]: any } = {
 
 export default function SearchScreen() {
   const router = useRouter();
+  const { profile } = useAuth(); // Assuming useAuth is available via context or need import
   const { startDate, endDate } = useLocalSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -34,8 +36,13 @@ export default function SearchScreen() {
   const [services, setServices] = useState<any[]>([]);
 
   React.useEffect(() => {
-    getServices().then(setServices).catch(console.error);
-  }, []);
+    if (profile?.role === 'pilgrim') {
+      const gender = profile.gender as 'male' | 'female' | undefined;
+      getServices(gender).then(setServices).catch(console.error);
+    } else {
+      getServices().then(setServices).catch(console.error);
+    }
+  }, [profile]);
 
   // Filter Logic
   const filteredServices = services.filter((service) => {
@@ -67,7 +74,32 @@ export default function SearchScreen() {
 
     const matchesPrice = advancedFilters.priceRange ? priceCategory === advancedFilters.priceRange : true;
 
-    return matchesSearch && matchesCategory && matchesCity && matchesLanguage && matchesPrice;
+    // 4. Date Filter - Strict Inclusion
+    // User selects a range: [userStart, userEnd]
+    // Service available: [serviceStart, serviceEnd]
+    // Condition: serviceStart <= userStart AND serviceEnd >= userEnd
+    let matchesDate = true;
+    if (startDate && endDate) {
+      const userStart = new Date(Number(startDate));
+      const userEnd = new Date(Number(endDate));
+      userStart.setHours(0, 0, 0, 0);
+      userEnd.setHours(23, 59, 59, 999); // Compare end of day
+
+      if (service.startDate && service.endDate) {
+        const serviceStart = new Date(service.startDate);
+        const serviceEnd = new Date(service.endDate);
+        serviceStart.setHours(0, 0, 0, 0);
+        serviceEnd.setHours(23, 59, 59, 999);
+
+        matchesDate = serviceStart <= userStart && serviceEnd >= userEnd;
+      } else {
+        // If service has no dates, assume available or strictly hide?
+        // Usually, availability is mandatory. Hiding is safer based on "The service must be available".
+        matchesDate = false;
+      }
+    }
+
+    return matchesSearch && matchesCategory && matchesCity && matchesLanguage && matchesPrice && matchesDate;
   });
 
   // Date Formatting Helper

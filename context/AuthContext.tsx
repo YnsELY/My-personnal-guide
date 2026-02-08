@@ -8,7 +8,7 @@ interface AuthContextType {
     profile: any | null;
     isLoading: boolean;
     signIn: (email: string, pass: string) => Promise<void>;
-    signUp: (email: string, pass: string, name: string, role: UserRole) => Promise<void>;
+    signUp: (email: string, pass: string, name: string, role: UserRole, gender: 'male' | 'female', dob: string, language: 'fr' | 'ar') => Promise<void>;
     signOut: () => Promise<void>;
 }
 
@@ -57,8 +57,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         await refreshUser();
     };
 
-    const signUp = async (email: string, pass: string, name: string, role: UserRole) => {
-        await apiSignUp(email, pass, name, role);
+    const signUp = async (email: string, pass: string, name: string, role: UserRole, gender: 'male' | 'female', dob: string, language: 'fr' | 'ar') => {
+        await apiSignUp(email, pass, name, role, gender, dob, language);
         await refreshUser();
     };
 

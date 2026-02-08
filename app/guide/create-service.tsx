@@ -1,9 +1,9 @@
 import CalendarPicker from '@/components/CalendarPicker';
-import { CATEGORIES } from '@/constants/data';
+import { CATEGORIES, SERVICE_OPTIONS } from '@/constants/data';
 import { createService, updateService, uploadImage } from '@/lib/api';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Calendar, Camera, DollarSign, MapPin, Minus, Plus, Trash2, Type, Users } from 'lucide-react-native';
+import { ArrowLeft, Calendar, Camera, ChevronDown, DollarSign, MapPin, Minus, Plus, Trash2, Users } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { Alert, Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StatusBar, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -29,6 +29,11 @@ export default function CreateServiceScreen() {
     const [endDate, setEndDate] = useState<number | null>(serviceToEdit?.endDate ? new Date(serviceToEdit.endDate).getTime() : null);
 
     const [loading, setLoading] = useState(false);
+
+    const [selectedServiceCategory, setSelectedServiceCategory] = useState<string | null>(null);
+    const [selectedServiceOption, setSelectedServiceOption] = useState<any | null>(null);
+    const [isCategoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
+    const [isOptionDropdownOpen, setOptionDropdownOpen] = useState(false);
 
     // Meeting Points State
     const [meetingPoints, setMeetingPoints] = useState<{ name: string, supplement: string }[]>(
@@ -149,50 +154,87 @@ export default function CreateServiceScreen() {
                                 </View>
                             </TouchableOpacity>
 
-                            {/* Title */}
-                            <View>
-                                <Text className="text-gray-500 mb-2 font-medium">Titre du service</Text>
-                                <View className="flex-row items-center bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3">
-                                    <Type size={20} color="#9CA3AF" />
-                                    <TextInput
-                                        className="flex-1 ml-3 text-gray-900 dark:text-white"
-                                        placeholder="Ex: Visite guidée de La Mecque"
-                                        placeholderTextColor="#9CA3AF"
-                                        value={title}
-                                        onChangeText={setTitle}
-                                    />
+
+                            {/* Service Category Dropdown */}
+                            <View className="z-50">
+                                <Text className="text-gray-500 mb-2 font-medium">Type de service</Text>
+                                <TouchableOpacity
+                                    onPress={() => { setCategoryDropdownOpen(!isCategoryDropdownOpen); setOptionDropdownOpen(false); }}
+                                    className="flex-row justify-between items-center bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3"
+                                >
+                                    <Text className="text-gray-900 dark:text-white flex-1">
+                                        {selectedServiceCategory || "Sélectionner un type"}
+                                    </Text>
+                                    <ChevronDown size={20} color="#9CA3AF" />
+                                </TouchableOpacity>
+
+                                {isCategoryDropdownOpen && (
+                                    <View className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl shadow-lg z-50 max-h-60 overflow-hidden">
+                                        <ScrollView nestedScrollEnabled>
+                                            {SERVICE_OPTIONS.map((opt, idx) => (
+                                                <TouchableOpacity
+                                                    key={idx}
+                                                    onPress={() => {
+                                                        setSelectedServiceCategory(opt.category);
+                                                        setCategory(opt.category); // Map to DB category field
+                                                        setSelectedServiceOption(null); // Reset option
+                                                        setPrice('');
+                                                        setCategoryDropdownOpen(false);
+                                                    }}
+                                                    className="px-4 py-3 border-b border-gray-100 dark:border-white/5 active:bg-gray-50 dark:active:bg-zinc-700"
+                                                >
+                                                    <Text className="text-gray-900 dark:text-white">{opt.category}</Text>
+                                                </TouchableOpacity>
+                                            ))}
+                                        </ScrollView>
+                                    </View>
+                                )}
+                            </View>
+
+                            {/* Service Option Dropdown */}
+                            {selectedServiceCategory && (
+                                <View className="z-40">
+                                    <Text className="text-gray-500 mb-2 font-medium">Option</Text>
+                                    <TouchableOpacity
+                                        onPress={() => setOptionDropdownOpen(!isOptionDropdownOpen)}
+                                        className="flex-row justify-between items-center bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3"
+                                    >
+                                        <Text className="text-gray-900 dark:text-white flex-1">
+                                            {selectedServiceOption?.label || "Sélectionner une option"}
+                                        </Text>
+                                        <ChevronDown size={20} color="#9CA3AF" />
+                                    </TouchableOpacity>
+
+                                    {isOptionDropdownOpen && (
+                                        <View className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl shadow-lg z-50">
+                                            {SERVICE_OPTIONS.find(o => o.category === selectedServiceCategory)?.options.map((opt, idx) => (
+                                                <TouchableOpacity
+                                                    key={idx}
+                                                    onPress={() => {
+                                                        setSelectedServiceOption(opt);
+                                                        setPrice(opt.price.toString());
+                                                        setTitle(`${selectedServiceCategory} - ${opt.label}`); // Auto-set title
+                                                        setOptionDropdownOpen(false);
+                                                    }}
+                                                    className="px-4 py-3 border-b border-gray-100 dark:border-white/5 active:bg-gray-50 dark:active:bg-zinc-700 flex-row justify-between"
+                                                >
+                                                    <Text className="text-gray-900 dark:text-white">{opt.label}</Text>
+                                                    <Text className="text-gray-500 font-medium">{opt.price} €</Text>
+                                                </TouchableOpacity>
+                                            ))}
+                                        </View>
+                                    )}
                                 </View>
-                            </View>
+                            )}
 
-                            {/* Category */}
+                            {/* Price Display (Read-Only) */}
                             <View>
-                                <Text className="text-gray-500 mb-2 font-medium">Catégorie</Text>
-                                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row gap-2">
-                                    {CATEGORIES.map((cat, idx) => (
-                                        <TouchableOpacity
-                                            key={idx}
-                                            onPress={() => setCategory(cat.name)}
-                                            className={`px-4 py-2 rounded-full border mr-2 ${category === cat.name ? 'bg-[#b39164] border-[#b39164]' : 'bg-white dark:bg-zinc-800 border-gray-200 dark:border-white/10'}`}
-                                        >
-                                            <Text className={`font-medium ${category === cat.name ? 'text-white' : 'text-gray-600 dark:text-gray-300'}`}>{cat.name}</Text>
-                                        </TouchableOpacity>
-                                    ))}
-                                </ScrollView>
-                            </View>
-
-                            {/* Price */}
-                            <View>
-                                <Text className="text-gray-500 mb-2 font-medium">Prix (SAR)</Text>
-                                <View className="flex-row items-center bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3">
+                                <Text className="text-gray-500 mb-2 font-medium">Prix (Fixe)</Text>
+                                <View className="flex-row items-center bg-gray-100 dark:bg-zinc-800/50 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 opacity-80">
                                     <DollarSign size={20} color="#9CA3AF" />
-                                    <TextInput
-                                        value={price}
-                                        onChangeText={setPrice}
-                                        placeholder="Ex: 500"
-                                        placeholderTextColor="#9CA3AF"
-                                        keyboardType="numeric"
-                                        className="flex-1 ml-3 text-gray-900 dark:text-white font-medium"
-                                    />
+                                    <Text className="flex-1 ml-3 text-gray-900 dark:text-white font-bold text-lg">
+                                        {price ? `${price} €` : '-- €'}
+                                    </Text>
                                 </View>
                             </View>
 

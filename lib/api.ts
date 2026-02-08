@@ -5,14 +5,25 @@ import { supabase } from '@/lib/supabase';
 
 // --- Auth ---
 
-export const signUp = async (email: string, password: string, fullName: string, role: 'guide' | 'pilgrim') => {
+export const signUp = async (
+    email: string,
+    password: string,
+    fullName: string,
+    role: 'guide' | 'pilgrim',
+    gender: 'male' | 'female',
+    dob: string,
+    language: 'fr' | 'ar'
+) => {
     const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
             data: {
                 full_name: fullName,
-                role: role
+                role: role,
+                gender: gender,
+                date_of_birth: dob,
+                language: language
             }
         }
     });
@@ -162,14 +173,16 @@ export const getCurrentGuideProfile = async () => {
 // --- Data Access ---
 
 // Deprecated or used for other purposes?
-export const getGuides = async () => {
-    const { data, error } = await supabase
+export const getGuides = async (filterGender?: 'male' | 'female') => {
+    let query = supabase
         .from('guides')
-        .select('*, profiles(full_name, avatar_url)');
+        .select('*, profiles(full_name, avatar_url, gender)');
+
+    const { data, error } = await query;
 
     if (error) throw error;
 
-    return data.map((g: any) => ({
+    let guides = data.map((g: any) => ({
         id: g.id,
         name: g.profiles?.full_name || 'Unknown',
         role: g.specialty,
@@ -181,19 +194,28 @@ export const getGuides = async () => {
         image: g.profiles?.avatar_url ? { uri: g.profiles.avatar_url } : require('@/assets/images/profil.jpeg'),
         location: g.location,
         verified: g.verified,
-        bio: g.bio
+        bio: g.bio,
+        gender: g.profiles?.gender
     }));
+
+    if (filterGender) {
+        guides = guides.filter((g: any) => g.gender === filterGender);
+    }
+
+    return guides;
 };
 
-export const getServices = async () => {
-    const { data, error } = await supabase
+export const getServices = async (filterGender?: 'male' | 'female') => {
+    let query = supabase
         .from('services')
-        .select('*, profiles(full_name, avatar_url, role)')
+        .select('*, profiles(full_name, avatar_url, role, gender)')
         .order('created_at', { ascending: false });
+
+    const { data, error } = await query;
 
     if (error) throw error;
 
-    return data.map((s: any) => ({
+    let services = data.map((s: any) => ({
         id: s.id,
         title: s.title,
         category: s.category,
@@ -203,11 +225,18 @@ export const getServices = async () => {
         guideId: s.guide_id,
         guideName: s.profiles?.full_name || 'Guide Inconnu',
         guideAvatar: s.profiles?.avatar_url,
+        guideGender: s.profiles?.gender,
         startDate: s.availability_start,
         endDate: s.availability_end,
         meetingPoints: s.meeting_points || [], // Add this
         image: s.image_url ? { uri: s.image_url } : null
     }));
+
+    if (filterGender) {
+        services = services.filter((s: any) => s.guideGender === filterGender);
+    }
+
+    return services;
 };
 
 export const getGuideServices = async (guideId: string) => {
@@ -270,7 +299,10 @@ export const getGuideById = async (id: string) => {
         image: data.avatar_url ? { uri: data.avatar_url } : require('@/assets/images/profil.jpeg'),
         location: g?.location || 'Lieu non renseigné',
         verified: g?.verified || false,
-        bio: g?.bio || 'Aucune biographie disponible.'
+        bio: g?.bio || 'Aucune biographie disponible.',
+        gender: data.gender,
+        age: data.date_of_birth ? new Date().getFullYear() - new Date(data.date_of_birth).getFullYear() : null,
+        experience: g?.experience_since ? new Date().getFullYear() - new Date(g.experience_since).getFullYear() : 0
     };
 };
 
@@ -463,6 +495,33 @@ export const deleteService = async (serviceId: string) => {
         .eq('id', serviceId);
 
     if (error) throw error;
+};
+
+export const getServiceById = async (serviceId: string) => {
+    const { data, error } = await supabase
+        .from('services')
+        .select('*, profiles(full_name, avatar_url, role, gender)')
+        .eq('id', serviceId)
+        .single();
+
+    if (error) throw error;
+
+    return {
+        id: data.id,
+        title: data.title,
+        category: data.category,
+        description: data.description,
+        price: data.price_override,
+        location: data.location || 'Lieu non spécifié',
+        guideId: data.guide_id,
+        guideName: data.profiles?.full_name || 'Guide Inconnu',
+        guideAvatar: data.profiles?.avatar_url,
+        guideGender: data.profiles?.gender,
+        startDate: data.availability_start,
+        endDate: data.availability_end,
+        meetingPoints: data.meeting_points || [],
+        image: data.image_url ? { uri: data.image_url } : null
+    };
 };
 
 export const uploadImage = async (uri: string) => {

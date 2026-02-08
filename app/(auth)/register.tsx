@@ -1,8 +1,9 @@
+import { CHARTER_TEXT } from '@/constants/charter';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'expo-router';
-import { Briefcase, Check, Lock, Mail, User, UserCircle2 } from 'lucide-react-native';
+import { Briefcase, Check, ChevronDown, Lock, Mail, User, UserCircle2 } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StatusBar, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Modal, Platform, ScrollView, StatusBar, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function RegisterScreen() {
@@ -13,16 +14,34 @@ export default function RegisterScreen() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [role, setRole] = useState<'pilgrim' | 'guide'>('pilgrim');
+
+    // New Fields
+    const [gender, setGender] = useState<'male' | 'female'>('male');
+    const [openGender, setOpenGender] = useState(false);
+
+    const [day, setDay] = useState('');
+    const [month, setMonth] = useState('');
+    const [year, setYear] = useState('');
+    const [language, setLanguage] = useState<'fr' | 'ar'>('fr');
+    const [openLanguage, setOpenLanguage] = useState(false);
+
     const [loading, setLoading] = useState(false);
 
-    const handleRegister = async () => {
-        if (!email || !password || !fullName) {
-            Alert.alert("Erreur", "Veuillez remplir tous les champs");
-            return;
-        }
+    // Charter State
+    const [charterAccepted, setCharterAccepted] = useState(false);
+    const [showCharterModal, setShowCharterModal] = useState(false);
+
+    const submitRegistration = async () => {
         setLoading(true);
         try {
-            await signUp(email, password, fullName, role);
+            // Re-validate dates just in case, or assume handleRegister did it? 
+            // Better to just use the state.
+            const d = parseInt(day);
+            const m = parseInt(month);
+            const y = parseInt(year);
+            const dob = `${y}-${m.toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`;
+
+            await signUp(email, password, fullName, role, gender, dob, language);
             Alert.alert("Compte créé", "Veuillez vérifier votre email pour confirmer votre compte (si activé) ou connectez-vous.", [
                 {
                     text: "OK",
@@ -40,6 +59,32 @@ export default function RegisterScreen() {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleRegister = async () => {
+        if (!email || !password || !fullName || !day || !month || !year) {
+            Alert.alert("Erreur", "Veuillez remplir tous les champs");
+            return;
+        }
+
+        // Validate Date
+        const d = parseInt(day);
+        const m = parseInt(month);
+        const y = parseInt(year);
+
+        if (isNaN(d) || isNaN(m) || isNaN(y) || d < 1 || d > 31 || m < 1 || m > 12 || y < 1900 || y > new Date().getFullYear()) {
+            Alert.alert("Erreur", "Date de naissance invalide");
+            return;
+        }
+
+        // Validate Charter for Pilgrim
+        if (role === 'pilgrim' && !charterAccepted) {
+            setShowCharterModal(true);
+            return;
+        }
+
+        // Proceed
+        submitRegistration();
     };
 
     return (
@@ -122,10 +167,148 @@ export default function RegisterScreen() {
                                 </View>
                             </View>
 
+                            {/* Gender */}
+                            <View className="z-50">
+                                <Text className="text-gray-500 mb-2 font-medium">Genre</Text>
+                                <TouchableOpacity
+                                    onPress={() => setOpenGender(!openGender)}
+                                    className="flex-row justify-between items-center bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3"
+                                >
+                                    <Text className="text-gray-900 dark:text-white capitalize">
+                                        {gender === 'male' ? 'Homme' : 'Femme'}
+                                    </Text>
+                                    <ChevronDown size={20} color="#9CA3AF" />
+                                </TouchableOpacity>
+
+                                {openGender && (
+                                    <View className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl shadow-lg z-50 overflow-hidden">
+                                        <TouchableOpacity
+                                            onPress={() => { setGender('male'); setOpenGender(false); }}
+                                            className="px-4 py-3 border-b border-gray-100 dark:border-white/5 active:bg-gray-50 dark:active:bg-zinc-700"
+                                        >
+                                            <Text className="text-gray-900 dark:text-white">Homme</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            onPress={() => { setGender('female'); setOpenGender(false); }}
+                                            className="px-4 py-3 active:bg-gray-50 dark:active:bg-zinc-700"
+                                        >
+                                            <Text className="text-gray-900 dark:text-white">Femme</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                )}
+                            </View>
+
+                            {/* Date of Birth */}
+                            <View>
+                                <Text className="text-gray-500 mb-2 font-medium">Date de naissance</Text>
+                                <View className="flex-row gap-2">
+                                    <View className="flex-1 flex-row items-center bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3">
+                                        <TextInput
+                                            className="flex-1 text-center text-gray-900 dark:text-white"
+                                            placeholder="JJ"
+                                            placeholderTextColor="#9CA3AF"
+                                            value={day}
+                                            onChangeText={setDay}
+                                            keyboardType="numeric"
+                                            maxLength={2}
+                                        />
+                                    </View>
+                                    <View className="flex-1 flex-row items-center bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3">
+                                        <TextInput
+                                            className="flex-1 text-center text-gray-900 dark:text-white"
+                                            placeholder="MM"
+                                            placeholderTextColor="#9CA3AF"
+                                            value={month}
+                                            onChangeText={setMonth}
+                                            keyboardType="numeric"
+                                            maxLength={2}
+                                        />
+                                    </View>
+                                    <View className="flex-[1.5] flex-row items-center bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3">
+                                        <TextInput
+                                            className="flex-1 text-center text-gray-900 dark:text-white"
+                                            placeholder="AAAA"
+                                            placeholderTextColor="#9CA3AF"
+                                            value={year}
+                                            onChangeText={setYear}
+                                            keyboardType="numeric"
+                                            maxLength={4}
+                                        />
+                                    </View>
+                                </View>
+                            </View>
+
+                            {/* Language */}
+                            <View className="z-40">
+                                <Text className="text-gray-500 mb-2 font-medium">Langue préférée</Text>
+                                <TouchableOpacity
+                                    onPress={() => setOpenLanguage(!openLanguage)}
+                                    className="flex-row justify-between items-center bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3"
+                                >
+                                    <View className="flex-row items-center gap-2">
+                                        <Text className="text-lg">{language === 'fr' ? '🇫🇷' : '🇸🇦'}</Text>
+                                        <Text className="text-gray-900 dark:text-white capitalize">
+                                            {language === 'fr' ? 'Français' : 'Arabe'}
+                                        </Text>
+                                    </View>
+                                    <ChevronDown size={20} color="#9CA3AF" />
+                                </TouchableOpacity>
+
+                                {openLanguage && (
+                                    <View className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl shadow-lg z-50 overflow-hidden">
+                                        <TouchableOpacity
+                                            onPress={() => { setLanguage('fr'); setOpenLanguage(false); }}
+                                            className="px-4 py-3 border-b border-gray-100 dark:border-white/5 active:bg-gray-50 dark:active:bg-zinc-700 flex-row items-center gap-2"
+                                        >
+                                            <Text className="text-lg">🇫🇷</Text>
+                                            <Text className="text-gray-900 dark:text-white">Français</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            onPress={() => { setLanguage('ar'); setOpenLanguage(false); }}
+                                            className="px-4 py-3 active:bg-gray-50 dark:active:bg-zinc-700 flex-row items-center gap-2"
+                                        >
+                                            <Text className="text-lg">🇸🇦</Text>
+                                            <Text className="text-gray-900 dark:text-white">Arabe</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                )}
+                            </View>
+
+                            {/* Removed Checkbox UI for Charter */}
+
+                            {/* Charter Modal */}
+                            <Modal visible={showCharterModal} animationType="slide" presentationStyle="pageSheet">
+                                <View className="flex-1 bg-white dark:bg-zinc-900">
+                                    <SafeAreaView className="flex-1">
+                                        <View className="flex-row justify-between items-center p-4 border-b border-gray-100 dark:border-white/5">
+                                            <Text className="text-xl font-bold text-gray-900 dark:text-white">Charte du Pèlerin</Text>
+                                            <TouchableOpacity onPress={() => setShowCharterModal(false)} className="p-2">
+                                                <Text className="text-gray-500 font-bold">Annuler</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                        <ScrollView className="flex-1 p-6" contentContainerStyle={{ paddingBottom: 40 }}>
+                                            <Text className="text-gray-700 dark:text-gray-300 leading-6 text-base">{CHARTER_TEXT}</Text>
+                                        </ScrollView>
+                                        <View className="p-4 border-t border-gray-100 dark:border-white/5 bg-gray-50 dark:bg-zinc-800">
+                                            <TouchableOpacity
+                                                onPress={() => {
+                                                    setCharterAccepted(true);
+                                                    setShowCharterModal(false);
+                                                    submitRegistration(); // Trigger registration immediately after acceptance
+                                                }}
+                                                className="bg-[#b39164] py-4 rounded-xl items-center shadow-sm"
+                                            >
+                                                <Text className="text-white font-bold text-lg">Accepter et S'inscrire</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    </SafeAreaView>
+                                </View>
+                            </Modal>
+
                             <TouchableOpacity
                                 onPress={handleRegister}
                                 disabled={loading}
-                                className="bg-[#b39164] py-4 rounded-xl items-center shadow-lg shadow-[#b39164]/20 mt-4 active:bg-[#a08055]"
+                                className={`bg-[#b39164] py-4 rounded-xl items-center shadow-lg shadow-[#b39164]/20 mt-4 active:bg-[#a08055] ${loading ? 'opacity-70' : ''}`}
                             >
                                 <Text className="text-white font-bold text-lg">{loading ? 'Inscription...' : 'S\'inscrire'}</Text>
                             </TouchableOpacity>

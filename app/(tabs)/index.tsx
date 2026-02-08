@@ -20,8 +20,13 @@ export default function HomeScreen() {
   const [guides, setGuides] = React.useState<any[]>([]);
 
   useEffect(() => {
-    getGuides().then(setGuides).catch(console.error);
-  }, []);
+    if (profile?.role === 'pilgrim') {
+      const gender = profile.gender as 'male' | 'female' | undefined;
+      getGuides(gender).then(setGuides).catch(console.error);
+    } else {
+      getGuides().then(setGuides).catch(console.error);
+    }
+  }, [profile]);
 
   // Get data from context
   const guideReservations = getReservationsByRole('guide', profile?.id || '1');
