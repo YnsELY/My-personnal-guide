@@ -1,12 +1,23 @@
 import CalendarPicker from '@/components/CalendarPicker';
 import { CATEGORIES, SERVICE_OPTIONS } from '@/constants/data';
+import { getFixedServiceDescription } from '@/constants/serviceDescriptions';
 import { createService, updateService, uploadImage } from '@/lib/api';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Calendar, Camera, ChevronDown, DollarSign, MapPin, Minus, Plus, Trash2, Users } from 'lucide-react-native';
+import { ArrowLeft, Calendar, Camera, ChevronDown, DollarSign, MapPin, Minus, Plus, Users } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { Alert, Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StatusBar, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+const LOCATION_OPTIONS = ['La Mecque', 'Médine'] as const;
+
+const normalizeGuideLocation = (value?: string | null) => {
+    const location = (value || '').trim().toLowerCase();
+    if (!location) return '';
+    if (location.includes('mecque')) return 'La Mecque';
+    if (location.includes('medine') || location.includes('médine')) return 'Médine';
+    return '';
+};
 
 export default function CreateServiceScreen() {
     const router = useRouter();
@@ -17,9 +28,8 @@ export default function CreateServiceScreen() {
 
     const [title, setTitle] = useState(serviceToEdit?.title || '');
     const [category, setCategory] = useState(serviceToEdit?.category || CATEGORIES[1].name);
-    const [description, setDescription] = useState(serviceToEdit?.description || '');
     const [price, setPrice] = useState(serviceToEdit?.price?.toString() || '');
-    const [location, setLocation] = useState(serviceToEdit?.location || '');
+    const [location, setLocation] = useState(normalizeGuideLocation(serviceToEdit?.location));
     const [maxParticipants, setMaxParticipants] = useState(serviceToEdit?.maxParticipants?.toString() || '');
     const [image, setImage] = useState<string | null>(serviceToEdit?.image?.uri || null);
 
@@ -35,23 +45,6 @@ export default function CreateServiceScreen() {
     const [isCategoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
     const [isOptionDropdownOpen, setOptionDropdownOpen] = useState(false);
 
-    // Meeting Points State
-    const [meetingPoints, setMeetingPoints] = useState<{ name: string, supplement: string }[]>(
-        serviceToEdit?.meetingPoints?.map((p: any) => ({ name: p.name, supplement: p.supplement?.toString() || '' })) || [{ name: '', supplement: '' }]
-    );
-
-    const addPoint = () => setMeetingPoints([...meetingPoints, { name: '', supplement: '' }]);
-    const removePoint = (index: number) => {
-        const newPoints = [...meetingPoints];
-        newPoints.splice(index, 1);
-        setMeetingPoints(newPoints);
-    };
-    const updatePoint = (index: number, field: 'name' | 'supplement', value: string) => {
-        const newPoints = [...meetingPoints];
-        newPoints[index] = { ...newPoints[index], [field]: value };
-        setMeetingPoints(newPoints);
-    };
-
     const pickImage = async () => {
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -66,7 +59,7 @@ export default function CreateServiceScreen() {
     };
 
     const handleCreateOrUpdate = async () => {
-        if (!title || !description || !price || !location || !startDate) {
+        if (!title || !price || !location || !startDate) {
             Alert.alert("Erreur", "Veuillez remplir tous les champs (y compris la date)");
             return;
         }
@@ -83,18 +76,19 @@ export default function CreateServiceScreen() {
             const startIso = new Date(startDate).toISOString();
             const endIso = endDate ? new Date(endDate).toISOString() : startIso; // Single date = same start/end
 
+            const fixedDescription = getFixedServiceDescription({
+                title,
+                category,
+                location,
+            }) || '';
+
             const serviceData = {
                 title,
                 category,
-                description,
+                description: fixedDescription,
                 price: parseInt(price),
                 location,
-                meeting_points: meetingPoints
-                    .filter(p => p.name.trim() !== '')
-                    .map(p => ({
-                        name: p.name,
-                        supplement: p.supplement ? parseInt(p.supplement) : 0
-                    })),
+                meeting_points: [],
                 availability_start: startIso,
                 availability_end: endIso,
                 image_url: imageUrl,
@@ -280,55 +274,39 @@ export default function CreateServiceScreen() {
                             {/* Location */}
                             <View>
                                 <Text className="text-gray-500 mb-2 font-medium">Lieu</Text>
-                                <View className="flex-row items-center bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3">
-                                    <MapPin size={20} color="#9CA3AF" />
-                                    <TextInput
-                                        className="flex-1 ml-3 text-gray-900 dark:text-white"
-                                        placeholder="Ex: La Mecque, Médine..."
-                                        placeholderTextColor="#9CA3AF"
-                                        value={location}
-                                        onChangeText={setLocation}
-                                    />
+                                <View className="flex-row gap-3">
+                                    {LOCATION_OPTIONS.map((option) => {
+                                        const isSelected = location === option;
+                                        return (
+                                            <TouchableOpacity
+                                                key={option}
+                                                onPress={() => setLocation(option)}
+                                                className={`flex-1 flex-row items-center justify-center rounded-xl border px-4 py-3 ${isSelected
+                                                    ? 'bg-primary/20 border-primary'
+                                                    : 'bg-gray-50 dark:bg-zinc-800 border-gray-200 dark:border-white/10'
+                                                    }`}
+                                            >
+                                                <MapPin size={16} color={isSelected ? '#b39164' : '#9CA3AF'} />
+                                                <Text className={`ml-2 font-medium ${isSelected ? 'text-primary' : 'text-gray-700 dark:text-gray-300'}`}>
+                                                    {option}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        );
+                                    })}
                                 </View>
                             </View>
 
-                            {/* Meeting Points */}
-                            <View>
-                                <Text className="text-gray-500 mb-2 font-medium">Points de rendez-vous & Suppléments</Text>
-                                <View className="gap-3">
-                                    {meetingPoints.map((point, index) => (
-                                        <View key={index} className="flex-row gap-2 items-start">
-                                            <View className="flex-1 gap-2">
-                                                <TextInput
-                                                    placeholder="Lieu (ex: Hôtel, Gare...)"
-                                                    placeholderTextColor="#9CA3AF"
-                                                    className="bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white"
-                                                    value={point.name}
-                                                    onChangeText={(t) => updatePoint(index, 'name', t)}
-                                                />
-                                            </View>
-                                            <View className="w-24">
-                                                <TextInput
-                                                    placeholder="+SAR"
-                                                    placeholderTextColor="#9CA3AF"
-                                                    keyboardType="numeric"
-                                                    className="bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white"
-                                                    value={point.supplement}
-                                                    onChangeText={(t) => updatePoint(index, 'supplement', t)}
-                                                />
-                                            </View>
-                                            {meetingPoints.length > 1 && (
-                                                <TouchableOpacity onPress={() => removePoint(index)} className="bg-red-500/10 p-3 rounded-xl justify-center items-center h-12 w-12 border border-red-500/20">
-                                                    <Trash2 size={20} color="#EF4444" />
-                                                </TouchableOpacity>
-                                            )}
-                                        </View>
-                                    ))}
-                                    <TouchableOpacity onPress={addPoint} className="flex-row items-center justify-center bg-gray-50 dark:bg-zinc-800 border border-dashed border-gray-300 dark:border-white/20 p-3 rounded-xl">
-                                        <Plus size={20} color="#9CA3AF" className="mr-2" />
-                                        <Text className="text-gray-500 font-medium">Ajouter un point de rendez-vous</Text>
-                                    </TouchableOpacity>
-                                </View>
+                            {/* Transport Rules */}
+                            <View className="bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl p-4">
+                                <Text className="text-gray-900 dark:text-white font-semibold mb-2">Transport géré automatiquement</Text>
+                                <Text className="text-gray-500 dark:text-gray-300 text-xs leading-5">
+                                    Le pèlerin choisira automatiquement entre:
+                                </Text>
+                                <Text className="text-gray-500 dark:text-gray-300 text-xs mt-1">- Rendez-vous au haram</Text>
+                                <Text className="text-gray-500 dark:text-gray-300 text-xs mt-1">- Rendez-vous à l&apos;hôtel</Text>
+                                <Text className="text-gray-500 dark:text-gray-300 text-xs mt-2 leading-5">
+                                    Si l&apos;hôtel est déclaré à plus de 2 km en voiture du haram, un supplément fixe de 10 € sera ajouté.
+                                </Text>
                             </View>
 
                             {/* Date Range */}
@@ -363,22 +341,6 @@ export default function CreateServiceScreen() {
                                     />
                                 </View>
                             </Modal>
-
-                            {/* Description */}
-                            <View>
-                                <Text className="text-gray-500 mb-2 font-medium">Description</Text>
-                                <View className="bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl p-4 h-32">
-                                    <TextInput
-                                        className="flex-1 text-gray-900 dark:text-white text-base" // Removed ml-3, added text-base for alignment
-                                        placeholder="Décrivez votre service en détail..."
-                                        placeholderTextColor="#9CA3AF"
-                                        value={description}
-                                        onChangeText={setDescription}
-                                        multiline
-                                        textAlignVertical="top"
-                                    />
-                                </View>
-                            </View>
 
                             <TouchableOpacity
                                 onPress={handleCreateOrUpdate}

@@ -4,6 +4,7 @@ import {
     Camera,
     ChevronRight,
     CircleHelp, LogOut,
+    LayoutDashboard,
     Settings,
     Shield,
     User
@@ -13,12 +14,67 @@ import { Alert, Image, ScrollView, StatusBar, Switch, Text, TouchableOpacity, Vi
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/AuthContext';
-import { useRouter } from 'expo-router';
+import { getGuideWalletSummary, getPilgrimWalletSummary } from '@/lib/api';
+import { useFocusEffect, useRouter } from 'expo-router';
+
+const formatCurrency = (value: number) =>
+    new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(value || 0);
 
 export default function ProfileScreen() {
     const { user, profile, signOut, isLoading } = useAuth();
     const router = useRouter();
     const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
+    const [walletSummary, setWalletSummary] = React.useState<Awaited<ReturnType<typeof getGuideWalletSummary>> | null>(null);
+    const [walletLoading, setWalletLoading] = React.useState(false);
+    const [walletError, setWalletError] = React.useState<string | null>(null);
+    const [pilgrimWalletSummary, setPilgrimWalletSummary] = React.useState<Awaited<ReturnType<typeof getPilgrimWalletSummary>> | null>(null);
+    const [pilgrimWalletLoading, setPilgrimWalletLoading] = React.useState(false);
+    const [pilgrimWalletError, setPilgrimWalletError] = React.useState<string | null>(null);
+
+    const loadGuideWalletSummary = React.useCallback(async () => {
+        if (profile?.role !== 'guide') {
+            setWalletSummary(null);
+            setWalletError(null);
+            return;
+        }
+
+        setWalletLoading(true);
+        setWalletError(null);
+        try {
+            const summary = await getGuideWalletSummary();
+            setWalletSummary(summary);
+        } catch (error: any) {
+            setWalletError(error?.message || "Impossible de charger la cagnotte.");
+        } finally {
+            setWalletLoading(false);
+        }
+    }, [profile?.role]);
+
+    const loadPilgrimWalletSummary = React.useCallback(async () => {
+        if (profile?.role !== 'pilgrim') {
+            setPilgrimWalletSummary(null);
+            setPilgrimWalletError(null);
+            return;
+        }
+
+        setPilgrimWalletLoading(true);
+        setPilgrimWalletError(null);
+        try {
+            const summary = await getPilgrimWalletSummary();
+            setPilgrimWalletSummary(summary);
+        } catch (error: any) {
+            setPilgrimWalletError(error?.message || "Impossible de charger votre cagnotte.");
+        } finally {
+            setPilgrimWalletLoading(false);
+        }
+    }, [profile?.role]);
+
+    useFocusEffect(
+        React.useCallback(() => {
+            loadGuideWalletSummary();
+            loadPilgrimWalletSummary();
+        }, [loadGuideWalletSummary, loadPilgrimWalletSummary])
+    );
 
     if (isLoading) {
         return <View className="flex-1 bg-gray-50 dark:bg-zinc-900 justify-center items-center"><Text className="text-gray-500">Chargement...</Text></View>;
@@ -79,11 +135,81 @@ export default function ProfileScreen() {
                                     <Text className="text-white text-xs font-bold">+ Créer un service</Text>
                                 </TouchableOpacity>
                             )}
+                            {profile?.role === 'admin' && (
+                                <TouchableOpacity
+                                    onPress={() => router.push('/(tabs)/admin-dashboard' as any)}
+                                    className="bg-blue-500 px-5 py-2 rounded-full border border-blue-500"
+                                >
+                                    <Text className="text-white text-xs font-bold">Espace Admin</Text>
+                                </TouchableOpacity>
+                            )}
                         </View>
                     </View>
 
                     {/* Menu Sections */}
                     <View className="px-5 pb-10">
+                        {profile?.role === 'guide' && (
+                            <View className="mb-4 bg-white dark:bg-zinc-800 rounded-2xl border border-gray-100 dark:border-white/10 p-4">
+                                <Text className="text-gray-500 text-xs uppercase tracking-wider">Cagnotte guide</Text>
+                                <Text className="text-3xl font-bold text-gray-900 dark:text-white mt-1">
+                                    {formatCurrency(walletSummary?.availableBalance || 0)}
+                                </Text>
+                                <Text className="text-gray-500 text-xs mt-2">
+                                    La cagnotte se crédite à la fin validée de la visite.
+                                </Text>
+
+                                {walletLoading && !walletSummary ? (
+                                    <View className="mt-4 gap-2">
+                                        <View className="h-3 rounded-full bg-gray-200 dark:bg-zinc-700" />
+                                        <View className="h-3 rounded-full bg-gray-200 dark:bg-zinc-700 w-4/5" />
+                                        <View className="h-3 rounded-full bg-gray-200 dark:bg-zinc-700 w-3/5" />
+                                    </View>
+                                ) : walletError ? (
+                                    <View className="mt-3 rounded-xl border border-red-500/20 bg-red-500/10 p-3">
+                                        <Text className="text-red-400 text-xs">{walletError}</Text>
+                                        <TouchableOpacity onPress={loadGuideWalletSummary} className="mt-2 self-start">
+                                            <Text className="text-red-300 text-xs font-semibold">Réessayer</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                ) : (
+                                    <View className="mt-4 gap-2">
+                                        <WalletRow label="Total généré" value={formatCurrency(walletSummary?.totalGenerated || 0)} />
+                                        <WalletRow label="Déjà payé" value={formatCurrency(walletSummary?.paidOut || 0)} />
+                                        <WalletRow label="Visites terminées" value={`${walletSummary?.completedVisits || 0}`} />
+                                    </View>
+                                )}
+                            </View>
+                        )}
+                        {profile?.role === 'pilgrim' && (
+                            <View className="mb-4 bg-white dark:bg-zinc-800 rounded-2xl border border-gray-100 dark:border-white/10 p-4">
+                                <Text className="text-gray-500 text-xs uppercase tracking-wider">Cagnotte pèlerin</Text>
+                                <Text className="text-3xl font-bold text-gray-900 dark:text-white mt-1">
+                                    {formatCurrency(pilgrimWalletSummary?.availableBalance || 0)}
+                                </Text>
+                                <Text className="text-gray-500 text-xs mt-2">
+                                    Solde d&apos;avoir disponible pour vos prochaines réservations.
+                                </Text>
+
+                                {pilgrimWalletLoading && !pilgrimWalletSummary ? (
+                                    <View className="mt-4 gap-2">
+                                        <View className="h-3 rounded-full bg-gray-200 dark:bg-zinc-700" />
+                                        <View className="h-3 rounded-full bg-gray-200 dark:bg-zinc-700 w-4/5" />
+                                        <View className="h-3 rounded-full bg-gray-200 dark:bg-zinc-700 w-3/5" />
+                                    </View>
+                                ) : pilgrimWalletError ? (
+                                    <View className="mt-3 rounded-xl border border-red-500/20 bg-red-500/10 p-3">
+                                        <Text className="text-red-400 text-xs">{pilgrimWalletError}</Text>
+                                        <TouchableOpacity onPress={loadPilgrimWalletSummary} className="mt-2 self-start">
+                                            <Text className="text-red-300 text-xs font-semibold">Réessayer</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                ) : (
+                                    <View className="mt-4 gap-2">
+                                        <WalletRow label="Crédits d'annulation" value={`${pilgrimWalletSummary?.cancellationCreditsCount || 0}`} />
+                                    </View>
+                                )}
+                            </View>
+                        )}
 
                         {/* Section: Account */}
                         <Text className="text-gray-500 dark:text-gray-400 font-bold mb-3 mt-4 ml-1">COMPTE</Text>
@@ -126,6 +252,16 @@ export default function ProfileScreen() {
                             />
                             <Separator />
                             <MenuItem icon={Shield} label="Sécurité et confidentialité" />
+                            {profile?.role === 'admin' && (
+                                <>
+                                    <Separator />
+                                    <MenuItem
+                                        icon={LayoutDashboard}
+                                        label="Pilotage Admin"
+                                        onPress={() => router.push('/(tabs)/admin-dashboard' as any)}
+                                    />
+                                </>
+                            )}
                         </View>
 
                         {/* Section: App */}
@@ -170,4 +306,13 @@ function MenuItem({ icon: Icon, label, rightElement, onPress }: any) {
 
 function Separator() {
     return <View className="h-[1px] bg-gray-100 dark:bg-zinc-700/50 mx-4" />;
+}
+
+function WalletRow({ label, value }: { label: string; value: string }) {
+    return (
+        <View className="flex-row items-center justify-between">
+            <Text className="text-gray-500 text-xs">{label}</Text>
+            <Text className="text-gray-900 dark:text-white text-sm font-semibold">{value}</Text>
+        </View>
+    );
 }

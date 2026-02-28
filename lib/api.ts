@@ -1,4 +1,5 @@
 import { GUIDES } from '@/constants/data';
+import { getFixedServiceDescription } from '@/constants/serviceDescriptions';
 import { supabase } from '@/lib/supabase';
 
 // --- Auth & Seeding ---
@@ -70,6 +71,158 @@ export const ensureUser = async () => {
     return user?.id;
 };
 
+export const DEFAULT_PLATFORM_COMMISSION_RATE = 0.15;
+
+const toNumber = (value: any) => {
+    const parsed = Number(value ?? 0);
+    return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const roundMoney = (value: number) => Math.round(value * 100) / 100;
+const toCurrencyLabel = (currency?: string | null) => {
+    if (!currency || currency === 'EUR') return '€';
+    return currency;
+};
+
+const parseDateValue = (value: any): Date | null => {
+    if (value === null || value === undefined) return null;
+
+    if (value instanceof Date) {
+        return Number.isNaN(value.getTime()) ? null : value;
+    }
+
+    if (typeof value === 'number') {
+        const date = new Date(value > 1e12 ? value : value * 1000);
+        return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (!trimmed) return null;
+
+        if (/^\d+$/.test(trimmed)) {
+            const numeric = Number(trimmed);
+            if (!Number.isFinite(numeric)) return null;
+            const date = new Date(trimmed.length <= 10 ? numeric * 1000 : numeric);
+            return Number.isNaN(date.getTime()) ? null : date;
+        }
+
+        const date = new Date(trimmed);
+        return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    return null;
+};
+
+const toSqlDate = (value: any): string => {
+    const parsed = parseDateValue(value) || new Date();
+    const year = parsed.getFullYear();
+    const month = String(parsed.getMonth() + 1).padStart(2, '0');
+    const day = String(parsed.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+export const computeReservationFinance = (totalPrice: number, commissionRate = DEFAULT_PLATFORM_COMMISSION_RATE) => {
+    const normalizedPrice = toNumber(totalPrice);
+    const normalizedRate = Math.max(0, Math.min(1, toNumber(commissionRate)));
+    const platformFee = roundMoney(normalizedPrice * normalizedRate);
+    const guideNet = roundMoney(normalizedPrice - platformFee);
+    return { platformFee, guideNet, commissionRate: normalizedRate };
+};
+
+type ReservationPayoutStatus = 'not_due' | 'to_pay' | 'processing' | 'paid' | 'failed';
+type ReservationCancellationPolicy = 'full_credit_over_48h' | 'no_credit_under_48h';
+const DUE_PAYOUT_STATUSES: ReservationPayoutStatus[] = ['to_pay', 'processing', 'failed'];
+
+export const getGuideWalletSummary = async (): Promise<{
+    currency: 'EUR';
+    availableBalance: number;
+    totalGenerated: number;
+    paidOut: number;
+    completedVisits: number;
+    pendingPayoutVisits: number;
+}> => {
+    const userId = await ensureUser();
+    if (!userId) throw new Error("Vous devez être connecté.");
+
+    const { data, error } = await supabase
+        .from('reservations')
+        .select('total_price,commission_rate,platform_fee_amount,guide_net_amount,payout_status')
+        .eq('guide_id', userId)
+        .eq('status', 'completed');
+
+    if (error) throw error;
+
+    let totalGenerated = 0;
+    let availableBalance = 0;
+    let paidOut = 0;
+    let pendingPayoutVisits = 0;
+
+    for (const reservation of data || []) {
+        const totalPrice = toNumber(reservation.total_price);
+        const commissionRate = toNumber(reservation.commission_rate) || DEFAULT_PLATFORM_COMMISSION_RATE;
+        const fallback = computeReservationFinance(totalPrice, commissionRate);
+        const guideNet = toNumber(reservation.guide_net_amount) || fallback.guideNet;
+        const payoutStatus = (reservation.payout_status || 'to_pay') as ReservationPayoutStatus;
+
+        totalGenerated += guideNet;
+
+        if (DUE_PAYOUT_STATUSES.includes(payoutStatus)) {
+            availableBalance += guideNet;
+            pendingPayoutVisits += 1;
+            continue;
+        }
+
+        if (payoutStatus === 'paid') {
+            paidOut += guideNet;
+        }
+    }
+
+    return {
+        currency: 'EUR',
+        availableBalance: roundMoney(availableBalance),
+        totalGenerated: roundMoney(totalGenerated),
+        paidOut: roundMoney(paidOut),
+        completedVisits: (data || []).length,
+        pendingPayoutVisits,
+    };
+};
+
+export const getPilgrimWalletSummary = async (): Promise<{
+    currency: 'EUR';
+    availableBalance: number;
+    totalCredited: number;
+    totalDebited: number;
+    cancellationCreditsCount: number;
+}> => {
+    const userId = await ensureUser();
+    if (!userId) throw new Error("Vous devez être connecté.");
+
+    const [{ data: walletRow, error: walletError }, cancellationCount] = await Promise.all([
+        supabase
+            .from('pilgrim_wallets')
+            .select('currency,available_balance,total_credited,total_debited')
+            .eq('user_id', userId)
+            .maybeSingle(),
+        supabase
+            .from('pilgrim_wallet_transactions')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', userId)
+            .eq('type', 'cancellation_credit'),
+    ]);
+
+    if (walletError) throw walletError;
+    if (cancellationCount.error) throw cancellationCount.error;
+
+    return {
+        currency: 'EUR',
+        availableBalance: roundMoney(toNumber(walletRow?.available_balance)),
+        totalCredited: roundMoney(toNumber(walletRow?.total_credited)),
+        totalDebited: roundMoney(toNumber(walletRow?.total_debited)),
+        cancellationCreditsCount: cancellationCount.count || 0,
+    };
+};
+
 export const seedGuides = async () => {
     try {
         const { count } = await supabase.from('guides').select('*', { count: 'exact', head: true });
@@ -105,7 +258,7 @@ export const seedGuides = async () => {
                     bio: guide.bio,
                     location: guide.location,
                     price_per_day: price,
-                    currency: 'SAR',
+                    currency: 'EUR',
                     price_unit: guide.priceUnit,
                     languages: guide.languages,
                     verified: guide.verified,
@@ -127,7 +280,7 @@ export const createGuideProfile = async (guideData: {
     bio: string,
     location: string,
     languages: string[],
-    specialty: string,
+    phone_number: string,
     experience_since: string
 }) => {
     const userId = await ensureUser();
@@ -140,9 +293,10 @@ export const createGuideProfile = async (guideData: {
             bio: guideData.bio,
             location: guideData.location,
             languages: guideData.languages,
-            specialty: guideData.specialty,
+            phone_number: guideData.phone_number,
             experience_since: guideData.experience_since,
             verified: false,
+            onboarding_status: 'pending_review',
             rating: 0,
             reviews_count: 0,
             price_per_day: 0, // Default until set elsewhere
@@ -169,26 +323,176 @@ export const getCurrentGuideProfile = async () => {
     return data;
 };
 
+type GuideApprovalStatus = 'pending_review' | 'approved' | 'rejected';
+
+export const getGuideApprovalInfo = async (guideId?: string): Promise<{
+    status: GuideApprovalStatus;
+    isApproved: boolean;
+    rejectionReason: string | null;
+}> => {
+    const userId = guideId || await ensureUser();
+    if (!userId) {
+        return {
+            status: 'pending_review',
+            isApproved: false,
+            rejectionReason: null,
+        };
+    }
+
+    const { data, error } = await supabase
+        .from('guides')
+        .select('onboarding_status, verified, rejection_reason')
+        .eq('id', userId)
+        .maybeSingle();
+
+    if (error) {
+        // If guide row does not exist yet, treat as pending approval.
+        if (error.code === 'PGRST116') {
+            return {
+                status: 'pending_review',
+                isApproved: false,
+                rejectionReason: null,
+            };
+        }
+        throw error;
+    }
+
+    const status = (data?.onboarding_status || (data?.verified ? 'approved' : 'pending_review')) as GuideApprovalStatus;
+    const isApproved = status === 'approved' || data?.verified === true;
+
+    return {
+        status,
+        isApproved,
+        rejectionReason: data?.rejection_reason || null,
+    };
+};
+
+type GuideInterviewStatus = 'pending_guide' | 'pending_admin' | 'accepted' | 'cancelled';
+
+export const getMyGuideInterviews = async () => {
+    const userId = await ensureUser();
+    if (!userId) return [];
+    const nowISO = new Date().toISOString();
+
+    const { data, error } = await supabase
+        .from('guide_interviews')
+        .select(`
+            id,
+            guide_id,
+            admin_id,
+            scheduled_at,
+            whatsapp_contact,
+            status,
+            proposed_by,
+            admin_note,
+            guide_note,
+            accepted_at,
+            created_at,
+            updated_at,
+            admin_profile:profiles!guide_interviews_admin_id_fkey (
+                id,
+                full_name,
+                email
+            )
+        `)
+        .eq('guide_id', userId)
+        .gte('scheduled_at', nowISO)
+        .order('scheduled_at', { ascending: true });
+
+    if (error) throw error;
+
+    return (data || []).map((row: any) => ({
+        id: row.id,
+        guideId: row.guide_id,
+        adminId: row.admin_id,
+        scheduledAt: row.scheduled_at,
+        whatsappContact: row.whatsapp_contact || '',
+        status: row.status as GuideInterviewStatus,
+        proposedBy: row.proposed_by as 'admin' | 'guide',
+        adminNote: row.admin_note || '',
+        guideNote: row.guide_note || '',
+        acceptedAt: row.accepted_at,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        adminName: Array.isArray(row.admin_profile)
+            ? row.admin_profile[0]?.full_name || 'Admin'
+            : row.admin_profile?.full_name || 'Admin',
+        adminEmail: Array.isArray(row.admin_profile)
+            ? row.admin_profile[0]?.email || ''
+            : row.admin_profile?.email || '',
+    }));
+};
+
+export const acceptGuideInterviewProposal = async (interviewId: string) => {
+    const userId = await ensureUser();
+    if (!userId) throw new Error("Vous devez être connecté.");
+
+    const now = new Date().toISOString();
+    const { data, error } = await supabase
+        .from('guide_interviews')
+        .update({
+            status: 'accepted',
+            accepted_at: now,
+            updated_at: now,
+        })
+        .eq('id', interviewId)
+        .eq('guide_id', userId)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data;
+};
+
+export const counterProposeGuideInterview = async (payload: {
+    interviewId: string;
+    scheduledAt: string;
+    guideNote?: string;
+}) => {
+    const userId = await ensureUser();
+    if (!userId) throw new Error("Vous devez être connecté.");
+
+    const now = new Date().toISOString();
+    const { data, error } = await supabase
+        .from('guide_interviews')
+        .update({
+            scheduled_at: payload.scheduledAt,
+            guide_note: payload.guideNote || null,
+            proposed_by: 'guide',
+            status: 'pending_admin',
+            accepted_at: null,
+            updated_at: now,
+        })
+        .eq('id', payload.interviewId)
+        .eq('guide_id', userId)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data;
+};
+
 
 // --- Data Access ---
 
 // Deprecated or used for other purposes?
-export const getGuides = async (filterGender?: 'male' | 'female') => {
+export const getGuides = async () => {
     let query = supabase
         .from('guides')
-        .select('*, profiles(full_name, avatar_url, gender)');
+        .select('*, profiles:profiles!guides_id_fkey(full_name, avatar_url, gender)')
+        .or('onboarding_status.eq.approved,verified.eq.true');
 
     const { data, error } = await query;
 
     if (error) throw error;
 
-    let guides = data.map((g: any) => ({
+    const guides = data.map((g: any) => ({
         id: g.id,
         name: g.profiles?.full_name || 'Unknown',
         role: g.specialty,
         rating: g.rating,
         reviews: g.reviews_count,
-        price: `${g.price_per_day} ${g.currency}`,
+        price: `${g.price_per_day} ${toCurrencyLabel(g.currency)}`,
         priceUnit: g.price_unit,
         languages: g.languages,
         image: g.profiles?.avatar_url ? { uri: g.profiles.avatar_url } : require('@/assets/images/profil.jpeg'),
@@ -198,28 +502,29 @@ export const getGuides = async (filterGender?: 'male' | 'female') => {
         gender: g.profiles?.gender
     }));
 
-    if (filterGender) {
-        guides = guides.filter((g: any) => g.gender === filterGender);
-    }
-
     return guides;
 };
 
-export const getServices = async (filterGender?: 'male' | 'female') => {
+export const getServices = async () => {
     let query = supabase
         .from('services')
         .select('*, profiles(full_name, avatar_url, role, gender)')
+        .or('service_status.eq.active,service_status.is.null')
         .order('created_at', { ascending: false });
 
     const { data, error } = await query;
 
     if (error) throw error;
 
-    let services = data.map((s: any) => ({
+    const services = data.map((s: any) => ({
         id: s.id,
         title: s.title,
         category: s.category,
-        description: s.description,
+        description: getFixedServiceDescription({
+            title: s.title,
+            category: s.category,
+            location: s.location,
+        }) || s.description || '',
         price: s.price_override,
         location: s.location || 'Lieu non spécifié', // Fallback
         guideId: s.guide_id,
@@ -231,10 +536,6 @@ export const getServices = async (filterGender?: 'male' | 'female') => {
         meetingPoints: s.meeting_points || [], // Add this
         image: s.image_url ? { uri: s.image_url } : null
     }));
-
-    if (filterGender) {
-        services = services.filter((s: any) => s.guideGender === filterGender);
-    }
 
     return services;
 };
@@ -253,6 +554,7 @@ export const getGuideServices = async (guideId: string) => {
         title: s.title,
         category: s.category,
         price: s.price_override,
+        status: s.service_status || 'active',
         meetingPoints: s.meeting_points || []
     }));
 };
@@ -261,28 +563,11 @@ export const getGuideById = async (id: string) => {
     // We query 'profiles' instead of 'guides' to ensure we get a result even if guide details are missing
     const { data, error } = await supabase
         .from('profiles')
-        .select('*, guides(*)')
+        .select('*, guides:guides!guides_id_fkey(*)')
         .eq('id', id)
         .single();
 
     if (error) throw error;
-
-    const guideDetails = data.guides?.[0] || data.guides || {}; // One-to-one usually returns object or array depending on Supabase client setup, usually object for single relation or array. References usually return array or object. Let's assume object if it's 1:1 or array.
-    // Actually, 'guides(*)' on a one-to-one reverse relation might return an array or object.
-    // Safest to handle both or index 0.
-    // However, since profiles->guides is 1:1 (id maps to id), Supabase might return an array or single object depending on definition.
-    // Let's assume it might be null.
-
-    // Correct way: The 'guides' table has 'id' as PK refs profiles.id.
-    // So distinct profiles row has 0 or 1 guide row.
-    // It usually returns an array or null. 
-
-    // Let's inspect what we access.
-    // data.full_name, data.avatar_url
-    // guideDetails = data.guides (if using select '*, guides(*)') 
-
-    // Note: If we query 'profiles' and join 'guides', we get data.guides as object or array.
-    // Let's try to be safe.
 
     // Safer: 
     const g = Array.isArray(data.guides) ? data.guides[0] : data.guides;
@@ -293,7 +578,7 @@ export const getGuideById = async (id: string) => {
         role: g?.specialty || 'Guide',
         rating: g?.rating || 0,
         reviews: g?.reviews_count || 0,
-        price: g?.price_per_day ? `${g.price_per_day} ${g.currency || 'SAR'}` : 'Sur devis',
+        price: g?.price_per_day ? `${g.price_per_day} ${toCurrencyLabel(g?.currency || 'EUR')}` : 'Sur devis',
         priceUnit: g?.price_unit || '',
         languages: g?.languages || [],
         image: data.avatar_url ? { uri: data.avatar_url } : require('@/assets/images/profil.jpeg'),
@@ -306,28 +591,131 @@ export const getGuideById = async (id: string) => {
     };
 };
 
-export const createReservation = async (reservationData: any) => {
+export const createReservation = async (reservationData: any, options?: { useWallet?: boolean }) => {
     const userId = await ensureUser();
     if (!userId) throw new Error("Vous devez être connecté pour réserver. (Test User création échouée)");
 
-    // Clean price string
-    const priceStr = reservationData.price || '0';
-    const price = parseInt(priceStr.toString().replace(/\D/g, ''));
+    const rawPrice = reservationData.price;
+    let normalizedPrice = 0;
+    if (typeof rawPrice === 'number') {
+        normalizedPrice = rawPrice;
+    } else if (typeof rawPrice === 'string') {
+        const sanitized = rawPrice.replace(/[^\d,.-]/g, '').replace(',', '.');
+        const parsed = Number(sanitized);
+        normalizedPrice = Number.isFinite(parsed) ? parsed : 0;
+    }
+    normalizedPrice = Math.max(0, normalizedPrice);
+
+    const transportPickupType = reservationData.transportPickupType || null;
+    const hotelAddress = reservationData.hotelAddress === null || reservationData.hotelAddress === undefined
+        ? null
+        : String(reservationData.hotelAddress).trim() || null;
+    const hotelOver2KmByCar = typeof reservationData.hotelOver2KmByCar === 'boolean'
+        ? reservationData.hotelOver2KmByCar
+        : reservationData.hotelOver2KmByCar === 'true'
+            ? true
+            : reservationData.hotelOver2KmByCar === 'false'
+                ? false
+                : null;
+    const hotelDistanceRaw = reservationData.hotelDistanceKm;
+    const hotelDistanceParsed = hotelDistanceRaw === null || hotelDistanceRaw === undefined || hotelDistanceRaw === ''
+        ? null
+        : Number(String(hotelDistanceRaw).replace(',', '.'));
+    const hotelDistanceKm = hotelDistanceParsed !== null && Number.isFinite(hotelDistanceParsed)
+        ? hotelDistanceParsed
+        : null;
+    const transportExtraFeeAmount = toNumber(reservationData.transportExtraFeeAmount);
+    const transportWarningAcknowledged = !!reservationData.transportWarningAcknowledged;
+
+    const { data: rpcData, error: rpcError } = await supabase.rpc('create_reservation_with_wallet', {
+        p_guide_id: reservationData.guideId,
+        p_service_name: reservationData.serviceName,
+        p_start_date: toSqlDate(reservationData.startDate),
+        p_end_date: toSqlDate(reservationData.endDate ?? reservationData.startDate),
+        p_total_price: normalizedPrice,
+        p_location: reservationData.location || null,
+        p_visit_time: reservationData.visitTime || null,
+        p_pilgrims_names: reservationData.pilgrims || [],
+        p_use_wallet: !!options?.useWallet,
+        p_transport_pickup_type: transportPickupType,
+        p_hotel_address: hotelAddress,
+        p_hotel_over_2km_by_car: hotelOver2KmByCar,
+        p_hotel_distance_km: hotelDistanceKm,
+        p_transport_extra_fee_amount: transportExtraFeeAmount,
+        p_transport_warning_acknowledged: transportWarningAcknowledged,
+    });
+
+    if (rpcError) throw rpcError;
+
+    const rpcPayload = Array.isArray(rpcData) ? rpcData[0] : rpcData;
+    const reservationId = rpcPayload?.reservationId || rpcPayload?.reservation_id;
+    if (!reservationId) throw new Error("Impossible de créer la réservation.");
 
     const { data, error } = await supabase
         .from('reservations')
-        .insert({
-            user_id: userId,
-            guide_id: reservationData.guideId,
-            service_name: reservationData.serviceName,
-            start_date: reservationData.startDate ? new Date(parseInt(reservationData.startDate)).toISOString() : new Date().toISOString(),
-            end_date: reservationData.endDate ? new Date(parseInt(reservationData.endDate)).toISOString() : new Date().toISOString(),
-            total_price: price,
-            location: reservationData.location,
-            visit_time: reservationData.visitTime,
-            pilgrims_names: reservationData.pilgrims,
-            status: 'pending'
-        })
+        .select('*')
+        .eq('id', reservationId)
+        .single();
+
+    if (error) throw error;
+    return data;
+};
+
+export const getReservedGuideTimeSlots = async (guideId: string, dateValue: any): Promise<string[]> => {
+    if (!guideId) return [];
+
+    const sqlDate = toSqlDate(dateValue);
+    const { data, error } = await supabase
+        .from('reservations')
+        .select('visit_time,status')
+        .eq('guide_id', guideId)
+        .eq('start_date', sqlDate)
+        .in('status', ['pending', 'confirmed', 'in_progress']);
+
+    if (error) throw error;
+
+    const slots = (data || [])
+        .map((row: any) => String(row?.visit_time || '').trim())
+        .filter((time) => /^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(time));
+
+    return Array.from(new Set(slots));
+};
+
+export const updateReservationStatus = async (id: string, status: string) => {
+    const userId = await ensureUser();
+    if (!userId) throw new Error("Vous devez être connecté.");
+
+    const updates: any = {
+        status,
+        updated_at: new Date().toISOString(),
+    };
+
+    if (status === 'completed') {
+        const { data: reservation, error: reservationError } = await supabase
+            .from('reservations')
+            .select('total_price, commission_rate')
+            .eq('id', id)
+            .single();
+
+        if (reservationError) throw reservationError;
+
+        const commissionRate = toNumber(reservation?.commission_rate) || DEFAULT_PLATFORM_COMMISSION_RATE;
+        const { platformFee, guideNet } = computeReservationFinance(toNumber(reservation?.total_price), commissionRate);
+        updates.completed_at = new Date().toISOString();
+        updates.commission_rate = commissionRate;
+        updates.platform_fee_amount = platformFee;
+        updates.guide_net_amount = guideNet;
+        updates.payout_status = 'to_pay';
+    }
+
+    if (status === 'cancelled') {
+        updates.payout_status = 'not_due';
+    }
+
+    const { data, error } = await supabase
+        .from('reservations')
+        .update(updates)
+        .eq('id', id)
         .select()
         .single();
 
@@ -335,19 +723,174 @@ export const createReservation = async (reservationData: any) => {
     return data;
 };
 
-export const updateReservationStatus = async (id: string, status: string) => {
+export const cancelReservationAsPilgrim = async (reservationId: string) => {
     const userId = await ensureUser();
-    if (!userId) throw new Error("Vous devez être connecté.");
+    if (!userId) throw new Error("Vous devez etre connecte.");
 
+    const { data, error } = await supabase.rpc('cancel_reservation_as_pilgrim_with_policy', {
+        p_reservation_id: reservationId,
+    });
+
+    if (error) throw error;
+
+    const payload = Array.isArray(data) ? data[0] : data;
+    if (!payload) throw new Error("Reservation introuvable ou non eligible a l'annulation.");
+
+    return {
+        reservationId: payload.reservationId || payload.reservation_id,
+        status: 'cancelled' as const,
+        creditedAmount: roundMoney(toNumber(payload.creditedAmount ?? payload.credited_amount)),
+        policyApplied: (payload.policyApplied || payload.policy_applied || 'no_credit_under_48h') as ReservationCancellationPolicy,
+        serviceStartAt: payload.serviceStartAt || payload.service_start_at,
+        cutoffAt: payload.cutoffAt || payload.cutoff_at,
+    };
+};
+
+const getReservationById = async (reservationId: string) => {
     const { data, error } = await supabase
         .from('reservations')
-        .update({ status })
-        .eq('id', id)
-        .select()
+        .select('*')
+        .eq('id', reservationId)
         .single();
 
     if (error) throw error;
     return data;
+};
+
+const syncReservationStartState = async (reservationId: string) => {
+    const reservation = await getReservationById(reservationId);
+
+    const canStart =
+        reservation.status === 'confirmed' &&
+        reservation.guide_start_confirmed_at &&
+        reservation.pilgrim_start_confirmed_at;
+
+    if (!canStart) return reservation;
+
+    const now = new Date().toISOString();
+    const { data, error } = await supabase
+        .from('reservations')
+        .update({
+            status: 'in_progress',
+            visit_started_at: reservation.visit_started_at || now,
+            guide_end_confirmed_at: null,
+            pilgrim_end_confirmed_at: null,
+            updated_at: now,
+        })
+        .eq('id', reservationId)
+        .select('*')
+        .single();
+
+    if (error) throw error;
+    return data;
+};
+
+const syncReservationCompletionState = async (reservationId: string) => {
+    const reservation = await getReservationById(reservationId);
+
+    const canComplete =
+        reservation.status === 'in_progress' &&
+        reservation.guide_end_confirmed_at &&
+        reservation.pilgrim_end_confirmed_at;
+
+    if (!canComplete) return reservation;
+
+    await updateReservationStatus(reservationId, 'completed');
+    return await getReservationById(reservationId);
+};
+
+export const confirmVisitStartAsGuide = async (reservationId: string) => {
+    const userId = await ensureUser();
+    if (!userId) throw new Error("Vous devez être connecté.");
+
+    const now = new Date().toISOString();
+    const { data, error } = await supabase
+        .from('reservations')
+        .update({
+            guide_start_confirmed_at: now,
+            updated_at: now,
+        })
+        .eq('id', reservationId)
+        .eq('guide_id', userId)
+        .eq('status', 'confirmed')
+        .select('*')
+        .maybeSingle();
+
+    if (error) throw error;
+    if (!data) throw new Error("Réservation introuvable ou non éligible au démarrage.");
+
+    return await syncReservationStartState(reservationId);
+};
+
+export const confirmVisitStartAsPilgrim = async (reservationId: string) => {
+    const userId = await ensureUser();
+    if (!userId) throw new Error("Vous devez être connecté.");
+
+    const now = new Date().toISOString();
+    const { data, error } = await supabase
+        .from('reservations')
+        .update({
+            pilgrim_start_confirmed_at: now,
+            updated_at: now,
+        })
+        .eq('id', reservationId)
+        .eq('user_id', userId)
+        .eq('status', 'confirmed')
+        .not('guide_start_confirmed_at', 'is', null)
+        .select('*')
+        .maybeSingle();
+
+    if (error) throw error;
+    if (!data) throw new Error("Le guide doit d'abord confirmer le début de la visite.");
+
+    return await syncReservationStartState(reservationId);
+};
+
+export const confirmVisitEndAsGuide = async (reservationId: string) => {
+    const userId = await ensureUser();
+    if (!userId) throw new Error("Vous devez être connecté.");
+
+    const now = new Date().toISOString();
+    const { data, error } = await supabase
+        .from('reservations')
+        .update({
+            guide_end_confirmed_at: now,
+            updated_at: now,
+        })
+        .eq('id', reservationId)
+        .eq('guide_id', userId)
+        .eq('status', 'in_progress')
+        .select('*')
+        .maybeSingle();
+
+    if (error) throw error;
+    if (!data) throw new Error("Réservation introuvable ou non éligible à la clôture.");
+
+    return await syncReservationCompletionState(reservationId);
+};
+
+export const confirmVisitEndAsPilgrim = async (reservationId: string) => {
+    const userId = await ensureUser();
+    if (!userId) throw new Error("Vous devez être connecté.");
+
+    const now = new Date().toISOString();
+    const { data, error } = await supabase
+        .from('reservations')
+        .update({
+            pilgrim_end_confirmed_at: now,
+            updated_at: now,
+        })
+        .eq('id', reservationId)
+        .eq('user_id', userId)
+        .eq('status', 'in_progress')
+        .not('guide_end_confirmed_at', 'is', null)
+        .select('*')
+        .maybeSingle();
+
+    if (error) throw error;
+    if (!data) throw new Error("Le guide doit d'abord confirmer la fin de la visite.");
+
+    return await syncReservationCompletionState(reservationId);
 };
 
 export const getReservations = async () => {
@@ -371,21 +914,55 @@ export const getReservations = async () => {
 
     if (error) throw error;
 
-    return data.map((r: any) => ({
+    return data.map((r: any) => {
+        const startDate = parseDateValue(r.start_date);
+        const createdAt = parseDateValue(r.created_at);
+        const displayDate =
+            startDate && startDate.getFullYear() >= 2000
+                ? startDate
+                : createdAt && createdAt.getFullYear() >= 2000
+                    ? createdAt
+                    : null;
+
+        return {
         id: r.id,
         guideId: r.guide_id,
         pilgrimId: r.user_id,
         serviceName: r.service_name,
-        date: new Date(r.start_date).toLocaleDateString(),
+        startDate: r.start_date,
+        endDate: r.end_date,
+        date: displayDate
+            ? displayDate.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+            : 'Date indisponible',
         time: r.visit_time,
         status: r.status,
+        payoutStatus: (r.payout_status || 'not_due') as ReservationPayoutStatus,
         price: r.total_price,
         location: r.location,
+        transportPickupType: (r.transport_pickup_type || null) as 'haram' | 'hotel' | null,
+        hotelAddress: r.hotel_address || null,
+        hotelOver2KmByCar: typeof r.hotel_over_2km_by_car === 'boolean' ? r.hotel_over_2km_by_car : null,
+        hotelDistanceKm: r.hotel_distance_km !== null && r.hotel_distance_km !== undefined
+            ? toNumber(r.hotel_distance_km)
+            : null,
+        transportExtraFeeAmount: toNumber(r.transport_extra_fee_amount),
+        walletAmountUsed: toNumber(r.wallet_amount_used),
+        cardAmountPaid: toNumber(r.card_amount_paid),
+        cancellationCreditAmount: toNumber(r.cancellation_credit_amount),
+        cancelledAt: r.cancelled_at,
+        cancellationPolicyApplied: (r.cancellation_policy_applied || null) as ReservationCancellationPolicy | null,
+        guideStartConfirmedAt: r.guide_start_confirmed_at,
+        pilgrimStartConfirmedAt: r.pilgrim_start_confirmed_at,
+        visitStartedAt: r.visit_started_at,
+        guideEndConfirmedAt: r.guide_end_confirmed_at,
+        pilgrimEndConfirmedAt: r.pilgrim_end_confirmed_at,
+        completedAt: r.completed_at,
         guideName: r.guide_profile?.full_name || 'Guide Inconnu',
         guideAvatar: r.guide_profile?.avatar_url,
         pilgrimName: r.pilgrim_profile?.full_name || 'Pèlerin Inconnu',
         pilgrimAvatar: r.pilgrim_profile?.avatar_url,
-    }));
+    };
+    });
 };
 
 export const getReviews = async (guideId: string) => {
@@ -427,7 +1004,7 @@ export const createReview = async (reviewData: { guideId: string, rating: number
 };
 
 export const createService = async (serviceData: {
-    title: string, category: string, description: string, price: number, location: string, availability_start: string;
+    title: string, category: string, description?: string, price: number, location: string, availability_start: string;
     availability_end: string;
     image?: string;
     max_participants?: number;
@@ -440,20 +1017,27 @@ export const createService = async (serviceData: {
     const { data: profile } = await supabase.from('profiles').select('role').eq('id', userId).single();
     if (profile?.role !== 'guide') throw new Error("Seuls les guides peuvent créer des services.");
 
+    const fixedDescription = getFixedServiceDescription({
+        title: serviceData.title,
+        category: serviceData.category,
+        location: serviceData.location,
+    }) || serviceData.description || null;
+
     const { data, error } = await supabase
         .from('services')
         .insert({
             guide_id: userId,
             title: serviceData.title,
             category: serviceData.category,
-            description: serviceData.description,
+            description: fixedDescription,
             price_override: serviceData.price,
             location: serviceData.location,
             availability_start: serviceData.availability_start,
             availability_end: serviceData.availability_end,
             image_url: serviceData.image || null,
             max_participants: serviceData.max_participants,
-            meeting_points: serviceData.meeting_points
+            meeting_points: serviceData.meeting_points,
+            service_status: 'active'
         })
         .select()
         .single();
@@ -510,7 +1094,11 @@ export const getServiceById = async (serviceId: string) => {
         id: data.id,
         title: data.title,
         category: data.category,
-        description: data.description,
+        description: getFixedServiceDescription({
+            title: data.title,
+            category: data.category,
+            location: data.location,
+        }) || data.description || '',
         price: data.price_override,
         location: data.location || 'Lieu non spécifié',
         guideId: data.guide_id,
@@ -555,7 +1143,10 @@ export const getMessages = async (otherUserId: string) => {
         .order('created_at', { ascending: true });
 
     if (error) throw error;
-    return data;
+    return (data || []).map((message: any) => ({
+        ...message,
+        is_read: Boolean(message?.is_read),
+    }));
 };
 
 export const sendMessage = async (receiverId: string, content: string) => {
@@ -567,13 +1158,28 @@ export const sendMessage = async (receiverId: string, content: string) => {
         .insert({
             sender_id: userId,
             receiver_id: receiverId,
-            content: content
+            content: content,
+            is_read: false,
         })
         .select()
         .single();
 
     if (error) throw error;
     return data;
+};
+
+export const markConversationAsRead = async (otherUserId: string) => {
+    const userId = await ensureUser();
+    if (!userId) return;
+
+    const { error } = await supabase
+        .from('messages')
+        .update({ is_read: true })
+        .eq('receiver_id', userId)
+        .eq('sender_id', otherUserId)
+        .or('is_read.eq.false,is_read.is.null');
+
+    if (error) throw error;
 };
 
 export const getConversations = async () => {
@@ -592,15 +1198,16 @@ export const getConversations = async () => {
 
     if (error) throw error;
 
-    const conversations = new Map();
+    const conversations = new Map<string, any>();
 
-    for (const msg of data) {
+    for (const msg of data || []) {
         const isSender = msg.sender_id === userId;
         const otherUser = isSender ? msg.receiver : msg.sender;
 
-        if (!otherUser) continue;
+        if (!otherUser?.id) continue;
 
         const otherId = otherUser.id;
+        const isUnreadForCurrentUser = msg.receiver_id === userId && msg.is_read !== true;
 
         if (!conversations.has(otherId)) {
             conversations.set(otherId, {
@@ -609,13 +1216,20 @@ export const getConversations = async () => {
                 avatar: otherUser.avatar_url ? { uri: otherUser.avatar_url } : require('@/assets/images/profil.jpeg'),
                 message: msg.content,
                 time: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                unread: !msg.is_read && !isSender ? 1 : 0,
-                lastMessageDate: new Date(msg.created_at)
+                unread: 0,
+                lastMessageDate: new Date(msg.created_at),
             });
+        }
+
+        const existingConversation = conversations.get(otherId);
+        if (existingConversation && isUnreadForCurrentUser) {
+            existingConversation.unread += 1;
         }
     }
 
-    return Array.from(conversations.values());
+    return Array.from(conversations.values()).sort(
+        (a, b) => b.lastMessageDate.getTime() - a.lastMessageDate.getTime()
+    );
 };
 
 export const getPrayerTimes = async (city: string, country: string) => {

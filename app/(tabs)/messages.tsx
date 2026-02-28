@@ -1,4 +1,4 @@
-import { getConversations } from '@/lib/api';
+import { getConversations, markConversationAsRead } from '@/lib/api';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { ActivityIndicator, FlatList, Image, StatusBar, Text, TouchableOpacity, View } from 'react-native';
@@ -48,7 +48,23 @@ export default function MessagesScreen() {
                         renderItem={({ item }) => (
                             <TouchableOpacity
                                 className="flex-row items-center mb-6 bg-white dark:bg-zinc-800/50 p-4 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm"
-                                onPress={() => router.push(`/chat/${item.id}`)}
+                                onPress={async () => {
+                                    setConversations((prev) =>
+                                        prev.map((conversation) =>
+                                            conversation.id === item.id
+                                                ? { ...conversation, unread: 0 }
+                                                : conversation
+                                        )
+                                    );
+
+                                    try {
+                                        await markConversationAsRead(item.id);
+                                    } catch (error) {
+                                        console.error('Failed to mark conversation as read:', error);
+                                    }
+
+                                    router.push(`/chat/${item.id}`);
+                                }}
                             >
                                 <View className="relative">
                                     <Image
@@ -56,7 +72,11 @@ export default function MessagesScreen() {
                                         className="w-14 h-14 rounded-full bg-gray-200 dark:bg-gray-700"
                                     />
                                     {item.unread > 0 && (
-                                        <View className="absolute top-0 right-0 w-4 h-4 bg-primary rounded-full border-2 border-white dark:border-zinc-900" />
+                                        <View className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-primary rounded-full border border-white dark:border-zinc-900 items-center justify-center">
+                                            <Text className="text-white text-[10px] font-bold">
+                                                {item.unread > 99 ? '99+' : item.unread}
+                                            </Text>
+                                        </View>
                                     )}
                                 </View>
 

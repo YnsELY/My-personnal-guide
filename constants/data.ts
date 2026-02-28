@@ -52,7 +52,7 @@ export const GUIDES = [
         role: 'Historical Guide',
         rating: 4.9,
         reviews: 128,
-        price: '200 SAR',
+        price: '200 €',
         priceUnit: '/tour',
         languages: ['French', 'Arabic', 'English'],
         // Photo of a man in traditional Saudi dress / Omra context
@@ -68,7 +68,7 @@ export const GUIDES = [
         role: 'Transport & Ziyara',
         rating: 4.7,
         reviews: 85,
-        price: '150 SAR',
+        price: '150 €',
         priceUnit: '/trip',
         languages: ['French', 'Darija', 'Arabic'],
         // Photo representing Medina / Transport or Guide
@@ -84,7 +84,7 @@ export const GUIDES = [
         role: 'Female Group Guide',
         rating: 5.0,
         reviews: 42,
-        price: '300 SAR',
+        price: '300 €',
         priceUnit: '/day',
         languages: ['French', 'English'],
         // Photo of a woman in Hijab / Pilgrim context
@@ -100,7 +100,7 @@ export const GUIDES = [
         role: 'VIP Services',
         rating: 4.8,
         reviews: 56,
-        price: '500 SAR',
+        price: '500 €',
         priceUnit: '/day',
         languages: ['French', 'English', 'Urdu'],
         // Man in business/formal attire or traditional
@@ -165,7 +165,7 @@ export const RESERVATIONS = [
         date: '15 Jan 2026',
         time: '08:00',
         status: 'upcoming', // upcoming, completed, cancelled
-        price: '200 SAR',
+        price: '200 €',
         image: require('@/assets/images/profil.jpeg'),
         location: 'Hôtel Makkah',
     },
@@ -177,7 +177,7 @@ export const RESERVATIONS = [
         date: '10 Jan 2026',
         time: '14:00',
         status: 'completed',
-        price: '450 SAR',
+        price: '450 €',
         image: require('@/assets/images/profil.jpeg'),
         location: 'Gare Haramain',
     },
@@ -250,7 +250,7 @@ export const GUIDE_REQUESTS = [
         pilgrimName: 'Yassir M.',
         date: '30 Jan 2026',
         service: 'Omra Badal',
-        price: '450 SAR',
+        price: '450 €',
         time: '10:00',
         status: 'pending'
     },
@@ -259,7 +259,7 @@ export const GUIDE_REQUESTS = [
         pilgrimName: 'Noura T.',
         date: '02 Feb 2026',
         service: 'Ziyara Médine',
-        price: '200 SAR',
+        price: '200 €',
         time: '15:00',
         status: 'pending'
     },
@@ -268,7 +268,7 @@ export const GUIDE_REQUESTS = [
         pilgrimName: 'Karim L.',
         date: '05 Feb 2026',
         service: 'Accompagnement',
-        price: '300 SAR',
+        price: '300 €',
         time: '09:00',
         status: 'pending'
     }

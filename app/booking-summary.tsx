@@ -123,15 +123,15 @@ export default function BookingSummaryScreen() {
                     <View className="mb-8">
                         <View className="flex-row justify-between items-center mb-2">
                             <Text className="text-gray-500 dark:text-gray-400">Sous-total</Text>
-                            <Text className="text-gray-900 dark:text-white font-medium">{totalPrice} SAR</Text>
+                            <Text className="text-gray-900 dark:text-white font-medium">{totalPrice} €</Text>
                         </View>
                         <View className="flex-row justify-between items-center mb-4">
                             <Text className="text-gray-500 dark:text-gray-400">Frais de service (5%)</Text>
-                            <Text className="text-gray-900 dark:text-white font-medium">{(Number(totalPrice) * 0.05).toFixed(0)} SAR</Text>
+                            <Text className="text-gray-900 dark:text-white font-medium">{(Number(totalPrice) * 0.05).toFixed(0)} €</Text>
                         </View>
                         <View className="border-t border-gray-200 dark:border-white/10 pt-4 flex-row justify-between items-center">
                             <Text className="text-xl font-bold text-gray-900 dark:text-white">Total à payer</Text>
-                            <Text className="text-3xl font-bold text-primary">{(Number(totalPrice) * 1.05).toFixed(0)} SAR</Text>
+                            <Text className="text-3xl font-bold text-primary">{(Number(totalPrice) * 1.05).toFixed(0)} €</Text>
                         </View>
                     </View>
 

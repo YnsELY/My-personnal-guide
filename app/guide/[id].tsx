@@ -9,6 +9,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function GuideDetails() {
     const { id, startDate, endDate, servicePrice, serviceLocation, serviceImage, serviceTitle, serviceId } = useLocalSearchParams();
     const router = useRouter();
+    const selectedStartDateParam = Array.isArray(startDate) ? startDate[0] : startDate;
+    const selectedEndDateParam = Array.isArray(endDate) ? endDate[0] : endDate;
+    const selectedStartDateTs = selectedStartDateParam ? Number(selectedStartDateParam) : NaN;
+    const selectedEndDateTs = selectedEndDateParam ? Number(selectedEndDateParam) : NaN;
 
     const [guide, setGuide] = useState<any>(null);
     const [service, setService] = useState<any>(null);
@@ -35,6 +39,10 @@ export default function GuideDetails() {
         category: 'Omra accompagnée', // Fallback? Or try to deduce? Best to rely on serviceId fetch.
         meetingPoints: []
     } : null);
+    const fallbackStartDateTs = activeService?.startDate ? new Date(activeService.startDate).getTime() : undefined;
+    const fallbackEndDateTs = activeService?.endDate ? new Date(activeService.endDate).getTime() : undefined;
+    const modalStartDate = Number.isFinite(selectedStartDateTs) ? selectedStartDateTs : fallbackStartDateTs;
+    const modalEndDate = Number.isFinite(selectedEndDateTs) ? selectedEndDateTs : fallbackEndDateTs;
 
     if (!guide) {
         return (
@@ -104,10 +112,15 @@ export default function GuideDetails() {
                         {/* Guide Name */}
                         <Text className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{guide.name}</Text>
                         <Text className="text-gray-500 dark:text-gray-400 text-lg">{guide.role} • {serviceLocation || guide.location}</Text>
+                        {!!activeService?.description && (
+                            <Text className="text-gray-500 dark:text-gray-400 text-sm leading-6 mt-3">
+                                {activeService.description}
+                            </Text>
+                        )}
                     </View>
 
                     <View className="flex-row items-center mb-6">
-                        <Text className="text-3xl font-bold text-primary">{servicePrice ? `${servicePrice} SAR` : guide.price}</Text>
+                        <Text className="text-3xl font-bold text-primary">{servicePrice ? `${servicePrice} €` : guide.price}</Text>
                         <Text className="text-gray-500 dark:text-gray-400 text-sm ml-2 self-end mb-1">{servicePrice ? '' : guide.priceUnit}</Text>
                     </View>
 
@@ -142,7 +155,7 @@ export default function GuideDetails() {
                         {guide.experience > 0 && (
                             <View className="bg-primary/10 px-4 py-2 rounded-full border border-primary/20 flex-row items-center">
                                 <Briefcase size={16} color="#b39164" />
-                                <Text className="text-primary font-bold ml-2">{guide.experience} ans d'expérience</Text>
+                                <Text className="text-primary font-bold ml-2">{guide.experience} ans d&apos;expérience</Text>
                             </View>
                         )}
                         {guide.age && (
@@ -211,8 +224,8 @@ export default function GuideDetails() {
             <BookingModal
                 visible={isBookingModalVisible}
                 onClose={() => setBookingModalVisible(false)}
-                startDate={activeService?.startDate ? new Date(activeService.startDate).getTime() : (startDate ? Number(startDate) : undefined)}
-                endDate={activeService?.endDate ? new Date(activeService.endDate).getTime() : (endDate ? Number(endDate) : undefined)}
+                startDate={modalStartDate}
+                endDate={modalEndDate}
                 guideName={guide.name}
                 guideId={guide.id}
                 service={activeService}

@@ -1,7 +1,6 @@
 import { FilterModal, FilterState } from '@/components/FilterModal';
 import { ServiceGridCard } from '@/components/ServiceGridCard';
 import { CATEGORIES } from '@/constants/data';
-import { useAuth } from '@/context/AuthContext';
 import { getServices } from '@/lib/api'; // Changed import
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Accessibility, Calendar, Car, Heart, Map as MapIcon, Search as SearchIcon, SlidersHorizontal, Users, X } from 'lucide-react-native';
@@ -19,8 +18,9 @@ const iconMap: { [key: string]: any } = {
 
 export default function SearchScreen() {
   const router = useRouter();
-  const { profile } = useAuth(); // Assuming useAuth is available via context or need import
   const { startDate, endDate } = useLocalSearchParams();
+  const selectedStartDate = Array.isArray(startDate) ? startDate[0] : startDate;
+  const selectedEndDate = Array.isArray(endDate) ? endDate[0] : endDate;
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
@@ -36,13 +36,8 @@ export default function SearchScreen() {
   const [services, setServices] = useState<any[]>([]);
 
   React.useEffect(() => {
-    if (profile?.role === 'pilgrim') {
-      const gender = profile.gender as 'male' | 'female' | undefined;
-      getServices(gender).then(setServices).catch(console.error);
-    } else {
-      getServices().then(setServices).catch(console.error);
-    }
-  }, [profile]);
+    getServices().then(setServices).catch(console.error);
+  }, []);
 
   // Filter Logic
   const filteredServices = services.filter((service) => {
@@ -207,7 +202,11 @@ export default function SearchScreen() {
               filteredServices.map((service) => (
                 <ServiceGridCard
                   key={service.id}
-                  service={service}
+                  service={{
+                    ...service,
+                    selectedStartDate,
+                    selectedEndDate,
+                  }}
                 />
               ))
             ) : (

@@ -77,8 +77,8 @@ export default function RegisterScreen() {
             return;
         }
 
-        // Validate Charter for Pilgrim
-        if (role === 'pilgrim' && !charterAccepted) {
+        // Validate Charter for both pilgrim and guide
+        if (!charterAccepted) {
             setShowCharterModal(true);
             return;
         }
@@ -103,7 +103,10 @@ export default function RegisterScreen() {
                         <Text className="text-gray-500 mb-3 font-medium">Vous êtes ?</Text>
                         <View className="flex-row gap-4 mb-8">
                             <TouchableOpacity
-                                onPress={() => setRole('pilgrim')}
+                                onPress={() => {
+                                    setRole('pilgrim');
+                                    setCharterAccepted(false);
+                                }}
                                 className={`flex-1 p-4 rounded-xl border-2 flex-row items-center justify-center gap-2 ${role === 'pilgrim' ? 'border-[#b39164] bg-[#b39164]/10' : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-zinc-800'}`}
                             >
                                 <UserCircle2 size={24} color={role === 'pilgrim' ? '#b39164' : '#9CA3AF'} />
@@ -112,7 +115,10 @@ export default function RegisterScreen() {
                             </TouchableOpacity>
 
                             <TouchableOpacity
-                                onPress={() => setRole('guide')}
+                                onPress={() => {
+                                    setRole('guide');
+                                    setCharterAccepted(false);
+                                }}
                                 className={`flex-1 p-4 rounded-xl border-2 flex-row items-center justify-center gap-2 ${role === 'guide' ? 'border-[#b39164] bg-[#b39164]/10' : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-zinc-800'}`}
                             >
                                 <Briefcase size={24} color={role === 'guide' ? '#b39164' : '#9CA3AF'} />
@@ -281,7 +287,9 @@ export default function RegisterScreen() {
                                 <View className="flex-1 bg-white dark:bg-zinc-900">
                                     <SafeAreaView className="flex-1">
                                         <View className="flex-row justify-between items-center p-4 border-b border-gray-100 dark:border-white/5">
-                                            <Text className="text-xl font-bold text-gray-900 dark:text-white">Charte du Pèlerin</Text>
+                                            <Text className="text-xl font-bold text-gray-900 dark:text-white">
+                                                {role === 'guide' ? 'Charte du guide' : 'Charte du pèlerin'}
+                                            </Text>
                                             <TouchableOpacity onPress={() => setShowCharterModal(false)} className="p-2">
                                                 <Text className="text-gray-500 font-bold">Annuler</Text>
                                             </TouchableOpacity>
@@ -313,7 +321,7 @@ export default function RegisterScreen() {
                                 <Text className="text-white font-bold text-lg">{loading ? 'Inscription...' : 'S\'inscrire'}</Text>
                             </TouchableOpacity>
 
-                            <TouchableOpacity onPress={() => router.back()} className="mt-4 items-center mb-8">
+                            <TouchableOpacity onPress={() => router.replace('/(auth)/login')} className="mt-4 items-center mb-8">
                                 <Text className="text-gray-500">Déjà un compte ? <Text className="text-[#b39164] font-bold">Se connecter</Text></Text>
                             </TouchableOpacity>
                         </View>

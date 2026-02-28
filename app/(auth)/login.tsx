@@ -1,4 +1,5 @@
 import { useAuth } from '@/context/AuthContext';
+import { getCurrentProfile, getCurrentUser, getGuideApprovalInfo } from '@/lib/api';
 import { Link, useRouter } from 'expo-router';
 import { Lock, Mail } from 'lucide-react-native';
 import React, { useState } from 'react';
@@ -20,7 +21,21 @@ export default function LoginScreen() {
         setLoading(true);
         try {
             await signIn(email, password);
-            router.replace('/(tabs)');
+            const profile = await getCurrentProfile();
+            const user = await getCurrentUser();
+            const effectiveRole = profile?.role || user?.user_metadata?.role;
+            if (profile?.role === 'admin') {
+                router.replace('/(tabs)/admin-dashboard' as any);
+            } else if (effectiveRole === 'guide') {
+                const approval = await getGuideApprovalInfo(user?.id);
+                if (!approval.isApproved) {
+                    router.replace('/guide/pending-approval');
+                } else {
+                    router.replace('/(tabs)');
+                }
+            } else {
+                router.replace('/(tabs)');
+            }
         } catch (e: any) {
             Alert.alert("Erreur de connexion", e.message);
         } finally {
@@ -92,7 +107,7 @@ export default function LoginScreen() {
                                 <Text className="text-gray-500">Pas encore de compte ? </Text>
                                 <Link href="/(auth)/register" asChild>
                                     <TouchableOpacity>
-                                        <Text className="text-[#b39164] font-bold">S'inscrire</Text>
+                                        <Text className="text-[#b39164] font-bold">S&apos;inscrire</Text>
                                     </TouchableOpacity>
                                 </Link>
                             </View>

@@ -21,6 +21,8 @@ export function ServiceGridCard({ service }: ServiceGridCardProps) {
                 serviceLocation: service.location,
                 serviceImage: service.image?.uri,
                 serviceTitle: service.title,
+                startDate: service.selectedStartDate,
+                endDate: service.selectedEndDate,
                 serviceId: service.id // Add this
             }
         }} asChild>
@@ -36,7 +38,7 @@ export function ServiceGridCard({ service }: ServiceGridCardProps) {
                     )}
 
                     <View className="absolute top-2 right-2 bg-white/90 dark:bg-zinc-900/90 py-1 px-2 rounded-lg">
-                        <Text className="text-xs font-bold text-gray-900 dark:text-white">{service.price ? `${service.price} SAR` : 'Sur devis'}</Text>
+                        <Text className="text-xs font-bold text-gray-900 dark:text-white">{service.price ? `${service.price} €` : 'Sur devis'}</Text>
                     </View>
                 </View>
 
@@ -50,8 +52,14 @@ export function ServiceGridCard({ service }: ServiceGridCardProps) {
                         {service.title}
                     </Text>
 
+                    {!!service.description && (
+                        <Text className="text-gray-500 dark:text-gray-400 text-[11px] leading-4 mb-2" numberOfLines={3}>
+                            {service.description}
+                        </Text>
+                    )}
+
                     {/* Guide Info */}
-                    <View className="flex-row items-center mt-2 mb-2">
+                    <View className="flex-row items-center mt-1 mb-2">
                         <Image
                             source={service.guideAvatar ? { uri: service.guideAvatar } : require('@/assets/images/profil.jpeg')}
                             className="w-5 h-5 rounded-full mr-2"

@@ -1,6 +1,6 @@
 import { createGuideProfile, getCurrentGuideProfile } from '@/lib/api';
 import { Stack, useRouter } from 'expo-router';
-import { ArrowRight, BadgeCheck, Check, ChevronDown, Globe, MapPin, X } from 'lucide-react-native';
+import { ArrowRight, BadgeCheck, Check, ChevronDown, Globe, MapPin, Phone, X } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { Alert, Modal, ScrollView, StatusBar, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,7 +16,7 @@ export default function CompleteProfileScreen() {
     const [loading, setLoading] = useState(false);
 
     const [bio, setBio] = useState('');
-    const [specialty, setSpecialty] = useState('');
+    const [phoneNumber, setPhoneNumber] = useState('');
 
     // City Selector State
     const [location, setLocation] = useState('');
@@ -51,7 +51,7 @@ export default function CompleteProfileScreen() {
             if (guideProfile) {
                 if (guideProfile.bio) setBio(guideProfile.bio);
                 if (guideProfile.location) setLocation(guideProfile.location);
-                if (guideProfile.specialty) setSpecialty(guideProfile.specialty);
+                if (guideProfile.phone_number) setPhoneNumber(guideProfile.phone_number);
                 if (guideProfile.languages) setSelectedLanguages(guideProfile.languages);
                 if (guideProfile.experience_since) setExperienceDate(new Date(guideProfile.experience_since));
             }
@@ -62,7 +62,7 @@ export default function CompleteProfileScreen() {
 
 
     const handleSubmit = async () => {
-        if (!bio || !location || selectedLanguages.length === 0 || !specialty) {
+        if (!bio || !location || selectedLanguages.length === 0 || !phoneNumber.trim()) {
             Alert.alert("Erreur", "Veuillez remplir tous les champs");
             return;
         }
@@ -73,11 +73,11 @@ export default function CompleteProfileScreen() {
                 bio,
                 location,
                 languages: selectedLanguages,
-                specialty,
+                phone_number: phoneNumber.trim(),
                 experience_since: experienceDate.toISOString()
             });
             Alert.alert("Succès", "Profil mis à jour !", [
-                { text: "Retour", onPress: () => router.back() }
+                { text: "Retour", onPress: () => router.replace('/(tabs)/profile') }
             ]);
         } catch (e: any) {
             // ... error handling
@@ -142,7 +142,7 @@ export default function CompleteProfileScreen() {
                 <Stack.Screen options={{ headerShown: false }} />
 
                 <View className="flex-row items-center mb-6 mt-4">
-                    <TouchableOpacity onPress={() => router.back()} className="p-2 bg-gray-100 dark:bg-zinc-800 rounded-full mr-4">
+                    <TouchableOpacity onPress={() => router.replace('/(tabs)/profile')} className="p-2 bg-gray-100 dark:bg-zinc-800 rounded-full mr-4">
                         <ArrowRight className="rotate-180" size={20} color="#000" />
                     </TouchableOpacity>
                     <Text className="text-xl font-bold dark:text-white">Profil Guide</Text>
@@ -151,17 +151,18 @@ export default function CompleteProfileScreen() {
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
                     <View className="gap-5">
 
-                        {/* Specialty */}
+                        {/* Phone */}
                         <View>
-                            <Text className="text-gray-500 mb-2 font-medium">Spécialité (ex: Guide Historique)</Text>
+                            <Text className="text-gray-500 mb-2 font-medium">Numéro de téléphone</Text>
                             <View className="flex-row items-center bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3">
-                                <BadgeCheck size={20} color="#9CA3AF" />
+                                <Phone size={20} color="#9CA3AF" />
                                 <TextInput
                                     className="flex-1 ml-3 text-gray-900 dark:text-white"
-                                    placeholder="Votre spécialité"
+                                    placeholder="+33 6 12 34 56 78"
                                     placeholderTextColor="#9CA3AF"
-                                    value={specialty}
-                                    onChangeText={setSpecialty}
+                                    value={phoneNumber}
+                                    onChangeText={setPhoneNumber}
+                                    keyboardType="phone-pad"
                                 />
                             </View>
                         </View>

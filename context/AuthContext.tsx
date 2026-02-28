@@ -1,14 +1,17 @@
-import { signIn as apiSignIn, signOut as apiSignOut, signUp as apiSignUp, getCurrentProfile, getCurrentUser } from '@/lib/api';
+import { getCurrentProfile, getCurrentUser, getGuideApprovalInfo, signIn as apiSignIn, signOut as apiSignOut, signUp as apiSignUp } from '@/lib/api';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
-type UserRole = 'guide' | 'pilgrim';
+type SignUpRole = 'guide' | 'pilgrim';
+type GuideApprovalStatus = 'pending_review' | 'approved' | 'rejected';
 
 interface AuthContextType {
     user: any | null;
     profile: any | null;
     isLoading: boolean;
+    guideApprovalStatus: GuideApprovalStatus;
+    isGuideApproved: boolean;
     signIn: (email: string, pass: string) => Promise<void>;
-    signUp: (email: string, pass: string, name: string, role: UserRole, gender: 'male' | 'female', dob: string, language: 'fr' | 'ar') => Promise<void>;
+    signUp: (email: string, pass: string, name: string, role: SignUpRole, gender: 'male' | 'female', dob: string, language: 'fr' | 'ar') => Promise<void>;
     signOut: () => Promise<void>;
 }
 
@@ -16,6 +19,8 @@ const AuthContext = createContext<AuthContextType>({
     user: null,
     profile: null,
     isLoading: true,
+    guideApprovalStatus: 'pending_review',
+    isGuideApproved: true,
     signIn: async () => { },
     signUp: async () => { },
     signOut: async () => { },
@@ -27,22 +32,60 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [user, setUser] = useState<any>(null);
     const [profile, setProfile] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [guideApprovalStatus, setGuideApprovalStatus] = useState<GuideApprovalStatus>('pending_review');
+    const [isGuideApproved, setIsGuideApproved] = useState(true);
 
-    const refreshUser = async () => {
+    const refreshUser = async (options?: { throwOnSuspended?: boolean }) => {
         try {
             const u = await getCurrentUser();
             setUser(u);
             if (u) {
                 const p = await getCurrentProfile();
-                setProfile(p);
+                const metadataRole = u.user_metadata?.role as SignUpRole | 'admin' | undefined;
+                const effectiveRole = p?.role || metadataRole;
+                if (p?.account_status === 'suspended') {
+                    await apiSignOut();
+                    setUser(null);
+                    setProfile(null);
+                    setGuideApprovalStatus('pending_review');
+                    setIsGuideApproved(false);
+                    if (options?.throwOnSuspended) {
+                        throw new Error("Votre compte a été suspendu. Contactez le support.");
+                    }
+                    return;
+                }
+
+                // Fallback profile when DB profile is not immediately available after signup.
+                setProfile(
+                    p || {
+                        id: u.id,
+                        email: u.email,
+                        full_name: u.user_metadata?.full_name || 'Guide',
+                        role: effectiveRole || 'pilgrim',
+                        account_status: 'active',
+                    }
+                );
+
+                if (effectiveRole === 'guide') {
+                    const approval = await getGuideApprovalInfo(u.id);
+                    setGuideApprovalStatus(approval.status);
+                    setIsGuideApproved(approval.isApproved);
+                } else {
+                    setGuideApprovalStatus('approved');
+                    setIsGuideApproved(true);
+                }
             } else {
                 setProfile(null);
+                setGuideApprovalStatus('pending_review');
+                setIsGuideApproved(true);
             }
         } catch (e: any) {
             console.error("AuthContext initialization error:", e);
             // Don't crash the app, just stay logged out
             setUser(null);
             setProfile(null);
+            setGuideApprovalStatus('pending_review');
+            setIsGuideApproved(true);
         } finally {
             setIsLoading(false);
         }
@@ -54,10 +97,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const signIn = async (email: string, pass: string) => {
         await apiSignIn(email, pass);
-        await refreshUser();
+        await refreshUser({ throwOnSuspended: true });
     };
 
-    const signUp = async (email: string, pass: string, name: string, role: UserRole, gender: 'male' | 'female', dob: string, language: 'fr' | 'ar') => {
+    const signUp = async (email: string, pass: string, name: string, role: SignUpRole, gender: 'male' | 'female', dob: string, language: 'fr' | 'ar') => {
         await apiSignUp(email, pass, name, role, gender, dob, language);
         await refreshUser();
     };
@@ -66,10 +109,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         await apiSignOut();
         setUser(null);
         setProfile(null);
+        setGuideApprovalStatus('pending_review');
+        setIsGuideApproved(true);
     };
 
     return (
-        <AuthContext.Provider value={{ user, profile, isLoading, signIn, signUp, signOut }}>
+        <AuthContext.Provider value={{ user, profile, isLoading, guideApprovalStatus, isGuideApproved, signIn, signUp, signOut }}>
             {children}
         </AuthContext.Provider>
     );

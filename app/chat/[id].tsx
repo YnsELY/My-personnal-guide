@@ -1,4 +1,4 @@
-import { getCurrentUser, getGuideById, getMessages, sendMessage } from '@/lib/api';
+import { getCurrentUser, getGuideById, getMessages, markConversationAsRead, sendMessage } from '@/lib/api';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Send } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
@@ -16,14 +16,21 @@ export default function ChatScreen() {
 
     const flatListRef = useRef<FlatList>(null);
 
-    useEffect(() => {
-        loadData();
-        // Simple polling for new messages every 5 seconds
-        const interval = setInterval(loadMessages, 5000);
-        return () => clearInterval(interval);
+    const loadMessages = React.useCallback(async () => {
+        if (typeof id === 'string') {
+            try {
+                await markConversationAsRead(id);
+            } catch (error) {
+                console.error("Failed to mark conversation as read:", error);
+            }
+
+            const msgs = await getMessages(id);
+            // API returns messages ordered by date ASC. We reverse because FlatList is inverted.
+            setMessages([...msgs].reverse());
+        }
     }, [id]);
 
-    const loadData = async () => {
+    const loadData = React.useCallback(async () => {
         try {
             const currentUser = await getCurrentUser();
             setCurrentUserId(currentUser?.id || null);
@@ -38,24 +45,14 @@ export default function ChatScreen() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [id, loadMessages]);
 
-    const loadMessages = async () => {
-        if (typeof id === 'string') {
-            const msgs = await getMessages(id);
-            // API returns messages ordered by date ASC
-            // UI expects newest at bottom. FlatList is NOT inverted in my new code unless I specify.
-            // Previous code used inverted list with reversed data.
-            // Let's use standard list with data as is (Order ASC -> Oldest at Top, Newest at Bottom).
-            // But usually chat scrolls to bottom.
-            // I will use `inverted` FlatList and reverse the array if API is ASC.
-            // API is ASC. So `[Old, New]`.
-            // Reverse: `[New, Old]`. Inverted renders `New` at bottom.
-            // Wait, Inverted renders index 0 at bottom.
-            // So `[New, Old]` -> `New` at bottom. Correct. 
-            setMessages([...msgs].reverse());
-        }
-    };
+    useEffect(() => {
+        loadData();
+        // Simple polling for new messages every 5 seconds
+        const interval = setInterval(loadMessages, 5000);
+        return () => clearInterval(interval);
+    }, [loadData, loadMessages]);
 
     const handleSendMessage = async () => {
         if (inputText.trim() && typeof id === 'string') {
@@ -117,6 +114,7 @@ export default function ChatScreen() {
                                     </Text>
                                     <Text className={`text-[10px] mt-1 ${isMe ? 'text-white/70' : 'text-gray-500'}`}>
                                         {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        {isMe ? ` - ${item.is_read ? 'Lu' : 'Envoye'}` : ''}
                                     </Text>
                                 </View>
                             </View>

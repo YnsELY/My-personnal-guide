@@ -15,17 +15,14 @@ export default function HomeScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const { getReservationsByRole } = useReservations();
   const [guides, setGuides] = React.useState<any[]>([]);
+  const fullName = (profile?.full_name || user?.user_metadata?.full_name || '').trim();
+  const firstName = fullName ? fullName.split(/\s+/)[0] : '';
 
   useEffect(() => {
-    if (profile?.role === 'pilgrim') {
-      const gender = profile.gender as 'male' | 'female' | undefined;
-      getGuides(gender).then(setGuides).catch(console.error);
-    } else {
-      getGuides().then(setGuides).catch(console.error);
-    }
+    getGuides().then(setGuides).catch(console.error);
   }, [profile]);
 
   // Get data from context
@@ -73,25 +70,21 @@ export default function HomeScreen() {
               <TouchableOpacity onPress={() => router.back()}>
                 {/* <ChevronLeft color="white" size={28} /> */}
               </TouchableOpacity>
-              <View className="flex-row gap-4">
-                <View className="bg-green-500/20 px-3 py-1 rounded-full border border-green-500/30 flex-row items-center">
-                  <View className="w-2 h-2 bg-green-500 rounded-full mr-2" />
-                  <Text className="text-green-500 text-xs font-bold">7:15</Text>
-                </View>
-              </View>
             </View>
 
             <View className="mt-12">
-              <Text className="text-white text-3xl font-serif font-medium mb-1">Bienvenue YANIS</Text>
+              <Text className="text-white text-3xl font-serif font-medium mb-1">
+                {firstName ? `Bienvenue ${firstName}` : 'Bienvenue'}
+              </Text>
               <Text className="text-gray-200 text-sm w-3/4 leading-5 shadow-sm">
-                Bienvenue au lieu de la révélation et à l'origine du message divin
+                Bienvenue au lieu de la révélation et à l&apos;origine du message divin
               </Text>
             </View>
           </SafeAreaView>
         </View>
 
         <View className="-mt-12 px-6">
-          {profile?.role !== 'guide' && (
+          {profile?.role === 'pilgrim' && (
             <>
               {/* Primary Action Card (Permis in design -> Find Guide here) */}
               <TouchableOpacity
@@ -145,7 +138,7 @@ export default function HomeScreen() {
 
 
           {/* Pilgrim Sections */}
-          {profile?.role !== 'guide' && (
+          {profile?.role === 'pilgrim' && (
             <>
               {/* Services Section */}
               <Text className="text-gray-900 dark:text-white text-lg font-bold mb-4">Nos Services</Text>
@@ -291,6 +284,22 @@ export default function HomeScreen() {
             </>
           )}
 
+          {profile?.role === 'admin' && (
+            <View className="mt-2">
+              <Text className="text-gray-900 dark:text-white text-lg font-bold mb-4">Administration</Text>
+              <TouchableOpacity
+                className="bg-white dark:bg-zinc-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-white/5 flex-row items-center justify-between"
+                onPress={() => router.push('/(tabs)/admin-dashboard' as any)}
+              >
+                <View>
+                  <Text className="text-gray-900 dark:text-white text-base font-semibold">Ouvrir le dashboard admin</Text>
+                  <Text className="text-gray-500 dark:text-gray-400 text-xs mt-1">Validation guides, commandes, finance, paiements</Text>
+                </View>
+                <ChevronRight color="#9CA3AF" size={20} />
+              </TouchableOpacity>
+            </View>
+          )}
+
           <View className="h-24" />
         </View>
       </ScrollView>
@@ -300,7 +309,7 @@ export default function HomeScreen() {
 
         {/* Helper Text */}
         <View className="bg-white dark:bg-zinc-800 px-3 py-2 rounded-xl border border-gray-100 dark:border-white/10 shadow-sm mr-4">
-          <Text className="text-gray-900 dark:text-white font-medium text-xs">Besoin d'aide ?</Text>
+          <Text className="text-gray-900 dark:text-white font-medium text-xs">Besoin d&apos;aide ?</Text>
         </View>
 
         <View className="items-center justify-center">

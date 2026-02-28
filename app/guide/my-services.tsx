@@ -71,12 +71,10 @@ export default function MyServicesScreen() {
                 <Text className="text-gray-500 dark:text-gray-400 text-sm">{item.category}</Text>
             </View>
 
-            {item.meetingPoints && item.meetingPoints.length > 0 && (
-                <View className="flex-row items-center mt-2">
-                    <MapPin size={14} color="#9CA3AF" />
-                    <Text className="text-gray-400 text-xs ml-1">{item.meetingPoints.length} points de rendez-vous</Text>
-                </View>
-            )}
+            <View className="flex-row items-center mt-2">
+                <MapPin size={14} color="#9CA3AF" />
+                <Text className="text-gray-400 text-xs ml-1">Transport fixe: Haram / Hôtel (+10 € si hôtel {'>'} 2 km)</Text>
+            </View>
 
             <View className="flex-row justify-end gap-3 mt-4 border-t border-gray-100 dark:border-white/5 pt-3">
                 <TouchableOpacity
