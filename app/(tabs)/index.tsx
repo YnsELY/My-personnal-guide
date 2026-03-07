@@ -4,9 +4,10 @@ import { PrayerTimesWidget } from '@/components/PrayerTimesWidget';
 import { useAuth } from '@/context/AuthContext';
 import { useReservations } from '@/context/ReservationsContext';
 import { getGuides } from '@/lib/api';
+import { formatSAR, toSar } from '@/lib/pricing';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { Award, ChevronRight, Clock, Heart, MapPin, MessageCircle, User } from 'lucide-react-native';
+import { ArrowUpRight, ChevronRight, Clock, MapPin, MessageCircle, User } from 'lucide-react-native';
 import React, { useEffect, useRef } from 'react';
 import { Animated, Image, ImageBackground, ScrollView, StatusBar, Text, TouchableOpacity, View, useColorScheme } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -24,6 +25,42 @@ export default function HomeScreen() {
   useEffect(() => {
     getGuides().then(setGuides).catch(console.error);
   }, [profile]);
+
+  const serviceShowcaseCards = [
+    {
+      id: 'omra-badal',
+      title: 'Omra Badal',
+      subtitle: 'Par procuration',
+      description: 'Une adoration accomplie avec sérieux, transparence et suivi des étapes clés.',
+      image: require('@/assets/images/mecca.jpg'),
+      badge: 'Service encadré',
+      cta: 'Voir le service',
+      accent: ['#5a4529', '#b39164'] as const,
+      onPress: () => router.push('/service/omra-badal'),
+    },
+    {
+      id: 'visite-guidee',
+      title: 'Visites Guidées',
+      subtitle: 'Médine & Makkah',
+      description: 'Un parcours spirituel structuré pour visiter les lieux emblématiques avec un guide.',
+      image: require('@/assets/images/medina.jpeg'),
+      badge: 'Accompagnement premium',
+      cta: 'Découvrir',
+      accent: ['#365b64', '#6aa9ba'] as const,
+      onPress: () => router.push('/service/visite-guidee'),
+    },
+    {
+      id: 'all-services',
+      title: 'Trouver un guide',
+      subtitle: 'Selon vos dates',
+      description: 'Choisissez votre date puis découvrez les services réellement disponibles.',
+      image: require('@/assets/images/hero.jpg'),
+      badge: 'Disponibilités en direct',
+      cta: 'Commencer',
+      accent: ['#2d3e5d', '#4f6d9c'] as const,
+      onPress: () => router.push('/date-select'),
+    },
+  ];
 
   // Get data from context
   const guideReservations = getReservationsByRole('guide', profile?.id || '1');
@@ -141,64 +178,41 @@ export default function HomeScreen() {
           {profile?.role === 'pilgrim' && (
             <>
               {/* Services Section */}
-              <Text className="text-gray-900 dark:text-white text-lg font-bold mb-4">Nos Services</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-8" contentContainerStyle={{ gap: 16 }}>
-                {/* Service 1: Omra Badal */}
-                <TouchableOpacity
-                  className="bg-white dark:bg-zinc-800 rounded-2xl w-64 shadow-sm border border-gray-100 dark:border-white/5 overflow-hidden pb-4"
-                  onPress={() => router.push('/service/omra-badal')}
-                >
-                  <View className="h-60 relative">
-                    <Image
-                      source={require('@/assets/images/mecca.jpg')}
-                      className="w-full h-full object-cover"
-                    />
-                    <View className="absolute inset-0 bg-black/10" />
-                  </View>
-                  <View className="items-center -mt-8">
-                    <View className="bg-primary h-16 w-16 rounded-full items-center justify-center border-4 border-white dark:border-zinc-800 shadow-md">
-                      <Heart color="white" fill="white" size={24} />
+              <View className="flex-row items-end justify-between mb-4">
+                <Text className="text-gray-900 dark:text-white text-lg font-bold">Nos Services</Text>
+                <Text className="text-[#b39164] text-xs font-semibold uppercase tracking-wide">Sélection premium</Text>
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-8" contentContainerStyle={{ gap: 16, paddingRight: 20 }}>
+                {serviceShowcaseCards.map((card) => (
+                  <TouchableOpacity
+                    key={card.id}
+                    className="rounded-3xl w-80 bg-white dark:bg-zinc-800 shadow-sm border border-gray-100 dark:border-white/5 overflow-hidden"
+                    onPress={card.onPress}
+                    activeOpacity={0.9}
+                  >
+                    <View className="h-52 relative">
+                      <Image source={card.image} className="w-full h-full object-cover" />
+                      <LinearGradient
+                        colors={['rgba(9, 9, 11, 0.02)', 'rgba(9, 9, 11, 0.2)', 'rgba(9, 9, 11, 0.45)']}
+                        locations={[0.2, 0.6, 1]}
+                        className="absolute inset-0"
+                      />
                     </View>
-                    <Text className="text-gray-900 dark:text-white font-bold text-lg mt-2">Omra Badal</Text>
-                    <Text className="text-gray-500 dark:text-gray-400 text-xs text-center px-2 mt-1">Par procuration</Text>
-                  </View>
-                </TouchableOpacity>
 
-                {/* Service 2: Visites Guidées */}
-                <TouchableOpacity className="bg-white dark:bg-zinc-800 rounded-2xl w-64 shadow-sm border border-gray-100 dark:border-white/5 overflow-hidden pb-4">
-                  <View className="h-60 relative">
-                    <Image
-                      source={require('@/assets/images/medina.jpeg')}
-                      className="w-full h-full object-cover"
-                    />
-                    <View className="absolute inset-0 bg-black/10" />
-                  </View>
-                  <View className="items-center -mt-8">
-                    <View className="bg-primary h-16 w-16 rounded-full items-center justify-center border-4 border-white dark:border-zinc-800 shadow-md">
-                      <MapPin color="white" fill="white" size={24} />
-                    </View>
-                    <Text className="text-gray-900 dark:text-white font-bold text-lg mt-2">Visites Guidées</Text>
-                    <Text className="text-500 dark:text-gray-400 text-xs text-center px-2 mt-1">Ziyara Lieux Saints</Text>
-                  </View>
-                </TouchableOpacity>
+                    <View className="px-5 pt-4 pb-5">
+                      <Text className="text-gray-900 dark:text-white text-2xl font-serif font-semibold">{card.title}</Text>
+                      <Text className="text-[#b39164] text-xs font-semibold uppercase tracking-widest mt-1">{card.subtitle}</Text>
+                      <Text className="text-gray-600 dark:text-zinc-300 text-sm leading-6 mt-3" numberOfLines={3}>
+                        {card.description}
+                      </Text>
 
-                {/* Service 3: Transport VIP (Bonus) */}
-                <TouchableOpacity className="bg-white dark:bg-zinc-800 rounded-2xl w-64 shadow-sm border border-gray-100 dark:border-white/5 overflow-hidden pb-4">
-                  <View className="h-60 relative">
-                    <Image
-                      source={{ uri: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?q=80&w=1000&auto=format&fit=crop' }}
-                      className="w-full h-full object-cover"
-                    />
-                    <View className="absolute inset-0 bg-black/10" />
-                  </View>
-                  <View className="items-center -mt-8">
-                    <View className="bg-primary h-16 w-16 rounded-full items-center justify-center border-4 border-white dark:border-zinc-800 shadow-md">
-                      <Award color="white" fill="white" size={24} />
+                      <View className="flex-row items-center justify-between mt-4 rounded-2xl border border-gray-200 dark:border-white/15 bg-gray-50 dark:bg-zinc-700/30 px-4 py-3">
+                        <Text className="text-gray-900 dark:text-white text-sm font-semibold">{card.cta}</Text>
+                        <ArrowUpRight size={16} color={isDark ? '#ffffff' : '#18181b'} />
+                      </View>
                     </View>
-                    <Text className="text-gray-900 dark:text-white font-bold text-lg mt-2">Transport VIP</Text>
-                    <Text className="text-gray-500 dark:text-gray-400 text-xs text-center px-2 mt-1">Confort & Luxe</Text>
-                  </View>
-                </TouchableOpacity>
+                  </TouchableOpacity>
+                ))}
               </ScrollView>
 
               {/* Recommended Section (Mini) */}
@@ -274,7 +288,9 @@ export default function HomeScreen() {
                       </View>
                     </View>
                     <View className="items-end">
-                      <Text className="text-[#b39164] font-bold">{req.price}</Text>
+                      <Text className="text-[#b39164] font-bold">
+                        {formatSAR(toSar(Number(req.guideNetAmountEur ?? req.price ?? 0)))}
+                      </Text>
                     </View>
                   </View>
                 )) : (

@@ -2,6 +2,8 @@ import { Link } from 'expo-router';
 import { Calendar, MapPin } from 'lucide-react-native';
 import React from 'react';
 import { Image, Text, TouchableOpacity, View } from 'react-native';
+import { resolveProfileAvatarSource } from '@/lib/avatar';
+import { formatEUR } from '@/lib/pricing';
 
 interface ServiceGridCardProps {
     service: any; // Using any for simplicity or define interface
@@ -18,8 +20,8 @@ export function ServiceGridCard({ service }: ServiceGridCardProps) {
             params: {
                 id: service.guideId,
                 servicePrice: service.price,
+                serviceGuideNetPrice: service.guideNetBasePriceEur,
                 serviceLocation: service.location,
-                serviceImage: service.image?.uri,
                 serviceTitle: service.title,
                 startDate: service.selectedStartDate,
                 endDate: service.selectedEndDate,
@@ -38,7 +40,7 @@ export function ServiceGridCard({ service }: ServiceGridCardProps) {
                     )}
 
                     <View className="absolute top-2 right-2 bg-white/90 dark:bg-zinc-900/90 py-1 px-2 rounded-lg">
-                        <Text className="text-xs font-bold text-gray-900 dark:text-white">{service.price ? `${service.price} €` : 'Sur devis'}</Text>
+                        <Text className="text-xs font-bold text-gray-900 dark:text-white">{service.price ? formatEUR(Number(service.price)) : 'Sur devis'}</Text>
                     </View>
                 </View>
 
@@ -61,7 +63,7 @@ export function ServiceGridCard({ service }: ServiceGridCardProps) {
                     {/* Guide Info */}
                     <View className="flex-row items-center mt-1 mb-2">
                         <Image
-                            source={service.guideAvatar ? { uri: service.guideAvatar } : require('@/assets/images/profil.jpeg')}
+                            source={resolveProfileAvatarSource(service.guideAvatar)}
                             className="w-5 h-5 rounded-full mr-2"
                         />
                         <Text className="text-gray-500 dark:text-gray-400 text-xs flex-1" numberOfLines={1}>

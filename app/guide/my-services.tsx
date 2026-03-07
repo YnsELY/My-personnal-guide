@@ -1,4 +1,5 @@
 import { deleteService, getCurrentUser, getGuideServices } from '@/lib/api';
+import { formatSAR, toSar } from '@/lib/pricing';
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import { ArrowRight, MapPin, Pencil, Plus, Trash2 } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
@@ -51,7 +52,7 @@ export default function MyServicesScreen() {
                         try {
                             await deleteService(id);
                             loadServices(); // Refresh list
-                        } catch (error) {
+                        } catch {
                             Alert.alert("Erreur", "Impossible de supprimer le service.");
                         }
                     }
@@ -64,7 +65,7 @@ export default function MyServicesScreen() {
         <View className="bg-white dark:bg-zinc-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-white/5 mb-4">
             <View className="flex-row justify-between items-start mb-2">
                 <Text className="text-gray-900 dark:text-white font-bold text-lg flex-1 mr-2">{item.title}</Text>
-                <Text className="text-[#b39164] font-bold">{item.price} €</Text>
+                <Text className="text-[#b39164] font-bold">{formatSAR(toSar(Number(item.price || 0)))}</Text>
             </View>
 
             <View className="flex-row items-center mb-1">
@@ -73,7 +74,7 @@ export default function MyServicesScreen() {
 
             <View className="flex-row items-center mt-2">
                 <MapPin size={14} color="#9CA3AF" />
-                <Text className="text-gray-400 text-xs ml-1">Transport fixe: Haram / Hôtel (+10 € si hôtel {'>'} 2 km)</Text>
+                <Text className="text-gray-400 text-xs ml-1">Transport fixe: Haram / Hôtel (+40 SAR si hôtel {'>'} 2 km)</Text>
             </View>
 
             <View className="flex-row justify-end gap-3 mt-4 border-t border-gray-100 dark:border-white/5 pt-3">
@@ -128,7 +129,7 @@ export default function MyServicesScreen() {
                         contentContainerStyle={{ paddingBottom: 20 }}
                         ListEmptyComponent={() => (
                             <View className="items-center justify-center py-10">
-                                <Text className="text-gray-400 text-center mb-4">Vous n'avez pas encore créé de services.</Text>
+                                <Text className="text-gray-400 text-center mb-4">Vous n&apos;avez pas encore créé de services.</Text>
                                 <TouchableOpacity
                                     onPress={() => router.push('/guide/create-service')}
                                     className="bg-[#b39164] px-6 py-3 rounded-xl"

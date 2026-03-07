@@ -4,6 +4,7 @@ import { CATEGORIES } from '@/constants/data';
 import { useAuth } from '@/context/AuthContext';
 import { useReservations } from '@/context/ReservationsContext';
 import { createReservation, getPilgrimWalletSummary, getReservedGuideTimeSlots } from '@/lib/api';
+import { computePilgrimTotalFromGuideNet, formatEUR, roundMoney } from '@/lib/pricing';
 import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 import { Calendar, MapPin, Plus, Trash2, User, X } from 'lucide-react-native';
@@ -22,8 +23,7 @@ interface BookingModalProps {
     service: any; // Passed service object
 }
 
-const formatCurrency = (value: number) =>
-    new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(value || 0);
+const formatCurrency = (value: number) => formatEUR(value || 0);
 
 export default function BookingModal({ visible, onClose, startDate, endDate, guideName, guideId, basePrice = 200, service }: BookingModalProps) {
     const router = useRouter();
@@ -130,19 +130,30 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
     // Use passed service directly
     const activeService = service;
 
-    // Price Logic: Base + 50 € per extra pilgrim + transport supplement
+    // Price logic (EUR): base service + suppléments pèlerins + transport
     const soloOrCoupleText = `${activeService?.title || ''} ${activeService?.category || ''} ${selectedService || ''}`.toLowerCase();
     const isSoloOrCoupleService = soloOrCoupleText.includes('seul ou en couple');
     const includedPilgrimsWithoutSupplement = isSoloOrCoupleService ? 2 : 1;
     const chargeableExtraPilgrims = Math.max(0, pilgrims.length - includedPilgrimsWithoutSupplement);
+    const extraPilgrimsNetAmount = chargeableExtraPilgrims * 50;
     const normalizedHotelDistanceInput = hotelDistanceKm.replace(',', '.');
     const parsedHotelDistanceKm = Number(normalizedHotelDistanceInput);
     const hotelDistanceIsValid = Number.isFinite(parsedHotelDistanceKm) && parsedHotelDistanceKm > 2;
     const transportExtraFeeAmount = transportPickupType === 'hotel' && hotelOver2KmByCar === true ? 10 : 0;
-    // Prefer service price, then base param, then default
-    const servicePrice = Number(activeService?.price ?? activeService?.price_override ?? basePrice ?? 200);
-    const itemPrice = Number.isFinite(servicePrice) ? servicePrice : 200;
-    const totalPrice = itemPrice + (chargeableExtraPilgrims * 50) + transportExtraFeeAmount;
+    const explicitGuideNetBasePrice = Number(activeService?.guideNetBasePriceEur ?? activeService?.price_override);
+    const fallbackDisplayedPrice = Number(activeService?.price ?? basePrice ?? 200);
+    const serviceGuideNetPrice = Number.isFinite(explicitGuideNetBasePrice) && explicitGuideNetBasePrice > 0
+        ? explicitGuideNetBasePrice
+        : Number.isFinite(fallbackDisplayedPrice) && fallbackDisplayedPrice > 0
+            ? roundMoney(fallbackDisplayedPrice)
+            : 200;
+    const pricingPreview = computePilgrimTotalFromGuideNet({
+        serviceNetAmountEur: serviceGuideNetPrice,
+        extraPilgrimsNetAmountEur: extraPilgrimsNetAmount,
+        transportExtraFeeEur: transportExtraFeeAmount,
+    });
+    const commissionableNetAmount = pricingPreview.commissionableNetAmountEur;
+    const totalPrice = pricingPreview.totalPriceEur;
     const availableWalletBalance = Number(walletSummary?.availableBalance || 0);
     const walletAmountUsed = useWalletBalance ? Math.min(availableWalletBalance, totalPrice) : 0;
     const cardAmountPaid = Math.max(totalPrice - walletAmountUsed, 0);
@@ -247,6 +258,7 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                 hotelOver2KmByCar: transportPickupType === 'hotel' ? hotelOver2KmByCar : null,
                 hotelDistanceKm: normalizedHotelDistanceKm,
                 transportExtraFeeAmount,
+                commissionableNetAmount,
                 transportWarningAcknowledged: transportPickupType === 'hotel' ? transportWarningAcknowledged : true,
             }, { useWallet: useWalletBalance });
             await refreshReservations();
@@ -546,14 +558,28 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                             <View className="flex-row justify-between items-end mb-4 px-2">
                                 <View>
                                     <Text className="text-zinc-400 text-lg">Total estimé</Text>
-                                    {transportExtraFeeAmount > 0 && (
-                                        <Text className="text-zinc-500 text-xs">+ {transportExtraFeeAmount} € (transport)</Text>
-                                    )}
+                                    <Text className="text-zinc-500 text-xs">Détail en EUR</Text>
                                 </View>
                                 <View className="items-end">
-                                    <Text className="text-white font-bold text-3xl">{totalPrice} <Text className="text-primary text-xl">€</Text></Text>
+                                    <Text className="text-white font-bold text-3xl">{formatCurrency(totalPrice)}</Text>
                                 </View>
                             </View>
+                            {(extraPilgrimsNetAmount > 0 || transportExtraFeeAmount > 0) && (
+                                <View className="mb-4 rounded-xl border border-white/10 bg-zinc-800/70 px-4 py-3">
+                                {extraPilgrimsNetAmount > 0 && (
+                                    <View className="flex-row justify-between items-center mt-1.5">
+                                        <Text className="text-zinc-400 text-xs">Supplément pèlerins</Text>
+                                        <Text className="text-zinc-200 text-xs font-medium">{formatCurrency(extraPilgrimsNetAmount)}</Text>
+                                    </View>
+                                )}
+                                {transportExtraFeeAmount > 0 && (
+                                    <View className="flex-row justify-between items-center mt-1.5">
+                                        <Text className="text-zinc-400 text-xs">Transport</Text>
+                                        <Text className="text-zinc-200 text-xs font-medium">{formatCurrency(transportExtraFeeAmount)}</Text>
+                                    </View>
+                                )}
+                                </View>
+                            )}
                             <View className="mb-4 rounded-xl border border-white/10 bg-zinc-800/70 px-4 py-3">
                                 <View className="flex-row items-center justify-between">
                                     <View className="flex-1 pr-4">

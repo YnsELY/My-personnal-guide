@@ -1,5 +1,13 @@
 import { GUIDES } from '@/constants/data';
+import { getServiceImageForLocation } from '@/constants/serviceLocationImages';
 import { getFixedServiceDescription } from '@/constants/serviceDescriptions';
+import { type AvatarPresetId, resolveProfileAvatarSource, toAvatarPresetUrl } from '@/lib/avatar';
+import {
+    computeReservationFinance as computeReservationFinanceShared,
+    PLATFORM_COMMISSION_RATE,
+    roundMoney,
+    toSar,
+} from '@/lib/pricing';
 import { supabase } from '@/lib/supabase';
 
 // --- Auth & Seeding ---
@@ -65,20 +73,33 @@ export const getCurrentProfile = async () => {
     return data;
 };
 
+export const updateCurrentProfileAvatar = async (presetId: AvatarPresetId) => {
+    const avatarUrl = toAvatarPresetUrl(presetId);
+    const { data, error } = await supabase.rpc('update_my_profile_avatar', {
+        p_avatar_url: avatarUrl,
+    });
+
+    if (error) throw error;
+
+    const payload = Array.isArray(data) ? data[0] : data;
+    if (!payload?.id) throw new Error("Profil introuvable.");
+
+    return payload;
+};
+
 // Kept for legacy/testing if needed, but updated to use real auth check only
 export const ensureUser = async () => {
     const user = await getCurrentUser();
     return user?.id;
 };
 
-export const DEFAULT_PLATFORM_COMMISSION_RATE = 0.15;
+export const DEFAULT_PLATFORM_COMMISSION_RATE = PLATFORM_COMMISSION_RATE;
 
 const toNumber = (value: any) => {
     const parsed = Number(value ?? 0);
     return Number.isFinite(parsed) ? parsed : 0;
 };
 
-const roundMoney = (value: number) => Math.round(value * 100) / 100;
 const toCurrencyLabel = (currency?: string | null) => {
     if (!currency || currency === 'EUR') return '€';
     return currency;
@@ -123,11 +144,16 @@ const toSqlDate = (value: any): string => {
 };
 
 export const computeReservationFinance = (totalPrice: number, commissionRate = DEFAULT_PLATFORM_COMMISSION_RATE) => {
-    const normalizedPrice = toNumber(totalPrice);
-    const normalizedRate = Math.max(0, Math.min(1, toNumber(commissionRate)));
-    const platformFee = roundMoney(normalizedPrice * normalizedRate);
-    const guideNet = roundMoney(normalizedPrice - platformFee);
-    return { platformFee, guideNet, commissionRate: normalizedRate };
+    const finance = computeReservationFinanceShared({
+        totalPriceEur: toNumber(totalPrice),
+        transportExtraFeeEur: 0,
+        commissionRate,
+    });
+    return {
+        platformFee: finance.platformFeeEur,
+        guideNet: finance.guideNetEur,
+        commissionRate: finance.commissionRate,
+    };
 };
 
 type ReservationPayoutStatus = 'not_due' | 'to_pay' | 'processing' | 'paid' | 'failed';
@@ -135,7 +161,7 @@ type ReservationCancellationPolicy = 'full_credit_over_48h' | 'no_credit_under_4
 const DUE_PAYOUT_STATUSES: ReservationPayoutStatus[] = ['to_pay', 'processing', 'failed'];
 
 export const getGuideWalletSummary = async (): Promise<{
-    currency: 'EUR';
+    currency: 'SAR';
     availableBalance: number;
     totalGenerated: number;
     paidOut: number;
@@ -147,7 +173,7 @@ export const getGuideWalletSummary = async (): Promise<{
 
     const { data, error } = await supabase
         .from('reservations')
-        .select('total_price,commission_rate,platform_fee_amount,guide_net_amount,payout_status')
+        .select('total_price,commission_rate,commissionable_net_amount,transport_extra_fee_amount,platform_fee_amount,guide_net_amount,payout_status')
         .eq('guide_id', userId)
         .eq('status', 'completed');
 
@@ -161,8 +187,14 @@ export const getGuideWalletSummary = async (): Promise<{
     for (const reservation of data || []) {
         const totalPrice = toNumber(reservation.total_price);
         const commissionRate = toNumber(reservation.commission_rate) || DEFAULT_PLATFORM_COMMISSION_RATE;
-        const fallback = computeReservationFinance(totalPrice, commissionRate);
-        const guideNet = toNumber(reservation.guide_net_amount) || fallback.guideNet;
+        const rawCommissionable = (reservation as any).commissionable_net_amount;
+        const finance = computeReservationFinanceShared({
+            totalPriceEur: totalPrice,
+            transportExtraFeeEur: toNumber((reservation as any).transport_extra_fee_amount),
+            commissionableNetAmountEur: rawCommissionable === null || rawCommissionable === undefined ? null : toNumber(rawCommissionable),
+            commissionRate,
+        });
+        const guideNet = toNumber(reservation.guide_net_amount) || finance.guideNetEur;
         const payoutStatus = (reservation.payout_status || 'to_pay') as ReservationPayoutStatus;
 
         totalGenerated += guideNet;
@@ -179,10 +211,10 @@ export const getGuideWalletSummary = async (): Promise<{
     }
 
     return {
-        currency: 'EUR',
-        availableBalance: roundMoney(availableBalance),
-        totalGenerated: roundMoney(totalGenerated),
-        paidOut: roundMoney(paidOut),
+        currency: 'SAR',
+        availableBalance: toSar(availableBalance),
+        totalGenerated: toSar(totalGenerated),
+        paidOut: toSar(paidOut),
         completedVisits: (data || []).length,
         pendingPayoutVisits,
     };
@@ -495,7 +527,7 @@ export const getGuides = async () => {
         price: `${g.price_per_day} ${toCurrencyLabel(g.currency)}`,
         priceUnit: g.price_unit,
         languages: g.languages,
-        image: g.profiles?.avatar_url ? { uri: g.profiles.avatar_url } : require('@/assets/images/profil.jpeg'),
+        image: resolveProfileAvatarSource(g.profiles?.avatar_url),
         location: g.location,
         verified: g.verified,
         bio: g.bio,
@@ -516,7 +548,11 @@ export const getServices = async () => {
 
     if (error) throw error;
 
-    const services = data.map((s: any) => ({
+    const services = data.map((s: any) => {
+        const guideNetBasePriceEur = toNumber(s.price_override);
+        const pilgrimDisplayPriceEur = guideNetBasePriceEur;
+
+        return {
         id: s.id,
         title: s.title,
         category: s.category,
@@ -525,7 +561,8 @@ export const getServices = async () => {
             category: s.category,
             location: s.location,
         }) || s.description || '',
-        price: s.price_override,
+        price: pilgrimDisplayPriceEur,
+        guideNetBasePriceEur,
         location: s.location || 'Lieu non spécifié', // Fallback
         guideId: s.guide_id,
         guideName: s.profiles?.full_name || 'Guide Inconnu',
@@ -534,8 +571,9 @@ export const getServices = async () => {
         startDate: s.availability_start,
         endDate: s.availability_end,
         meetingPoints: s.meeting_points || [], // Add this
-        image: s.image_url ? { uri: s.image_url } : null
-    }));
+        image: getServiceImageForLocation(s.location)
+    };
+    });
 
     return services;
 };
@@ -581,7 +619,7 @@ export const getGuideById = async (id: string) => {
         price: g?.price_per_day ? `${g.price_per_day} ${toCurrencyLabel(g?.currency || 'EUR')}` : 'Sur devis',
         priceUnit: g?.price_unit || '',
         languages: g?.languages || [],
-        image: data.avatar_url ? { uri: data.avatar_url } : require('@/assets/images/profil.jpeg'),
+        image: resolveProfileAvatarSource(data.avatar_url),
         location: g?.location || 'Lieu non renseigné',
         verified: g?.verified || false,
         bio: g?.bio || 'Aucune biographie disponible.',
@@ -625,6 +663,10 @@ export const createReservation = async (reservationData: any, options?: { useWal
         ? hotelDistanceParsed
         : null;
     const transportExtraFeeAmount = toNumber(reservationData.transportExtraFeeAmount);
+    const rawCommissionableNetAmount = reservationData.commissionableNetAmount;
+    const commissionableNetAmount = rawCommissionableNetAmount === null || rawCommissionableNetAmount === undefined || rawCommissionableNetAmount === ''
+        ? roundMoney(Math.max(normalizedPrice - transportExtraFeeAmount, 0))
+        : toNumber(rawCommissionableNetAmount);
     const transportWarningAcknowledged = !!reservationData.transportWarningAcknowledged;
 
     const { data: rpcData, error: rpcError } = await supabase.rpc('create_reservation_with_wallet', {
@@ -643,6 +685,7 @@ export const createReservation = async (reservationData: any, options?: { useWal
         p_hotel_distance_km: hotelDistanceKm,
         p_transport_extra_fee_amount: transportExtraFeeAmount,
         p_transport_warning_acknowledged: transportWarningAcknowledged,
+        p_commissionable_net_amount: commissionableNetAmount,
     });
 
     if (rpcError) throw rpcError;
@@ -693,23 +736,32 @@ export const updateReservationStatus = async (id: string, status: string) => {
     if (status === 'completed') {
         const { data: reservation, error: reservationError } = await supabase
             .from('reservations')
-            .select('total_price, commission_rate')
+            .select('total_price, commission_rate, transport_extra_fee_amount, commissionable_net_amount')
             .eq('id', id)
             .single();
 
         if (reservationError) throw reservationError;
 
-        const commissionRate = toNumber(reservation?.commission_rate) || DEFAULT_PLATFORM_COMMISSION_RATE;
-        const { platformFee, guideNet } = computeReservationFinance(toNumber(reservation?.total_price), commissionRate);
+        const commissionRate = PLATFORM_COMMISSION_RATE;
+        const rawCommissionable = (reservation as any)?.commissionable_net_amount;
+        const finance = computeReservationFinanceShared({
+            totalPriceEur: toNumber(reservation?.total_price),
+            transportExtraFeeEur: toNumber((reservation as any)?.transport_extra_fee_amount),
+            commissionableNetAmountEur: rawCommissionable === null || rawCommissionable === undefined ? null : toNumber(rawCommissionable),
+            commissionRate,
+        });
         updates.completed_at = new Date().toISOString();
-        updates.commission_rate = commissionRate;
-        updates.platform_fee_amount = platformFee;
-        updates.guide_net_amount = guideNet;
+        updates.commission_rate = finance.commissionRate;
+        updates.commissionable_net_amount = finance.commissionableNetAmountEur;
+        updates.platform_fee_amount = finance.platformFeeEur;
+        updates.guide_net_amount = finance.guideNetEur;
         updates.payout_status = 'to_pay';
     }
 
     if (status === 'cancelled') {
         updates.payout_status = 'not_due';
+        updates.cancelled_at = new Date().toISOString();
+        updates.cancelled_by = userId;
     }
 
     const { data, error } = await supabase
@@ -924,6 +976,21 @@ export const getReservations = async () => {
                     ? createdAt
                     : null;
 
+        const commissionRate = toNumber(r.commission_rate) || DEFAULT_PLATFORM_COMMISSION_RATE;
+        const rawCommissionable = r.commissionable_net_amount;
+        const finance = computeReservationFinanceShared({
+            totalPriceEur: toNumber(r.total_price),
+            transportExtraFeeEur: toNumber(r.transport_extra_fee_amount),
+            commissionableNetAmountEur: rawCommissionable === null || rawCommissionable === undefined ? null : toNumber(rawCommissionable),
+            commissionRate,
+        });
+        const guideNetAmountEur = r.guide_net_amount === null || r.guide_net_amount === undefined
+            ? finance.guideNetEur
+            : toNumber(r.guide_net_amount);
+        const commissionableNetAmountEur = rawCommissionable === null || rawCommissionable === undefined
+            ? finance.commissionableNetAmountEur
+            : toNumber(rawCommissionable);
+
         return {
         id: r.id,
         guideId: r.guide_id,
@@ -938,6 +1005,9 @@ export const getReservations = async () => {
         status: r.status,
         payoutStatus: (r.payout_status || 'not_due') as ReservationPayoutStatus,
         price: r.total_price,
+        totalPriceEur: toNumber(r.total_price),
+        guideNetAmountEur,
+        commissionableNetAmountEur,
         location: r.location,
         transportPickupType: (r.transport_pickup_type || null) as 'haram' | 'hotel' | null,
         hotelAddress: r.hotel_address || null,
@@ -948,8 +1018,14 @@ export const getReservations = async () => {
         transportExtraFeeAmount: toNumber(r.transport_extra_fee_amount),
         walletAmountUsed: toNumber(r.wallet_amount_used),
         cardAmountPaid: toNumber(r.card_amount_paid),
+        createdAt: r.created_at,
+        reassignedFromGuideId: r.reassigned_from_guide_id || null,
+        reassignedByAdminId: r.reassigned_by_admin_id || null,
+        reassignedAt: r.reassigned_at || null,
+        reassignmentReason: r.reassignment_reason || null,
         cancellationCreditAmount: toNumber(r.cancellation_credit_amount),
         cancelledAt: r.cancelled_at,
+        cancelledBy: r.cancelled_by,
         cancellationPolicyApplied: (r.cancellation_policy_applied || null) as ReservationCancellationPolicy | null,
         guideStartConfirmedAt: r.guide_start_confirmed_at,
         pilgrimStartConfirmedAt: r.pilgrim_start_confirmed_at,
@@ -980,7 +1056,7 @@ export const getReviews = async (guideId: string) => {
         rating: r.rating,
         comment: r.comment,
         date: new Date(r.created_at).toLocaleDateString(),
-        avatar: r.profiles?.avatar_url ? { uri: r.profiles.avatar_url } : require('@/assets/images/profil.jpeg')
+        avatar: resolveProfileAvatarSource(r.profiles?.avatar_url)
     }));
 };
 
@@ -1006,7 +1082,6 @@ export const createReview = async (reviewData: { guideId: string, rating: number
 export const createService = async (serviceData: {
     title: string, category: string, description?: string, price: number, location: string, availability_start: string;
     availability_end: string;
-    image?: string;
     max_participants?: number;
     meeting_points?: { name: string; supplement: number }[];
 }) => {
@@ -1034,7 +1109,7 @@ export const createService = async (serviceData: {
             location: serviceData.location,
             availability_start: serviceData.availability_start,
             availability_end: serviceData.availability_end,
-            image_url: serviceData.image || null,
+            image_url: null,
             max_participants: serviceData.max_participants,
             meeting_points: serviceData.meeting_points,
             service_status: 'active'
@@ -1090,6 +1165,9 @@ export const getServiceById = async (serviceId: string) => {
 
     if (error) throw error;
 
+    const guideNetBasePriceEur = toNumber(data.price_override);
+    const pilgrimDisplayPriceEur = guideNetBasePriceEur;
+
     return {
         id: data.id,
         title: data.title,
@@ -1099,7 +1177,8 @@ export const getServiceById = async (serviceId: string) => {
             category: data.category,
             location: data.location,
         }) || data.description || '',
-        price: data.price_override,
+        price: pilgrimDisplayPriceEur,
+        guideNetBasePriceEur,
         location: data.location || 'Lieu non spécifié',
         guideId: data.guide_id,
         guideName: data.profiles?.full_name || 'Guide Inconnu',
@@ -1108,7 +1187,7 @@ export const getServiceById = async (serviceId: string) => {
         startDate: data.availability_start,
         endDate: data.availability_end,
         meetingPoints: data.meeting_points || [],
-        image: data.image_url ? { uri: data.image_url } : null
+        image: getServiceImageForLocation(data.location)
     };
 };
 
@@ -1213,7 +1292,7 @@ export const getConversations = async () => {
             conversations.set(otherId, {
                 id: otherId,
                 user: otherUser.full_name || 'Utilisateur',
-                avatar: otherUser.avatar_url ? { uri: otherUser.avatar_url } : require('@/assets/images/profil.jpeg'),
+                avatar: resolveProfileAvatarSource(otherUser.avatar_url),
                 message: msg.content,
                 time: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 unread: 0,

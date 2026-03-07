@@ -1,9 +1,17 @@
 import { AdminGuard } from '@/components/admin/AdminGuard';
-import { getAdminReservations, updateAdminReservationStatus } from '@/lib/adminApi';
+import {
+    assignReplacementGuide,
+    getAdminReplacementGuideCandidates,
+    getAdminReservations,
+    type GuideCandidate,
+    updateAdminReservationStatus
+} from '@/lib/adminApi';
+import { formatEUR } from '@/lib/pricing';
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import { ArrowLeft, CheckCircle2, Search, XCircle } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
 import {
+    Alert,
     ActivityIndicator,
     FlatList,
     Modal,
@@ -35,9 +43,6 @@ const payoutLabel = (status: string) => {
     return 'Non dû';
 };
 
-const formatAmount = (value: number) =>
-    new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(value || 0);
-
 const transportSummary = (reservation: any) => {
     if (reservation.transportPickupType === 'haram') {
         return 'Transport: Rendez-vous au haram';
@@ -67,6 +72,12 @@ export default function AdminReservationsScreen() {
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
     const [actionModal, setActionModal] = useState<{ id: string; nextStatus: 'confirmed' | 'completed' | 'cancelled' } | null>(null);
     const [reason, setReason] = useState('');
+    const [replacementModalReservation, setReplacementModalReservation] = useState<any | null>(null);
+    const [replacementSearchInput, setReplacementSearchInput] = useState('');
+    const [replacementCandidates, setReplacementCandidates] = useState<GuideCandidate[]>([]);
+    const [replacementSelectedGuideId, setReplacementSelectedGuideId] = useState<string | null>(null);
+    const [isLoadingCandidates, setIsLoadingCandidates] = useState(false);
+    const [isAssigningReplacement, setIsAssigningReplacement] = useState(false);
 
     const loadData = useCallback(async () => {
         setIsLoading(true);
@@ -111,6 +122,64 @@ export default function AdminReservationsScreen() {
             setIsUpdating(false);
         }
     };
+
+    const openReplacementModal = async (row: any) => {
+        if (isLoadingCandidates || isAssigningReplacement) return;
+        setReplacementModalReservation(row);
+        setReplacementSearchInput('');
+        setReplacementSelectedGuideId(null);
+        setReplacementCandidates([]);
+        setIsLoadingCandidates(true);
+
+        try {
+            const candidates = await getAdminReplacementGuideCandidates(row.id);
+            setReplacementCandidates(candidates);
+        } catch (error: any) {
+            console.error(error);
+            setReplacementModalReservation(null);
+            Alert.alert("Erreur", error?.message || "Impossible de charger les guides de remplacement.");
+        } finally {
+            setIsLoadingCandidates(false);
+        }
+    };
+
+    const closeReplacementModal = () => {
+        if (isAssigningReplacement) return;
+        setReplacementModalReservation(null);
+        setReplacementCandidates([]);
+        setReplacementSearchInput('');
+        setReplacementSelectedGuideId(null);
+    };
+
+    const confirmReplacementGuide = async () => {
+        if (!replacementModalReservation || !replacementSelectedGuideId || isAssigningReplacement) return;
+        setIsAssigningReplacement(true);
+        try {
+            await assignReplacementGuide({
+                reservationId: replacementModalReservation.id,
+                newGuideId: replacementSelectedGuideId,
+                reason: replacementModalReservation.replacementReason || undefined,
+            });
+            await loadData();
+            closeReplacementModal();
+            Alert.alert("Succès", "Le guide de remplacement a été assigné.");
+        } catch (error) {
+            console.error(error);
+            Alert.alert("Erreur", "Impossible d'assigner ce guide de remplacement.");
+        } finally {
+            setIsAssigningReplacement(false);
+        }
+    };
+
+    const filteredReplacementCandidates = replacementCandidates.filter((candidate) => {
+        const search = replacementSearchInput.trim().toLowerCase();
+        if (!search) return true;
+        return (
+            candidate.fullName.toLowerCase().includes(search)
+            || candidate.email.toLowerCase().includes(search)
+            || (candidate.location || '').toLowerCase().includes(search)
+        );
+    });
 
     const renderActions = (row: any) => {
         if (row.status === 'pending') {
@@ -251,7 +320,10 @@ export default function AdminReservationsScreen() {
                                                     {statusLabel(item.status)}
                                                 </Text>
                                             </View>
-                                            <Text className="text-[#b39164] font-semibold mt-2">{formatAmount(item.totalPrice)}</Text>
+                                            <Text className="text-[#b39164] font-semibold mt-2">{formatEUR(item.totalPrice)}</Text>
+                                            <Text className="text-gray-400 text-[11px] mt-1">
+                                                Net guide: {formatEUR(Number(item.guideNetAmount || 0))}
+                                            </Text>
                                         </View>
                                     </View>
 
@@ -259,8 +331,25 @@ export default function AdminReservationsScreen() {
                                         <Text className="text-gray-400 text-xs">Paiement guide: {payoutLabel(item.payoutStatus)}</Text>
                                         <Text className="text-gray-400 text-xs">{item.startDate}</Text>
                                     </View>
+                                    <View className="flex-row justify-between items-center mt-1">
+                                        <Text className="text-gray-400 text-xs">Enregistrée il y a {item.hoursSinceReservation ?? 0}h</Text>
+                                        {item.isPendingTooLong ? (
+                                            <View className="px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30">
+                                                <Text className="text-amber-400 text-[10px] font-semibold">En attente &gt; 12h</Text>
+                                            </View>
+                                        ) : null}
+                                    </View>
 
                                     {renderActions(item)}
+
+                                    {item.canAssignReplacement ? (
+                                        <TouchableOpacity
+                                            className="mt-3 rounded-xl bg-[#b39164] py-2.5 items-center"
+                                            onPress={() => openReplacementModal(item)}
+                                        >
+                                            <Text className="text-white font-semibold text-xs">Assigner un guide de remplacement</Text>
+                                        </TouchableOpacity>
+                                    ) : null}
                                 </View>
                             )}
                         />
@@ -308,6 +397,102 @@ export default function AdminReservationsScreen() {
                                 disabled={isUpdating}
                             >
                                 <Text className="text-white font-semibold">{isUpdating ? 'Traitement...' : 'Confirmer'}</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            <Modal
+                visible={!!replacementModalReservation}
+                transparent
+                animationType="fade"
+                onRequestClose={closeReplacementModal}
+            >
+                <View className="flex-1 bg-black/60 justify-center p-6">
+                    <View className="bg-white dark:bg-zinc-800 rounded-2xl p-5 max-h-[80%]">
+                        <Text className="text-lg font-bold text-gray-900 dark:text-white">
+                            Guide de remplacement
+                        </Text>
+                        <Text className="text-gray-500 text-xs mt-1">
+                            Sélectionnez un guide approuvé
+                        </Text>
+
+                        <View className="bg-gray-100 dark:bg-zinc-700 rounded-xl px-3 py-2.5 flex-row items-center mt-4">
+                            <Search size={16} color="#9CA3AF" />
+                            <TextInput
+                                value={replacementSearchInput}
+                                onChangeText={setReplacementSearchInput}
+                                placeholder="Rechercher un guide"
+                                placeholderTextColor="#9CA3AF"
+                                className="flex-1 ml-2 text-gray-900 dark:text-white"
+                            />
+                        </View>
+
+                        {replacementCandidates.some((candidate) => candidate.fallbackAllZones) && (
+                            <View className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2">
+                                <Text className="text-amber-300 text-xs">
+                                    Aucun guide approuvé trouvé dans la même zone. Affichage de tous les guides approuvés.
+                                </Text>
+                            </View>
+                        )}
+
+                        {isLoadingCandidates ? (
+                            <View className="py-8 items-center">
+                                <ActivityIndicator color="#b39164" />
+                            </View>
+                        ) : (
+                            <FlatList
+                                data={filteredReplacementCandidates}
+                                keyExtractor={(item) => item.id}
+                                contentContainerStyle={{ paddingTop: 12, paddingBottom: 8 }}
+                                ListEmptyComponent={() => (
+                                    <View className="py-8 items-center">
+                                        <Text className="text-gray-500 text-sm">Aucun guide disponible.</Text>
+                                    </View>
+                                )}
+                                renderItem={({ item }) => {
+                                    const isSelected = replacementSelectedGuideId === item.id;
+                                    return (
+                                        <TouchableOpacity
+                                            onPress={() => setReplacementSelectedGuideId(item.id)}
+                                            className={`mb-2 rounded-xl border px-3 py-3 ${isSelected
+                                                ? 'bg-[#b39164]/15 border-[#b39164]/40'
+                                                : 'bg-gray-50 dark:bg-zinc-700 border-gray-200 dark:border-white/10'
+                                                }`}
+                                        >
+                                            <Text className={`font-semibold ${isSelected ? 'text-[#b39164]' : 'text-gray-900 dark:text-white'}`}>
+                                                {item.fullName}
+                                            </Text>
+                                            <Text className="text-gray-500 text-xs mt-1">{item.email || 'Email non renseigné'}</Text>
+                                            <Text className="text-gray-500 text-xs mt-0.5">
+                                                {item.location || 'Zone non renseignée'} • Note {item.rating.toFixed(1)} ({item.reviewsCount})
+                                            </Text>
+                                        </TouchableOpacity>
+                                    );
+                                }}
+                            />
+                        )}
+
+                        <View className="flex-row gap-3 mt-3">
+                            <TouchableOpacity
+                                className="flex-1 py-3 rounded-xl bg-gray-200 dark:bg-zinc-700 items-center"
+                                onPress={closeReplacementModal}
+                                disabled={isAssigningReplacement}
+                            >
+                                <Text className="text-gray-700 dark:text-gray-200 font-semibold">Annuler</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                className={`flex-1 py-3 rounded-xl items-center ${(replacementSelectedGuideId && !isAssigningReplacement)
+                                    ? 'bg-[#b39164]'
+                                    : 'bg-gray-300 dark:bg-zinc-600'
+                                    }`}
+                                onPress={confirmReplacementGuide}
+                                disabled={!replacementSelectedGuideId || isAssigningReplacement}
+                            >
+                                <Text className="text-white font-semibold">
+                                    {isAssigningReplacement ? 'Traitement...' : 'Confirmer'}
+                                </Text>
                             </TouchableOpacity>
                         </View>
                     </View>

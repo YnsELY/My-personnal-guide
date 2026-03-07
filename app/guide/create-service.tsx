@@ -1,12 +1,12 @@
 import CalendarPicker from '@/components/CalendarPicker';
 import { CATEGORIES, SERVICE_OPTIONS } from '@/constants/data';
 import { getFixedServiceDescription } from '@/constants/serviceDescriptions';
-import { createService, updateService, uploadImage } from '@/lib/api';
-import * as ImagePicker from 'expo-image-picker';
+import { createService, updateService } from '@/lib/api';
+import { formatSAR, PLATFORM_COMMISSION_RATE, roundMoney, toSar } from '@/lib/pricing';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Calendar, Camera, ChevronDown, DollarSign, MapPin, Minus, Plus, Users } from 'lucide-react-native';
+import { ArrowLeft, Calendar, ChevronDown, DollarSign, MapPin, Minus, Plus, Users } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { Alert, Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StatusBar, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Modal, Platform, ScrollView, StatusBar, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const LOCATION_OPTIONS = ['La Mecque', 'Médine'] as const;
@@ -18,6 +18,9 @@ const normalizeGuideLocation = (value?: string | null) => {
     if (location.includes('medine') || location.includes('médine')) return 'Médine';
     return '';
 };
+
+const getGuideNetEurFromDisplayedPrice = (rawPrice: number) =>
+    roundMoney(Math.max(Number(rawPrice) || 0, 0) * (1 - PLATFORM_COMMISSION_RATE));
 
 export default function CreateServiceScreen() {
     const router = useRouter();
@@ -31,7 +34,6 @@ export default function CreateServiceScreen() {
     const [price, setPrice] = useState(serviceToEdit?.price?.toString() || '');
     const [location, setLocation] = useState(normalizeGuideLocation(serviceToEdit?.location));
     const [maxParticipants, setMaxParticipants] = useState(serviceToEdit?.maxParticipants?.toString() || '');
-    const [image, setImage] = useState<string | null>(serviceToEdit?.image?.uri || null);
 
     // Date Range State
     const [showCalendar, setShowCalendar] = useState(false);
@@ -45,19 +47,6 @@ export default function CreateServiceScreen() {
     const [isCategoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
     const [isOptionDropdownOpen, setOptionDropdownOpen] = useState(false);
 
-    const pickImage = async () => {
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
-            aspect: [16, 9],
-            quality: 0.8,
-        });
-
-        if (!result.canceled) {
-            setImage(result.assets[0].uri);
-        }
-    };
-
     const handleCreateOrUpdate = async () => {
         if (!title || !price || !location || !startDate) {
             Alert.alert("Erreur", "Veuillez remplir tous les champs (y compris la date)");
@@ -66,12 +55,6 @@ export default function CreateServiceScreen() {
 
         setLoading(true);
         try {
-            let imageUrl = image;
-            if (image && image !== serviceToEdit?.image?.uri && !image.startsWith('http')) {
-                // Only upload if it's a new local image
-                imageUrl = await uploadImage(image);
-            }
-
             // Convert timestamps to ISO dates
             const startIso = new Date(startDate).toISOString();
             const endIso = endDate ? new Date(endDate).toISOString() : startIso; // Single date = same start/end
@@ -91,7 +74,6 @@ export default function CreateServiceScreen() {
                 meeting_points: [],
                 availability_start: startIso,
                 availability_end: endIso,
-                image_url: imageUrl,
                 max_participants: maxParticipants ? parseInt(maxParticipants) : undefined
             };
 
@@ -132,23 +114,6 @@ export default function CreateServiceScreen() {
                     <ScrollView className="px-6 pt-6" showsVerticalScrollIndicator={false}>
 
                         <View className="gap-6 pb-20">
-                            {/* Image Picker */}
-                            <TouchableOpacity onPress={pickImage}>
-                                <View className="h-48 bg-gray-100 dark:bg-zinc-800 rounded-2xl items-center justify-center border-2 border-dashed border-gray-300 dark:border-white/10 overflow-hidden">
-                                    {image ? (
-                                        <Image source={{ uri: image }} className="w-full h-full" resizeMode="cover" />
-                                    ) : (
-                                        <>
-                                            <View className="bg-white dark:bg-zinc-700 p-4 rounded-full mb-2">
-                                                <Camera size={24} color="#9CA3AF" />
-                                            </View>
-                                            <Text className="text-gray-500 font-medium">Ajouter une photo de couverture</Text>
-                                        </>
-                                    )}
-                                </View>
-                            </TouchableOpacity>
-
-
                             {/* Service Category Dropdown */}
                             <View className="z-50">
                                 <Text className="text-gray-500 mb-2 font-medium">Type de service</Text>
@@ -213,7 +178,9 @@ export default function CreateServiceScreen() {
                                                     className="px-4 py-3 border-b border-gray-100 dark:border-white/5 active:bg-gray-50 dark:active:bg-zinc-700 flex-row justify-between"
                                                 >
                                                     <Text className="text-gray-900 dark:text-white">{opt.label}</Text>
-                                                    <Text className="text-gray-500 font-medium">{opt.price} €</Text>
+                                                    <Text className="text-gray-500 font-medium">
+                                                        {formatSAR(toSar(getGuideNetEurFromDisplayedPrice(opt.price)))}
+                                                    </Text>
                                                 </TouchableOpacity>
                                             ))}
                                         </View>
@@ -223,11 +190,11 @@ export default function CreateServiceScreen() {
 
                             {/* Price Display (Read-Only) */}
                             <View>
-                                <Text className="text-gray-500 mb-2 font-medium">Prix (Fixe)</Text>
+                                <Text className="text-gray-500 mb-2 font-medium">Prix guide (net après commission)</Text>
                                 <View className="flex-row items-center bg-gray-100 dark:bg-zinc-800/50 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 opacity-80">
                                     <DollarSign size={20} color="#9CA3AF" />
                                     <Text className="flex-1 ml-3 text-gray-900 dark:text-white font-bold text-lg">
-                                        {price ? `${price} €` : '-- €'}
+                                        {price ? formatSAR(toSar(getGuideNetEurFromDisplayedPrice(Number(price)))) : '--'}
                                     </Text>
                                 </View>
                             </View>
@@ -305,7 +272,7 @@ export default function CreateServiceScreen() {
                                 <Text className="text-gray-500 dark:text-gray-300 text-xs mt-1">- Rendez-vous au haram</Text>
                                 <Text className="text-gray-500 dark:text-gray-300 text-xs mt-1">- Rendez-vous à l&apos;hôtel</Text>
                                 <Text className="text-gray-500 dark:text-gray-300 text-xs mt-2 leading-5">
-                                    Si l&apos;hôtel est déclaré à plus de 2 km en voiture du haram, un supplément fixe de 10 € sera ajouté.
+                                    Si l&apos;hôtel est déclaré à plus de 2 km en voiture du haram, un supplément fixe de 40 SAR sera ajouté.
                                 </Text>
                             </View>
 

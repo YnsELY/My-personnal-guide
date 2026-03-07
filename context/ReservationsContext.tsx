@@ -27,7 +27,10 @@ export interface Reservation {
     endDate?: string;
     date: string;
     time: string;
-    price: string;
+    price: string | number;
+    totalPriceEur?: number;
+    guideNetAmountEur?: number | null;
+    commissionableNetAmountEur?: number | null;
     location?: string;
     transportPickupType?: 'haram' | 'hotel' | null;
     hotelAddress?: string | null;
@@ -40,7 +43,14 @@ export interface Reservation {
     cardAmountPaid?: number;
     cancellationCreditAmount?: number;
     cancelledAt?: string | null;
+    cancelledBy?: string | null;
     cancellationPolicyApplied?: ReservationCancellationPolicy | null;
+    createdAt?: string | null;
+    reassignedFromGuideId?: string | null;
+    reassignedByAdminId?: string | null;
+    reassignedAt?: string | null;
+    reassignmentReason?: string | null;
+    hoursSinceReservation?: number;
     guideStartConfirmedAt?: string | null;
     pilgrimStartConfirmedAt?: string | null;
     visitStartedAt?: string | null;

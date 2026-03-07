@@ -1,13 +1,11 @@
 import { AdminGuard } from '@/components/admin/AdminGuard';
 import { getAdminFinance, markGuidePayoutAsPaid } from '@/lib/adminApi';
+import { formatEUR } from '@/lib/pricing';
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import { ArrowLeft, BadgeCheck } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, StatusBar, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-const formatCurrency = (value: number) =>
-    new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(value || 0);
 
 export default function AdminPayoutsScreen() {
     const router = useRouter();
@@ -86,7 +84,7 @@ export default function AdminPayoutsScreen() {
                                     <View className="mt-3">
                                         <View className="flex-row justify-between">
                                             <Text className="text-gray-500 text-xs">Net dû</Text>
-                                            <Text className="text-[#b39164] font-semibold">{formatCurrency(item.dueAmount)}</Text>
+                                            <Text className="text-[#b39164] font-semibold">{formatEUR(item.dueAmount || 0)}</Text>
                                         </View>
                                     </View>
 
@@ -108,4 +106,3 @@ export default function AdminPayoutsScreen() {
         </AdminGuard>
     );
 }
-

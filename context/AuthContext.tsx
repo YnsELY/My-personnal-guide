@@ -1,4 +1,5 @@
-import { getCurrentProfile, getCurrentUser, getGuideApprovalInfo, signIn as apiSignIn, signOut as apiSignOut, signUp as apiSignUp } from '@/lib/api';
+import { type AvatarPresetId } from '@/lib/avatar';
+import { getCurrentProfile, getCurrentUser, getGuideApprovalInfo, signIn as apiSignIn, signOut as apiSignOut, signUp as apiSignUp, updateCurrentProfileAvatar } from '@/lib/api';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 type SignUpRole = 'guide' | 'pilgrim';
@@ -12,6 +13,7 @@ interface AuthContextType {
     isGuideApproved: boolean;
     signIn: (email: string, pass: string) => Promise<void>;
     signUp: (email: string, pass: string, name: string, role: SignUpRole, gender: 'male' | 'female', dob: string, language: 'fr' | 'ar') => Promise<void>;
+    updateProfileAvatar: (presetId: AvatarPresetId) => Promise<void>;
     signOut: () => Promise<void>;
 }
 
@@ -23,6 +25,7 @@ const AuthContext = createContext<AuthContextType>({
     isGuideApproved: true,
     signIn: async () => { },
     signUp: async () => { },
+    updateProfileAvatar: async () => { },
     signOut: async () => { },
 });
 
@@ -105,6 +108,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         await refreshUser();
     };
 
+    const updateProfileAvatar = async (presetId: AvatarPresetId) => {
+        const updated = await updateCurrentProfileAvatar(presetId);
+        setProfile((prev: any) => {
+            if (!prev) return prev;
+            return {
+                ...prev,
+                avatar_url: updated?.avatar_url || prev.avatar_url,
+            };
+        });
+    };
+
     const signOut = async () => {
         await apiSignOut();
         setUser(null);
@@ -114,7 +128,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, profile, isLoading, guideApprovalStatus, isGuideApproved, signIn, signUp, signOut }}>
+        <AuthContext.Provider value={{ user, profile, isLoading, guideApprovalStatus, isGuideApproved, signIn, signUp, updateProfileAvatar, signOut }}>
             {children}
         </AuthContext.Provider>
     );

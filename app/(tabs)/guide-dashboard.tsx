@@ -1,6 +1,7 @@
 import { SlideToConfirmModal } from '@/components/SlideToConfirmModal';
 import { useAuth } from '@/context/AuthContext';
 import { useReservations } from '@/context/ReservationsContext';
+import { formatSAR, toSar } from '@/lib/pricing';
 import { Redirect } from 'expo-router';
 import { Check, ChevronDown, ChevronUp, Clock, MapPin, User, X } from 'lucide-react-native';
 import React, { useState } from 'react';
@@ -24,7 +25,7 @@ export default function GuideDashboardScreen() {
 
     const [activeView, setActiveView] = useState<DashboardView>('requests');
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [pendingAction, setPendingAction] = useState<{ type: 'start' | 'end'; reservation: any } | null>(null);
+    const [pendingAction, setPendingAction] = useState<{ type: 'start' | 'end' | 'cancel'; reservation: any } | null>(null);
     const [isActionSubmitting, setIsActionSubmitting] = useState(false);
 
     const viewLabels: Record<DashboardView, string> = {
@@ -101,7 +102,7 @@ export default function GuideDashboardScreen() {
         );
     };
 
-    const openActionConfirmation = (type: 'start' | 'end', reservation: any) => {
+    const openActionConfirmation = (type: 'start' | 'end' | 'cancel', reservation: any) => {
         setPendingAction({ type, reservation });
     };
 
@@ -122,13 +123,16 @@ export default function GuideDashboardScreen() {
                 } else {
                     Alert.alert('Confirmation envoyee', 'Le pelerin doit maintenant confirmer le debut de la visite.');
                 }
-            } else {
+            } else if (pendingAction.type === 'end') {
                 const result = await confirmVisitEndAsGuide(pendingAction.reservation.id);
                 if (result?.status === 'completed') {
                     Alert.alert('Visite terminee', 'Le guide et le pelerin ont confirme la fin de la visite.');
                 } else {
                     Alert.alert('Confirmation envoyee', 'Le pelerin doit maintenant confirmer la fin de la visite.');
                 }
+            } else {
+                await updateReservationStatus(pendingAction.reservation.id, 'cancelled');
+                Alert.alert('Service annulé', 'La prestation a été annulée avec succès.');
             }
 
             setPendingAction(null);
@@ -152,7 +156,7 @@ export default function GuideDashboardScreen() {
                 : reservation.hotelOver2KmByCar === false
                     ? ' (<= 2 km)'
                     : '';
-            const feePart = Number(reservation.transportExtraFeeAmount || 0) > 0 ? ' +10 €' : '';
+            const feePart = Number(reservation.transportExtraFeeAmount || 0) > 0 ? ` +${formatSAR(toSar(Number(reservation.transportExtraFeeAmount || 0)))}` : '';
             return `Transport: Rendez-vous à l’hôtel${hotelAddress}${distancePart}${feePart}`;
         }
 
@@ -245,20 +249,29 @@ export default function GuideDashboardScreen() {
                                                 </View>
                                             </View>
 
-                                            {visit.guideStartConfirmedAt ? (
-                                                <View className="mt-4 bg-amber-100 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 py-3 rounded-lg items-center">
-                                                    <Text className="text-amber-700 dark:text-amber-300 font-semibold text-sm">
-                                                        En attente de confirmation du pelerin
-                                                    </Text>
-                                                </View>
-                                            ) : (
+                                            <View className="mt-4 gap-2">
+                                                {visit.guideStartConfirmedAt ? (
+                                                    <View className="bg-amber-100 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 py-3 rounded-lg items-center">
+                                                        <Text className="text-amber-700 dark:text-amber-300 font-semibold text-sm">
+                                                            En attente de confirmation du pelerin
+                                                        </Text>
+                                                    </View>
+                                                ) : (
+                                                    <TouchableOpacity
+                                                        className="bg-[#b39164] py-3 rounded-lg items-center"
+                                                        onPress={() => openActionConfirmation('start', visit)}
+                                                    >
+                                                        <Text className="text-white font-semibold text-sm">Commencer la visite</Text>
+                                                    </TouchableOpacity>
+                                                )}
+
                                                 <TouchableOpacity
-                                                    className="mt-4 bg-[#b39164] py-3 rounded-lg items-center"
-                                                    onPress={() => openActionConfirmation('start', visit)}
+                                                    className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 py-3 rounded-lg items-center"
+                                                    onPress={() => openActionConfirmation('cancel', visit)}
                                                 >
-                                                    <Text className="text-white font-semibold text-sm">Commencer la visite</Text>
+                                                    <Text className="text-red-500 font-semibold text-sm">Annuler la prestation</Text>
                                                 </TouchableOpacity>
-                                            )}
+                                            </View>
                                         </View>
                                     ))
                                 )}
@@ -346,8 +359,10 @@ export default function GuideDashboardScreen() {
                                                         </Text>
                                                     </View>
                                                 </View>
-                                                <View className="items-end">
-                                                    <Text className="text-[#b39164] font-bold text-lg">{req.price}</Text>
+                                                    <View className="items-end">
+                                                    <Text className="text-[#b39164] font-bold text-lg">
+                                                        {formatSAR(toSar(Number(req.guideNetAmountEur ?? req.price ?? 0)))}
+                                                    </Text>
                                                 </View>
                                             </View>
 
@@ -379,13 +394,27 @@ export default function GuideDashboardScreen() {
 
             <SlideToConfirmModal
                 visible={!!pendingAction}
-                title={pendingAction?.type === 'start' ? 'Confirmation de debut' : 'Confirmation de fin'}
-                message={pendingAction?.type === 'start'
-                    ? 'Est-ce que vous etes sur de vouloir commencer la visite maintenant ?'
-                    : 'Est-ce que vous etes sur de vouloir terminer la visite maintenant ?'}
-                sliderLabel={pendingAction?.type === 'start'
-                    ? 'Glissez pour confirmer le debut'
-                    : 'Glissez pour confirmer la fin'}
+                title={
+                    pendingAction?.type === 'start'
+                        ? 'Confirmation de debut'
+                        : pendingAction?.type === 'end'
+                            ? 'Confirmation de fin'
+                            : 'Confirmation d’annulation'
+                }
+                message={
+                    pendingAction?.type === 'start'
+                        ? 'Est-ce que vous etes sur de vouloir commencer la visite maintenant ?'
+                        : pendingAction?.type === 'end'
+                            ? 'Est-ce que vous etes sur de vouloir terminer la visite maintenant ?'
+                            : 'Est-ce que vous etes sur de vouloir annuler cette prestation ?'
+                }
+                sliderLabel={
+                    pendingAction?.type === 'start'
+                        ? 'Glissez pour confirmer le debut'
+                        : pendingAction?.type === 'end'
+                            ? 'Glissez pour confirmer la fin'
+                            : 'Glissez pour confirmer l’annulation'
+                }
                 isProcessing={isActionSubmitting}
                 onClose={closeActionConfirmation}
                 onConfirm={confirmPendingAction}

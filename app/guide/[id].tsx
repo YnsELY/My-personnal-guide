@@ -1,5 +1,7 @@
 import BookingModal from '@/components/BookingModal';
+import { getServiceImageForLocation } from '@/constants/serviceLocationImages';
 import { getGuideById, getReviews, getServiceById } from '@/lib/api';
+import { formatEUR } from '@/lib/pricing';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Briefcase, ShieldCheck, Star, User } from 'lucide-react-native';
 import React, { useState } from 'react';
@@ -7,12 +9,14 @@ import { Image, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'reac
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function GuideDetails() {
-    const { id, startDate, endDate, servicePrice, serviceLocation, serviceImage, serviceTitle, serviceId } = useLocalSearchParams();
+    const { id, startDate, endDate, servicePrice, serviceGuideNetPrice, serviceLocation, serviceTitle, serviceId } = useLocalSearchParams();
     const router = useRouter();
     const selectedStartDateParam = Array.isArray(startDate) ? startDate[0] : startDate;
     const selectedEndDateParam = Array.isArray(endDate) ? endDate[0] : endDate;
     const selectedStartDateTs = selectedStartDateParam ? Number(selectedStartDateParam) : NaN;
     const selectedEndDateTs = selectedEndDateParam ? Number(selectedEndDateParam) : NaN;
+    const selectedServicePrice = servicePrice ? Number(Array.isArray(servicePrice) ? servicePrice[0] : servicePrice) : NaN;
+    const selectedServiceGuideNetPrice = serviceGuideNetPrice ? Number(Array.isArray(serviceGuideNetPrice) ? serviceGuideNetPrice[0] : serviceGuideNetPrice) : NaN;
 
     const [guide, setGuide] = useState<any>(null);
     const [service, setService] = useState<any>(null);
@@ -34,11 +38,22 @@ export default function GuideDetails() {
     // User feedback implies we ARE on a service context.
     const activeService = service || (serviceTitle ? {
         title: serviceTitle,
-        price: servicePrice ? parseInt(servicePrice as string) : undefined,
+        price: Number.isFinite(selectedServicePrice) ? selectedServicePrice : undefined,
+        guideNetBasePriceEur: Number.isFinite(selectedServiceGuideNetPrice)
+            ? selectedServiceGuideNetPrice
+            : Number.isFinite(selectedServicePrice)
+                ? selectedServicePrice
+                : undefined,
         location: serviceLocation,
         category: 'Omra accompagnée', // Fallback? Or try to deduce? Best to rely on serviceId fetch.
         meetingPoints: []
     } : null);
+    const displayedServicePrice = Number.isFinite(Number(activeService?.price))
+        ? Number(activeService?.price)
+        : Number.isFinite(selectedServicePrice)
+            ? selectedServicePrice
+            : NaN;
+    const heroLocation = (serviceLocation || activeService?.location || guide?.location || '') as string;
     const fallbackStartDateTs = activeService?.startDate ? new Date(activeService.startDate).getTime() : undefined;
     const fallbackEndDateTs = activeService?.endDate ? new Date(activeService.endDate).getTime() : undefined;
     const modalStartDate = Number.isFinite(selectedStartDateTs) ? selectedStartDateTs : fallbackStartDateTs;
@@ -61,12 +76,7 @@ export default function GuideDetails() {
                 {/* Header Image */}
                 <View className="relative h-64">
                     <Image
-                        source={serviceImage
-                            ? { uri: serviceImage as string }
-                            : ((serviceLocation || guide.location).toLowerCase().includes('medina') || (serviceLocation || guide.location).toLowerCase().includes('médine')
-                                ? require('@/assets/images/medina.jpeg')
-                                : require('@/assets/images/mecca.jpg'))
-                        }
+                        source={getServiceImageForLocation(heroLocation)}
                         className="w-full h-full object-cover"
                     />
                     <View className="absolute inset-0 bg-black/30" />
@@ -120,8 +130,10 @@ export default function GuideDetails() {
                     </View>
 
                     <View className="flex-row items-center mb-6">
-                        <Text className="text-3xl font-bold text-primary">{servicePrice ? `${servicePrice} €` : guide.price}</Text>
-                        <Text className="text-gray-500 dark:text-gray-400 text-sm ml-2 self-end mb-1">{servicePrice ? '' : guide.priceUnit}</Text>
+                        <Text className="text-3xl font-bold text-primary">
+                            {Number.isFinite(displayedServicePrice) ? formatEUR(displayedServicePrice) : guide.price}
+                        </Text>
+                        <Text className="text-gray-500 dark:text-gray-400 text-sm ml-2 self-end mb-1">{Number.isFinite(displayedServicePrice) ? '' : guide.priceUnit}</Text>
                     </View>
 
                     {/* Stats Row */}

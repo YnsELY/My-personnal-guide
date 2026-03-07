@@ -135,7 +135,11 @@ export default function GuideCancellationGlobalPopup() {
         if (!isSeenCancellationsReady || profile?.role !== 'guide') return;
 
         const unseenCancelledByPilgrim = guideReservations.filter((reservation: any) => {
-            const cancelledByPilgrim = reservation.status === 'cancelled' && !!reservation.cancelledAt;
+            const cancelledByPilgrim =
+                reservation.status === 'cancelled'
+                && !!reservation.cancelledAt
+                && !!reservation.cancelledBy
+                && reservation.cancelledBy === reservation.pilgrimId;
             return cancelledByPilgrim && !seenCancelledReservationIdsRef.current.has(reservation.id);
         });
 

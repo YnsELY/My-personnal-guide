@@ -1,9 +1,5 @@
-import {
-    computeReservationFinance,
-    DEFAULT_PLATFORM_COMMISSION_RATE,
-    getCurrentProfile,
-    getCurrentUser,
-} from '@/lib/api';
+import { getCurrentProfile, getCurrentUser } from '@/lib/api';
+import { computeReservationFinance, PLATFORM_COMMISSION_RATE } from '@/lib/pricing';
 import { supabase } from '@/lib/supabase';
 
 type AccountStatus = 'active' | 'suspended';
@@ -13,6 +9,19 @@ type ReservationStatus = 'pending' | 'confirmed' | 'in_progress' | 'completed' |
 type PayoutStatus = 'not_due' | 'to_pay' | 'processing' | 'paid' | 'failed';
 type GuideInterviewStatus = 'pending_guide' | 'pending_admin' | 'accepted' | 'cancelled';
 const DUE_PAYOUT_STATUSES: PayoutStatus[] = ['to_pay', 'processing', 'failed'];
+const REPLACEMENT_PENDING_TIMEOUT_HOURS = 12;
+
+export type GuideCandidate = {
+    id: string;
+    fullName: string;
+    email: string;
+    location: string | null;
+    rating: number;
+    reviewsCount: number;
+    verified: boolean;
+    onboardingStatus: string | null;
+    fallbackAllZones?: boolean;
+};
 
 const asNumber = (value: any) => {
     const parsed = Number(value ?? 0);
@@ -86,7 +95,7 @@ export const getAdminOverview = async (periodDays = 30) => {
         supabase.from('reservations').select('*', { count: 'exact', head: true }),
         supabase
             .from('reservations')
-            .select('id,status,total_price,platform_fee_amount,guide_net_amount,commission_rate,guide_id,payout_status,created_at')
+            .select('id,status,total_price,platform_fee_amount,guide_net_amount,commission_rate,commissionable_net_amount,transport_extra_fee_amount,guide_id,payout_status,created_at')
             .gte('created_at', startISO),
     ]);
 
@@ -113,11 +122,17 @@ export const getAdminOverview = async (periodDays = 30) => {
         if (status !== 'completed') continue;
 
         const total = asNumber(reservation.total_price);
-        const commissionRate = asNumber(reservation.commission_rate) || DEFAULT_PLATFORM_COMMISSION_RATE;
-        const fallback = computeReservationFinance(total, commissionRate);
+        const commissionRate = asNumber(reservation.commission_rate) || PLATFORM_COMMISSION_RATE;
+        const rawCommissionable = (reservation as any).commissionable_net_amount;
+        const fallback = computeReservationFinance({
+            totalPriceEur: total,
+            transportExtraFeeEur: asNumber((reservation as any).transport_extra_fee_amount),
+            commissionableNetAmountEur: rawCommissionable === null || rawCommissionable === undefined ? null : asNumber(rawCommissionable),
+            commissionRate,
+        });
 
-        const platform = asNumber(reservation.platform_fee_amount) || fallback.platformFee;
-        const net = asNumber(reservation.guide_net_amount) || fallback.guideNet;
+        const platform = asNumber(reservation.platform_fee_amount) || fallback.platformFeeEur;
+        const net = asNumber(reservation.guide_net_amount) || fallback.guideNetEur;
 
         gmv += total;
         platformRevenue += platform;
@@ -641,9 +656,12 @@ export const getAdminReservations = async (options?: {
             hotel_over_2km_by_car,
             hotel_distance_km,
             transport_extra_fee_amount,
+            commissionable_net_amount,
+            commission_rate,
             total_price,
             status,
             payout_status,
+            cancelled_by,
             guide_net_amount,
             platform_fee_amount,
             created_at,
@@ -668,9 +686,41 @@ export const getAdminReservations = async (options?: {
     const { data, error } = await query;
     if (error) throw error;
 
+    const nowMs = Date.now();
     const rows = (data || []).map((reservation: any) => {
         const guideProfile = fromMaybeArray<any>(reservation.guide_profile);
         const pilgrimProfile = fromMaybeArray<any>(reservation.pilgrim_profile);
+        const commissionRate = asNumber(reservation.commission_rate) || PLATFORM_COMMISSION_RATE;
+        const rawCommissionable = reservation.commissionable_net_amount;
+        const createdAtRaw = reservation.created_at ? String(reservation.created_at) : null;
+        const createdAtMs = createdAtRaw ? new Date(createdAtRaw).getTime() : NaN;
+        const hoursSinceReservation = Number.isFinite(createdAtMs)
+            ? Math.max(0, Math.floor((nowMs - createdAtMs) / (1000 * 60 * 60)))
+            : 0;
+        const isPendingTooLong = reservation.status === 'pending' && hoursSinceReservation >= REPLACEMENT_PENDING_TIMEOUT_HOURS;
+        const isGuideCancelled = reservation.status === 'cancelled'
+            && (
+                (reservation.cancelled_by && reservation.cancelled_by === reservation.guide_id)
+                || reservation.cancelled_by === null
+            );
+        const canAssignReplacement = isGuideCancelled || isPendingTooLong;
+        const replacementReason = isGuideCancelled
+            ? 'guide_cancelled'
+            : isPendingTooLong
+                ? 'pending_timeout_12h'
+                : null;
+        const finance = computeReservationFinance({
+            totalPriceEur: asNumber(reservation.total_price),
+            transportExtraFeeEur: asNumber(reservation.transport_extra_fee_amount),
+            commissionableNetAmountEur: rawCommissionable === null || rawCommissionable === undefined ? null : asNumber(rawCommissionable),
+            commissionRate,
+        });
+        const guideNetAmount = reservation.guide_net_amount === null || reservation.guide_net_amount === undefined
+            ? finance.guideNetEur
+            : asNumber(reservation.guide_net_amount);
+        const platformFeeAmount = reservation.platform_fee_amount === null || reservation.platform_fee_amount === undefined
+            ? finance.platformFeeEur
+            : asNumber(reservation.platform_fee_amount);
 
         return {
             id: reservation.id,
@@ -693,9 +743,18 @@ export const getAdminReservations = async (options?: {
             totalPrice: asNumber(reservation.total_price),
             status: reservation.status as ReservationStatus,
             payoutStatus: (reservation.payout_status || 'not_due') as PayoutStatus,
-            guideNetAmount: asNumber(reservation.guide_net_amount),
-            platformFeeAmount: asNumber(reservation.platform_fee_amount),
-            createdAt: reservation.created_at,
+            createdAt: createdAtRaw,
+            hoursSinceReservation,
+            isPendingTooLong,
+            isGuideCancelled,
+            canAssignReplacement,
+            replacementReason,
+            cancelledBy: reservation.cancelled_by || null,
+            guideNetAmount,
+            commissionableNetAmount: reservation.commissionable_net_amount === null || reservation.commissionable_net_amount === undefined
+                ? null
+                : asNumber(reservation.commissionable_net_amount),
+            platformFeeAmount,
             updatedAt: reservation.updated_at,
             completedAt: reservation.completed_at,
             guideName: guideProfile?.full_name || 'Guide inconnu',
@@ -727,24 +786,33 @@ export const updateAdminReservationStatus = async (reservationId: string, status
     if (status === 'completed') {
         const { data: reservation, error: reservationError } = await supabase
             .from('reservations')
-            .select('total_price,commission_rate')
+            .select('total_price,commission_rate,transport_extra_fee_amount,commissionable_net_amount')
             .eq('id', reservationId)
             .single();
 
         if (reservationError) throw reservationError;
 
-        const commissionRate = asNumber(reservation?.commission_rate) || DEFAULT_PLATFORM_COMMISSION_RATE;
-        const finance = computeReservationFinance(asNumber(reservation?.total_price), commissionRate);
+        const commissionRate = PLATFORM_COMMISSION_RATE;
+        const rawCommissionable = (reservation as any)?.commissionable_net_amount;
+        const finance = computeReservationFinance({
+            totalPriceEur: asNumber(reservation?.total_price),
+            transportExtraFeeEur: asNumber((reservation as any)?.transport_extra_fee_amount),
+            commissionableNetAmountEur: rawCommissionable === null || rawCommissionable === undefined ? null : asNumber(rawCommissionable),
+            commissionRate,
+        });
 
         updates.completed_at = new Date().toISOString();
         updates.commission_rate = finance.commissionRate;
-        updates.platform_fee_amount = finance.platformFee;
-        updates.guide_net_amount = finance.guideNet;
+        updates.commissionable_net_amount = finance.commissionableNetAmountEur;
+        updates.platform_fee_amount = finance.platformFeeEur;
+        updates.guide_net_amount = finance.guideNetEur;
         updates.payout_status = 'to_pay';
     }
 
     if (status === 'cancelled') {
         updates.payout_status = 'not_due';
+        updates.cancelled_at = new Date().toISOString();
+        updates.cancelled_by = adminId;
     }
 
     const { data, error } = await supabase
@@ -767,13 +835,134 @@ export const updateAdminReservationStatus = async (reservationId: string, status
     return data;
 };
 
+export const getAdminReplacementGuideCandidates = async (reservationId: string): Promise<GuideCandidate[]> => {
+    await ensureAdmin();
+
+    const { data: reservation, error: reservationError } = await supabase
+        .from('reservations')
+        .select('id,guide_id,status,cancelled_by,created_at')
+        .eq('id', reservationId)
+        .single();
+
+    if (reservationError) throw reservationError;
+    if (!reservation) throw new Error('Réservation introuvable.');
+
+    const createdAtMs = reservation.created_at ? new Date(reservation.created_at).getTime() : NaN;
+    const hoursSinceReservation = Number.isFinite(createdAtMs)
+        ? Math.max(0, Math.floor((Date.now() - createdAtMs) / (1000 * 60 * 60)))
+        : 0;
+    const isPendingTooLong = reservation.status === 'pending' && hoursSinceReservation >= REPLACEMENT_PENDING_TIMEOUT_HOURS;
+    const isGuideCancelled = reservation.status === 'cancelled'
+        && (
+            (reservation.cancelled_by && reservation.cancelled_by === reservation.guide_id)
+            || reservation.cancelled_by === null
+        );
+    const canAssignReplacement = isGuideCancelled || isPendingTooLong;
+    if (!canAssignReplacement) {
+        throw new Error("Cette réservation n'est pas éligible au remplacement de guide.");
+    }
+
+    const { data: currentGuide, error: currentGuideError } = await supabase
+        .from('guides')
+        .select('id,location')
+        .eq('id', reservation.guide_id)
+        .maybeSingle();
+
+    if (currentGuideError) throw currentGuideError;
+
+    const buildCandidates = async (location?: string | null): Promise<GuideCandidate[]> => {
+        let query = supabase
+            .from('guides')
+            .select(`
+                id,
+                location,
+                rating,
+                reviews_count,
+                verified,
+                onboarding_status,
+                profiles:profiles!guides_id_fkey (
+                    full_name,
+                    email
+                )
+            `)
+            .neq('id', reservation.guide_id)
+            .or('onboarding_status.eq.approved,verified.eq.true');
+
+        if (location && location.trim().length > 0) {
+            query = query.eq('location', location.trim());
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+
+        return (data || [])
+            .map((guide: any) => {
+                const profile = fromMaybeArray<any>(guide.profiles);
+                return {
+                    id: guide.id,
+                    fullName: profile?.full_name || 'Guide',
+                    email: profile?.email || '',
+                    location: guide.location || null,
+                    rating: asNumber(guide.rating),
+                    reviewsCount: asNumber(guide.reviews_count),
+                    verified: !!guide.verified,
+                    onboardingStatus: guide.onboarding_status || null,
+                };
+            })
+            .sort((a, b) => {
+                if (Number(b.verified) !== Number(a.verified)) {
+                    return Number(b.verified) - Number(a.verified);
+                }
+                if (b.rating !== a.rating) {
+                    return b.rating - a.rating;
+                }
+                return b.reviewsCount - a.reviewsCount;
+            });
+    };
+
+    const currentLocation = currentGuide?.location || null;
+    const sameZoneCandidates = await buildCandidates(currentLocation);
+    if (sameZoneCandidates.length > 0) {
+        return sameZoneCandidates.map((candidate) => ({ ...candidate, fallbackAllZones: false }));
+    }
+
+    const fallbackCandidates = await buildCandidates(null);
+    return fallbackCandidates.map((candidate) => ({ ...candidate, fallbackAllZones: true }));
+};
+
+export const assignReplacementGuide = async (params: {
+    reservationId: string;
+    newGuideId: string;
+    reason?: string;
+}): Promise<{ reservationId: string; previousGuideId: string; newGuideId: string; status: 'confirmed' }> => {
+    await ensureAdmin();
+
+    const { data, error } = await supabase.rpc('admin_assign_replacement_guide', {
+        p_reservation_id: params.reservationId,
+        p_new_guide_id: params.newGuideId,
+        p_reason: params.reason || null,
+    });
+
+    if (error) throw error;
+
+    const payload = Array.isArray(data) ? data[0] : data;
+    if (!payload) throw new Error('Aucune donnée de remplacement retournée.');
+
+    return {
+        reservationId: payload.reservationId || payload.reservation_id,
+        previousGuideId: payload.previousGuideId || payload.previous_guide_id,
+        newGuideId: payload.newGuideId || payload.new_guide_id,
+        status: 'confirmed',
+    };
+};
+
 export const getAdminFinance = async (periodDays = 30) => {
     await ensureAdmin();
     const startISO = periodStartISO(periodDays);
 
     const { data: reservations, error } = await supabase
         .from('reservations')
-        .select('id,guide_id,total_price,commission_rate,platform_fee_amount,guide_net_amount,payout_status,status,created_at')
+        .select('id,guide_id,total_price,commission_rate,commissionable_net_amount,transport_extra_fee_amount,platform_fee_amount,guide_net_amount,payout_status,status,created_at')
         .eq('status', 'completed')
         .gte('created_at', startISO);
 
@@ -811,10 +1000,16 @@ export const getAdminFinance = async (periodDays = 30) => {
 
     for (const reservation of reservations || []) {
         const totalPrice = asNumber(reservation.total_price);
-        const commissionRate = asNumber(reservation.commission_rate) || DEFAULT_PLATFORM_COMMISSION_RATE;
-        const fallback = computeReservationFinance(totalPrice, commissionRate);
-        const platformFee = asNumber(reservation.platform_fee_amount) || fallback.platformFee;
-        const guideNet = asNumber(reservation.guide_net_amount) || fallback.guideNet;
+        const commissionRate = asNumber(reservation.commission_rate) || PLATFORM_COMMISSION_RATE;
+        const rawCommissionable = (reservation as any).commissionable_net_amount;
+        const fallback = computeReservationFinance({
+            totalPriceEur: totalPrice,
+            transportExtraFeeEur: asNumber((reservation as any).transport_extra_fee_amount),
+            commissionableNetAmountEur: rawCommissionable === null || rawCommissionable === undefined ? null : asNumber(rawCommissionable),
+            commissionRate,
+        });
+        const platformFee = asNumber(reservation.platform_fee_amount) || fallback.platformFeeEur;
+        const guideNet = asNumber(reservation.guide_net_amount) || fallback.guideNetEur;
         const payoutStatus = (reservation.payout_status || 'to_pay') as PayoutStatus;
 
         gmv += totalPrice;
@@ -868,7 +1063,7 @@ export const markGuidePayoutAsPaid = async (guideId: string, paymentReference?: 
 
     const { data: reservations, error: reservationsError } = await supabase
         .from('reservations')
-        .select('id,total_price,commission_rate,guide_net_amount,platform_fee_amount,created_at')
+        .select('id,total_price,commission_rate,commissionable_net_amount,transport_extra_fee_amount,guide_net_amount,platform_fee_amount,created_at')
         .eq('guide_id', guideId)
         .eq('status', 'completed')
         .in('payout_status', DUE_PAYOUT_STATUSES);
@@ -898,10 +1093,16 @@ export const markGuidePayoutAsPaid = async (guideId: string, paymentReference?: 
 
     for (const reservation of reservations) {
         const totalPrice = asNumber(reservation.total_price);
-        const commissionRate = asNumber(reservation.commission_rate) || DEFAULT_PLATFORM_COMMISSION_RATE;
-        const fallback = computeReservationFinance(totalPrice, commissionRate);
-        const linePlatformFee = asNumber(reservation.platform_fee_amount) || fallback.platformFee;
-        const lineNet = asNumber(reservation.guide_net_amount) || fallback.guideNet;
+        const commissionRate = asNumber(reservation.commission_rate) || PLATFORM_COMMISSION_RATE;
+        const rawCommissionable = (reservation as any).commissionable_net_amount;
+        const fallback = computeReservationFinance({
+            totalPriceEur: totalPrice,
+            transportExtraFeeEur: asNumber((reservation as any).transport_extra_fee_amount),
+            commissionableNetAmountEur: rawCommissionable === null || rawCommissionable === undefined ? null : asNumber(rawCommissionable),
+            commissionRate,
+        });
+        const linePlatformFee = asNumber(reservation.platform_fee_amount) || fallback.platformFeeEur;
+        const lineNet = asNumber(reservation.guide_net_amount) || fallback.guideNetEur;
 
         grossAmount += totalPrice;
         platformFee += linePlatformFee;

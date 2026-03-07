@@ -14,16 +14,17 @@ import { Alert, Image, ScrollView, StatusBar, Switch, Text, TouchableOpacity, Vi
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/AuthContext';
+import { AVATAR_PRESET_OPTIONS, DEFAULT_AVATAR_PRESET_ID, getAvatarPresetIdFromUrl, type AvatarPresetId, resolveProfileAvatarSource } from '@/lib/avatar';
 import { getGuideWalletSummary, getPilgrimWalletSummary } from '@/lib/api';
+import { formatEUR, formatSAR } from '@/lib/pricing';
 import { useFocusEffect, useRouter } from 'expo-router';
 
-const formatCurrency = (value: number) =>
-    new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(value || 0);
-
 export default function ProfileScreen() {
-    const { user, profile, signOut, isLoading } = useAuth();
+    const { user, profile, signOut, isLoading, updateProfileAvatar } = useAuth();
     const router = useRouter();
     const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
+    const [isAvatarPickerOpen, setIsAvatarPickerOpen] = React.useState(false);
+    const [isAvatarUpdating, setIsAvatarUpdating] = React.useState(false);
     const [walletSummary, setWalletSummary] = React.useState<Awaited<ReturnType<typeof getGuideWalletSummary>> | null>(null);
     const [walletLoading, setWalletLoading] = React.useState(false);
     const [walletError, setWalletError] = React.useState<string | null>(null);
@@ -76,6 +77,22 @@ export default function ProfileScreen() {
         }, [loadGuideWalletSummary, loadPilgrimWalletSummary])
     );
 
+    const currentAvatarPresetId = getAvatarPresetIdFromUrl(profile?.avatar_url) || DEFAULT_AVATAR_PRESET_ID;
+    const profileAvatarSource = resolveProfileAvatarSource(profile?.avatar_url);
+
+    const handleSelectAvatar = async (presetId: AvatarPresetId) => {
+        if (isAvatarUpdating) return;
+        try {
+            setIsAvatarUpdating(true);
+            await updateProfileAvatar(presetId);
+            setIsAvatarPickerOpen(false);
+        } catch (error: any) {
+            Alert.alert('Erreur', error?.message || "Impossible de mettre a jour l'avatar.");
+        } finally {
+            setIsAvatarUpdating(false);
+        }
+    };
+
     if (isLoading) {
         return <View className="flex-1 bg-gray-50 dark:bg-zinc-900 justify-center items-center"><Text className="text-gray-500">Chargement...</Text></View>;
     }
@@ -116,15 +133,41 @@ export default function ProfileScreen() {
                     <View className="items-center mt-4 mb-6">
                         <View className="relative">
                             <Image
-                                source={require('@/assets/images/profil.jpeg')}
+                                source={profileAvatarSource}
                                 className="w-28 h-28 rounded-full border-4 border-white dark:border-zinc-900"
                             />
-                            <TouchableOpacity className="absolute bottom-1 right-1 bg-primary p-2 rounded-full border border-white dark:border-zinc-900">
+                            <TouchableOpacity
+                                onPress={() => setIsAvatarPickerOpen((prev) => !prev)}
+                                className="absolute bottom-1 right-1 bg-primary p-2 rounded-full border border-white dark:border-zinc-900"
+                            >
                                 <Camera size={14} color="white" />
                             </TouchableOpacity>
                         </View>
                         <Text className="text-2xl font-bold text-white mt-3 mb-1">{profile?.full_name || 'Utilisateur'}</Text>
                         <Text className="text-gray-300 text-sm">{user.email}</Text>
+                        {isAvatarPickerOpen && (
+                            <View className="mt-4 bg-white dark:bg-zinc-800 rounded-2xl border border-gray-200 dark:border-white/10 p-3 w-[92%]">
+                                <Text className="text-gray-500 dark:text-gray-300 text-xs mb-3">Choisissez votre photo de profil</Text>
+                                <View className="flex-row items-center justify-between">
+                                    {AVATAR_PRESET_OPTIONS.map((avatar) => {
+                                        const isSelected = currentAvatarPresetId === avatar.id;
+                                        return (
+                                            <TouchableOpacity
+                                                key={avatar.id}
+                                                onPress={() => handleSelectAvatar(avatar.id)}
+                                                disabled={isAvatarUpdating}
+                                                className={`p-1 rounded-full ${isSelected ? 'border-2 border-[#b39164]' : 'border-2 border-transparent'}`}
+                                            >
+                                                <Image source={avatar.source} className="w-16 h-16 rounded-full" />
+                                            </TouchableOpacity>
+                                        );
+                                    })}
+                                </View>
+                                {isAvatarUpdating && (
+                                    <Text className="text-gray-400 text-xs mt-2">Mise a jour...</Text>
+                                )}
+                            </View>
+                        )}
                         <View className="flex-row gap-2 mt-4">
 
                             {profile?.role === 'guide' && (
@@ -152,7 +195,7 @@ export default function ProfileScreen() {
                             <View className="mb-4 bg-white dark:bg-zinc-800 rounded-2xl border border-gray-100 dark:border-white/10 p-4">
                                 <Text className="text-gray-500 text-xs uppercase tracking-wider">Cagnotte guide</Text>
                                 <Text className="text-3xl font-bold text-gray-900 dark:text-white mt-1">
-                                    {formatCurrency(walletSummary?.availableBalance || 0)}
+                                    {formatSAR(walletSummary?.availableBalance || 0)}
                                 </Text>
                                 <Text className="text-gray-500 text-xs mt-2">
                                     La cagnotte se crédite à la fin validée de la visite.
@@ -173,8 +216,8 @@ export default function ProfileScreen() {
                                     </View>
                                 ) : (
                                     <View className="mt-4 gap-2">
-                                        <WalletRow label="Total généré" value={formatCurrency(walletSummary?.totalGenerated || 0)} />
-                                        <WalletRow label="Déjà payé" value={formatCurrency(walletSummary?.paidOut || 0)} />
+                                        <WalletRow label="Total généré" value={formatSAR(walletSummary?.totalGenerated || 0)} />
+                                        <WalletRow label="Déjà payé" value={formatSAR(walletSummary?.paidOut || 0)} />
                                         <WalletRow label="Visites terminées" value={`${walletSummary?.completedVisits || 0}`} />
                                     </View>
                                 )}
@@ -184,7 +227,7 @@ export default function ProfileScreen() {
                             <View className="mb-4 bg-white dark:bg-zinc-800 rounded-2xl border border-gray-100 dark:border-white/10 p-4">
                                 <Text className="text-gray-500 text-xs uppercase tracking-wider">Cagnotte pèlerin</Text>
                                 <Text className="text-3xl font-bold text-gray-900 dark:text-white mt-1">
-                                    {formatCurrency(pilgrimWalletSummary?.availableBalance || 0)}
+                                    {formatEUR(pilgrimWalletSummary?.availableBalance || 0)}
                                 </Text>
                                 <Text className="text-gray-500 text-xs mt-2">
                                     Solde d&apos;avoir disponible pour vos prochaines réservations.

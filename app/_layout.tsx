@@ -1,5 +1,9 @@
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import AdminCancellationGlobalPopup from '@/components/AdminCancellationGlobalPopup';
 import GuideCancellationGlobalPopup from '@/components/GuideCancellationGlobalPopup';
+import GuideReplacementGlobalPopup from '@/components/GuideReplacementGlobalPopup';
+import PilgrimCancellationGlobalPopup from '@/components/PilgrimCancellationGlobalPopup';
+import PilgrimReplacementGlobalPopup from '@/components/PilgrimReplacementGlobalPopup';
 import { ReservationsProvider } from '@/context/ReservationsContext';
 import { DarkTheme, ThemeProvider } from '@react-navigation/native';
 import { Redirect, Stack, usePathname } from 'expo-router';
@@ -32,6 +36,10 @@ export default function RootLayout() {
         <ThemeProvider value={DarkTheme}>
           <AppStack />
           <GuideCancellationGlobalPopup />
+          <GuideReplacementGlobalPopup />
+          <PilgrimCancellationGlobalPopup />
+          <PilgrimReplacementGlobalPopup />
+          <AdminCancellationGlobalPopup />
           <StatusBar style="light" />
         </ThemeProvider>
       </ReservationsProvider>

@@ -1,5 +1,6 @@
 import { AdminGuard } from '@/components/admin/AdminGuard';
 import { getAdminOverview } from '@/lib/adminApi';
+import { formatEUR } from '@/lib/pricing';
 import { useFocusEffect, useRouter } from 'expo-router';
 import {
     BadgeCheck,
@@ -16,9 +17,6 @@ import { ActivityIndicator, RefreshControl, ScrollView, StatusBar, Text, Touchab
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const PERIOD_OPTIONS = [7, 30, 90];
-
-const formatCurrency = (value: number) =>
-    new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(value || 0);
 
 export default function AdminDashboardScreen() {
     const router = useRouter();
@@ -118,15 +116,15 @@ export default function AdminDashboardScreen() {
 
                                 <View className="bg-white dark:bg-zinc-800 border border-gray-100 dark:border-white/10 rounded-2xl p-4 mb-3">
                                     <Text className="text-gray-500 dark:text-gray-400 text-xs mb-1">GMV période ({periodDays}j)</Text>
-                                    <Text className="text-2xl font-bold text-gray-900 dark:text-white">{formatCurrency(overview?.gmv || 0)}</Text>
+                                    <Text className="text-2xl font-bold text-gray-900 dark:text-white">{formatEUR(overview?.gmv || 0)}</Text>
                                     <View className="flex-row justify-between mt-3">
                                         <View>
                                             <Text className="text-gray-400 text-xs">Revenu plateforme</Text>
-                                            <Text className="text-green-500 font-semibold">{formatCurrency(overview?.platformRevenue || 0)}</Text>
+                                            <Text className="text-green-500 font-semibold">{formatEUR(overview?.platformRevenue || 0)}</Text>
                                         </View>
                                         <View>
                                             <Text className="text-gray-400 text-xs text-right">Montant à distribuer</Text>
-                                            <Text className="text-[#b39164] font-semibold text-right">{formatCurrency(overview?.guidesToDistribute || 0)}</Text>
+                                            <Text className="text-[#b39164] font-semibold text-right">{formatEUR(overview?.guidesToDistribute || 0)}</Text>
                                         </View>
                                     </View>
                                 </View>

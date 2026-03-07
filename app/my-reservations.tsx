@@ -1,6 +1,7 @@
 import { SlideToConfirmModal } from '@/components/SlideToConfirmModal';
 import { useAuth } from '@/context/AuthContext';
 import { useReservations } from '@/context/ReservationsContext';
+import { resolveProfileAvatarSource } from '@/lib/avatar';
 import { Stack, useRouter } from 'expo-router';
 import { ArrowLeft, Calendar, MapPin, MessageCircle } from 'lucide-react-native';
 import React from 'react';
@@ -171,7 +172,7 @@ export default function ReservationsScreen() {
                                         <View className="flex-row justify-between items-start mb-4">
                                             <View className="flex-row items-center flex-1 mr-2">
                                                 <Image
-                                                    source={item.guideAvatar ? { uri: item.guideAvatar } : require('@/assets/images/profil.jpeg')}
+                                                    source={resolveProfileAvatarSource(item.guideAvatar)}
                                                     className="w-10 h-10 rounded-full bg-gray-200"
                                                 />
                                                 <View className="ml-3 flex-1">
