@@ -1,10 +1,12 @@
-import { CHARTER_TEXT } from '@/constants/charter';
+import { CHARTER_TEXT, GUIDE_CODE_OF_CONDUCT_TEXT, GUIDE_RELIGIOUS_REGULATION_TEXT } from '@/constants/charter';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'expo-router';
 import { Briefcase, Check, ChevronDown, Lock, Mail, User, UserCircle2 } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Modal, Platform, ScrollView, StatusBar, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+type GuideConsentStep = 'code_of_conduct' | 'religious_regulation';
 
 export default function RegisterScreen() {
     const router = useRouter();
@@ -30,6 +32,9 @@ export default function RegisterScreen() {
     // Charter State
     const [charterAccepted, setCharterAccepted] = useState(false);
     const [showCharterModal, setShowCharterModal] = useState(false);
+    const [guideCodeAccepted, setGuideCodeAccepted] = useState(false);
+    const [guideRegulationAccepted, setGuideRegulationAccepted] = useState(false);
+    const [guideConsentStep, setGuideConsentStep] = useState<GuideConsentStep>('code_of_conduct');
 
     const submitRegistration = async () => {
         setLoading(true);
@@ -77,8 +82,19 @@ export default function RegisterScreen() {
             return;
         }
 
-        // Validate Charter for both pilgrim and guide
-        if (!charterAccepted) {
+        if (role === 'guide') {
+            if (!guideCodeAccepted) {
+                setGuideConsentStep('code_of_conduct');
+                setShowCharterModal(true);
+                return;
+            }
+
+            if (!guideRegulationAccepted) {
+                setGuideConsentStep('religious_regulation');
+                setShowCharterModal(true);
+                return;
+            }
+        } else if (!charterAccepted) {
             setShowCharterModal(true);
             return;
         }
@@ -106,6 +122,9 @@ export default function RegisterScreen() {
                                 onPress={() => {
                                     setRole('pilgrim');
                                     setCharterAccepted(false);
+                                    setGuideCodeAccepted(false);
+                                    setGuideRegulationAccepted(false);
+                                    setGuideConsentStep('code_of_conduct');
                                 }}
                                 className={`flex-1 p-4 rounded-xl border-2 flex-row items-center justify-center gap-2 ${role === 'pilgrim' ? 'border-[#b39164] bg-[#b39164]/10' : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-zinc-800'}`}
                             >
@@ -118,6 +137,9 @@ export default function RegisterScreen() {
                                 onPress={() => {
                                     setRole('guide');
                                     setCharterAccepted(false);
+                                    setGuideCodeAccepted(false);
+                                    setGuideRegulationAccepted(false);
+                                    setGuideConsentStep('code_of_conduct');
                                 }}
                                 className={`flex-1 p-4 rounded-xl border-2 flex-row items-center justify-center gap-2 ${role === 'guide' ? 'border-[#b39164] bg-[#b39164]/10' : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-zinc-800'}`}
                             >
@@ -282,32 +304,67 @@ export default function RegisterScreen() {
 
                             {/* Removed Checkbox UI for Charter */}
 
-                            {/* Charter Modal */}
+                            {/* Charter / Guide Documents Modal */}
                             <Modal visible={showCharterModal} animationType="slide" presentationStyle="pageSheet">
                                 <View className="flex-1 bg-white dark:bg-zinc-900">
                                     <SafeAreaView className="flex-1">
                                         <View className="flex-row justify-between items-center p-4 border-b border-gray-100 dark:border-white/5">
                                             <Text className="text-xl font-bold text-gray-900 dark:text-white">
-                                                {role === 'guide' ? 'Charte du guide' : 'Charte du pèlerin'}
+                                                {role === 'guide'
+                                                    ? (guideConsentStep === 'code_of_conduct'
+                                                        ? 'Code de conduite des guides'
+                                                        : 'Reglement des guides religieux')
+                                                    : 'Charte du pèlerin'}
                                             </Text>
                                             <TouchableOpacity onPress={() => setShowCharterModal(false)} className="p-2">
                                                 <Text className="text-gray-500 font-bold">Annuler</Text>
                                             </TouchableOpacity>
                                         </View>
                                         <ScrollView className="flex-1 p-6" contentContainerStyle={{ paddingBottom: 40 }}>
-                                            <Text className="text-gray-700 dark:text-gray-300 leading-6 text-base">{CHARTER_TEXT}</Text>
+                                            <Text className="text-gray-700 dark:text-gray-300 leading-6 text-base">
+                                                {role === 'guide'
+                                                    ? (guideConsentStep === 'code_of_conduct'
+                                                        ? GUIDE_CODE_OF_CONDUCT_TEXT
+                                                        : GUIDE_RELIGIOUS_REGULATION_TEXT)
+                                                    : CHARTER_TEXT}
+                                            </Text>
                                         </ScrollView>
                                         <View className="p-4 border-t border-gray-100 dark:border-white/5 bg-gray-50 dark:bg-zinc-800">
-                                            <TouchableOpacity
-                                                onPress={() => {
-                                                    setCharterAccepted(true);
-                                                    setShowCharterModal(false);
-                                                    submitRegistration(); // Trigger registration immediately after acceptance
-                                                }}
-                                                className="bg-[#b39164] py-4 rounded-xl items-center shadow-sm"
-                                            >
-                                                <Text className="text-white font-bold text-lg">Accepter et S'inscrire</Text>
-                                            </TouchableOpacity>
+                                            {role === 'guide' ? (
+                                                guideConsentStep === 'code_of_conduct' ? (
+                                                    <TouchableOpacity
+                                                        onPress={() => {
+                                                            setGuideCodeAccepted(true);
+                                                            setGuideConsentStep('religious_regulation');
+                                                        }}
+                                                        className="bg-[#b39164] py-4 rounded-xl items-center shadow-sm"
+                                                    >
+                                                        <Text className="text-white font-bold text-lg">J&apos;accepte le code de conduite</Text>
+                                                    </TouchableOpacity>
+                                                ) : (
+                                                    <TouchableOpacity
+                                                        onPress={() => {
+                                                            setGuideRegulationAccepted(true);
+                                                            setShowCharterModal(false);
+                                                            submitRegistration();
+                                                        }}
+                                                        className="bg-[#b39164] py-4 rounded-xl items-center shadow-sm"
+                                                    >
+                                                        <Text className="text-white font-bold text-lg">J&apos;accepte le reglement et je m&apos;inscris</Text>
+                                                    </TouchableOpacity>
+                                                )
+                                            ) : (
+                                                <TouchableOpacity
+                                                    onPress={() => {
+                                                        setCharterAccepted(true);
+                                                        setShowCharterModal(false);
+                                                        submitRegistration();
+                                                    }}
+                                                    className="bg-[#b39164] py-4 rounded-xl items-center shadow-sm"
+                                                >
+                                                    <Text className="text-white font-bold text-lg">Accepter et S&apos;inscrire</Text>
+                                                </TouchableOpacity>
+                                            )}
                                         </View>
                                     </SafeAreaView>
                                 </View>

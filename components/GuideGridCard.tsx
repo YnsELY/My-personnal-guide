@@ -49,14 +49,9 @@ export function GuideGridCard({ guide, startDate, endDate }: { guide: GuideProps
 
                 <Text className="text-gray-500 dark:text-gray-400 text-xs mb-2" numberOfLines={1}>{guide.role}</Text>
 
-                <View className="flex-row items-center justify-between mt-1">
-                    <View className="flex-row items-center">
-                        <MapPin size={12} className="text-gray-400" />
-                        <Text className="text-gray-400 text-xs ml-0.5">{guide.location}</Text>
-                    </View>
-                    <Text className="text-primary font-bold text-sm">
-                        {guide.price}
-                    </Text>
+                <View className="flex-row items-center mt-1">
+                    <MapPin size={12} className="text-gray-400" />
+                    <Text className="text-gray-400 text-xs ml-0.5">{guide.location}</Text>
                 </View>
             </View>
         </TouchableOpacity>

@@ -23,6 +23,24 @@ export type GuideCandidate = {
     fallbackAllZones?: boolean;
 };
 
+export type AdminWalletRoleFilter = 'all' | 'guide' | 'pilgrim';
+export type AdminWalletRole = 'guide' | 'pilgrim';
+
+export type AdminWalletRow = {
+    userId: string;
+    fullName: string;
+    email: string;
+    role: AdminWalletRole;
+    currency: 'EUR';
+    availableBalance: number;
+    pilgrimTotalCredited: number;
+    pilgrimTotalDebited: number;
+    guideTotalGenerated: number;
+    guidePaidOut: number;
+    guideAdjustments: number;
+    guidePendingPayoutVisits: number;
+};
+
 const asNumber = (value: any) => {
     const parsed = Number(value ?? 0);
     return Number.isFinite(parsed) ? parsed : 0;
@@ -72,6 +90,11 @@ const logAdminAction = async (payload: {
         // Keep admin actions non-blocking if the audit table is not migrated yet.
         console.warn('Audit log insert failed:', error);
     }
+};
+
+const isMissingGuideWalletAdjustmentsTableError = (error: any) => {
+    const message = String(error?.message || '').toLowerCase();
+    return message.includes('guide_wallet_adjustments');
 };
 
 export const getAdminOverview = async (periodDays = 30) => {
@@ -532,6 +555,218 @@ export const updateAdminAccountStatus = async (accountId: string, accountStatus:
     });
 
     return data;
+};
+
+export const getAdminWallets = async (options?: { search?: string; role?: AdminWalletRoleFilter }): Promise<AdminWalletRow[]> => {
+    await ensureAdmin();
+    const search = options?.search?.trim();
+    const roleFilter = options?.role || 'all';
+
+    let query = supabase
+        .from('profiles')
+        .select('id,full_name,email,role,created_at')
+        .in('role', ['guide', 'pilgrim'])
+        .order('created_at', { ascending: false });
+
+    if (roleFilter !== 'all') {
+        query = query.eq('role', roleFilter);
+    }
+    if (search) {
+        query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`);
+    }
+
+    const { data: profiles, error: profilesError } = await query;
+    if (profilesError) throw profilesError;
+
+    const rows = profiles || [];
+    if (!rows.length) return [];
+
+    const pilgrimIds = rows.filter((row: any) => row.role === 'pilgrim').map((row: any) => row.id);
+    const guideIds = rows.filter((row: any) => row.role === 'guide').map((row: any) => row.id);
+
+    let pilgrimWallets: any[] = [];
+    if (pilgrimIds.length) {
+        const { data, error } = await supabase
+            .from('pilgrim_wallets')
+            .select('user_id,available_balance,total_credited,total_debited')
+            .in('user_id', pilgrimIds);
+        if (error) throw error;
+        pilgrimWallets = data || [];
+    }
+
+    const pilgrimWalletMap = new Map<string, { available: number; credited: number; debited: number }>(
+        pilgrimWallets.map((row: any) => [
+            row.user_id,
+            {
+                available: asNumber(row.available_balance),
+                credited: asNumber(row.total_credited),
+                debited: asNumber(row.total_debited),
+            },
+        ])
+    );
+
+    const guideStatsMap = new Map<string, {
+        totalGenerated: number;
+        paidOut: number;
+        dueBase: number;
+        adjustments: number;
+        pendingPayoutVisits: number;
+    }>();
+
+    for (const guideId of guideIds) {
+        guideStatsMap.set(guideId, {
+            totalGenerated: 0,
+            paidOut: 0,
+            dueBase: 0,
+            adjustments: 0,
+            pendingPayoutVisits: 0,
+        });
+    }
+
+    if (guideIds.length) {
+        const { data: reservations, error: reservationsError } = await supabase
+            .from('reservations')
+            .select('guide_id,total_price,commission_rate,commissionable_net_amount,transport_extra_fee_amount,guide_net_amount,payout_status')
+            .in('guide_id', guideIds)
+            .eq('status', 'completed');
+        if (reservationsError) throw reservationsError;
+
+        for (const reservation of reservations || []) {
+            const guideId = reservation.guide_id as string;
+            const stats = guideStatsMap.get(guideId);
+            if (!stats) continue;
+
+            const commissionRate = asNumber((reservation as any).commission_rate) || PLATFORM_COMMISSION_RATE;
+            const rawCommissionable = (reservation as any).commissionable_net_amount;
+            const finance = computeReservationFinance({
+                totalPriceEur: asNumber((reservation as any).total_price),
+                transportExtraFeeEur: asNumber((reservation as any).transport_extra_fee_amount),
+                commissionableNetAmountEur: rawCommissionable === null || rawCommissionable === undefined ? null : asNumber(rawCommissionable),
+                commissionRate,
+            });
+            const guideNet = asNumber((reservation as any).guide_net_amount) || finance.guideNetEur;
+            const payoutStatus = ((reservation as any).payout_status || 'to_pay') as PayoutStatus;
+
+            stats.totalGenerated += guideNet;
+
+            if (payoutStatus === 'paid') {
+                stats.paidOut += guideNet;
+            } else if (DUE_PAYOUT_STATUSES.includes(payoutStatus)) {
+                stats.dueBase += guideNet;
+                stats.pendingPayoutVisits += 1;
+            }
+        }
+
+        const { data: adjustments, error: adjustmentsError } = await supabase
+            .from('guide_wallet_adjustments')
+            .select('guide_id,amount_eur')
+            .in('guide_id', guideIds);
+
+        if (adjustmentsError && !isMissingGuideWalletAdjustmentsTableError(adjustmentsError)) {
+            throw adjustmentsError;
+        }
+
+        for (const adjustment of adjustments || []) {
+            const stats = guideStatsMap.get(adjustment.guide_id);
+            if (!stats) continue;
+            stats.adjustments += asNumber(adjustment.amount_eur);
+        }
+    }
+
+    return rows.map((row: any) => {
+        const role = row.role as AdminWalletRole;
+        if (role === 'pilgrim') {
+            const wallet = pilgrimWalletMap.get(row.id);
+            return {
+                userId: row.id,
+                fullName: row.full_name || 'Utilisateur',
+                email: row.email || '',
+                role: 'pilgrim' as const,
+                currency: 'EUR' as const,
+                availableBalance: asNumber(wallet?.available),
+                pilgrimTotalCredited: asNumber(wallet?.credited),
+                pilgrimTotalDebited: asNumber(wallet?.debited),
+                guideTotalGenerated: 0,
+                guidePaidOut: 0,
+                guideAdjustments: 0,
+                guidePendingPayoutVisits: 0,
+            };
+        }
+
+        const stats = guideStatsMap.get(row.id) || {
+            totalGenerated: 0,
+            paidOut: 0,
+            dueBase: 0,
+            adjustments: 0,
+            pendingPayoutVisits: 0,
+        };
+
+        return {
+            userId: row.id,
+            fullName: row.full_name || 'Guide',
+            email: row.email || '',
+            role: 'guide' as const,
+            currency: 'EUR' as const,
+            availableBalance: Math.max(0, stats.dueBase + stats.adjustments),
+            pilgrimTotalCredited: 0,
+            pilgrimTotalDebited: 0,
+            guideTotalGenerated: stats.totalGenerated,
+            guidePaidOut: stats.paidOut,
+            guideAdjustments: stats.adjustments,
+            guidePendingPayoutVisits: stats.pendingPayoutVisits,
+        };
+    });
+};
+
+export const adjustAdminWallet = async (payload: {
+    userId: string;
+    role: AdminWalletRole;
+    amountEur: number;
+    reason?: string;
+}) => {
+    const { adminId } = await ensureAdmin();
+    const amountEur = asNumber(payload.amountEur);
+
+    if (!Number.isFinite(amountEur) || amountEur === 0) {
+        throw new Error("Le montant doit être non nul.");
+    }
+
+    let rpcName = '';
+    let rpcPayload: Record<string, any> = {};
+    if (payload.role === 'pilgrim') {
+        rpcName = 'admin_adjust_pilgrim_wallet';
+        rpcPayload = {
+            p_user_id: payload.userId,
+            p_amount_eur: amountEur,
+            p_reason: payload.reason?.trim() || null,
+        };
+    } else {
+        rpcName = 'admin_add_guide_wallet_adjustment';
+        rpcPayload = {
+            p_guide_id: payload.userId,
+            p_amount_eur: amountEur,
+            p_reason: payload.reason?.trim() || null,
+        };
+    }
+
+    const { data, error } = await supabase.rpc(rpcName, rpcPayload);
+    if (error) throw error;
+
+    const result = Array.isArray(data) ? data[0] : data;
+
+    await logAdminAction({
+        adminId,
+        entityType: 'wallet',
+        entityId: payload.userId,
+        action: 'wallet_adjustment',
+        details: {
+            role: payload.role,
+            amountEur,
+            reason: payload.reason?.trim() || null,
+        },
+    });
+
+    return result;
 };
 
 export const getAdminServices = async (options?: { search?: string; status?: ServiceStatus | 'all' }) => {

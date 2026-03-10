@@ -85,7 +85,7 @@ export default function AdminCancellationGlobalPopup() {
 
     React.useEffect(() => {
         if (profile?.role !== 'admin' || !profile?.id) return;
-        refreshReservations().catch((error) => {
+        refreshReservations({ silent: true }).catch((error) => {
             console.error('Failed to refresh reservations for admin cancellation popup:', error);
         });
     }, [profile?.id, profile?.role, refreshReservations]);
@@ -103,7 +103,7 @@ export default function AdminCancellationGlobalPopup() {
                     table: 'reservations',
                 },
                 () => {
-                    refreshReservations().catch((error) => {
+                    refreshReservations({ silent: true }).catch((error) => {
                         console.error('Failed to refresh reservations after admin cancellation update:', error);
                     });
                 }
@@ -119,7 +119,7 @@ export default function AdminCancellationGlobalPopup() {
         if (profile?.role !== 'admin' || !profile?.id) return;
 
         const intervalId = setInterval(() => {
-            refreshReservations().catch((error) => {
+            refreshReservations({ silent: true }).catch((error) => {
                 console.error('Failed to refresh reservations from admin cancellation polling:', error);
             });
         }, 10000);

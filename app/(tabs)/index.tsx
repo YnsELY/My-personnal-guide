@@ -3,7 +3,7 @@ import { HadithWidget } from '@/components/HadithWidget';
 import { PrayerTimesWidget } from '@/components/PrayerTimesWidget';
 import { useAuth } from '@/context/AuthContext';
 import { useReservations } from '@/context/ReservationsContext';
-import { getGuides } from '@/lib/api';
+import { getRecommendedGuides } from '@/lib/api';
 import { formatSAR, toSar } from '@/lib/pricing';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -19,11 +19,17 @@ export default function HomeScreen() {
   const { profile, user } = useAuth();
   const { getReservationsByRole } = useReservations();
   const [guides, setGuides] = React.useState<any[]>([]);
+  const [isLoadingRecommendedGuides, setIsLoadingRecommendedGuides] = React.useState(false);
   const fullName = (profile?.full_name || user?.user_metadata?.full_name || '').trim();
   const firstName = fullName ? fullName.split(/\s+/)[0] : '';
 
   useEffect(() => {
-    getGuides().then(setGuides).catch(console.error);
+    if (profile?.role !== 'pilgrim') return;
+    setIsLoadingRecommendedGuides(true);
+    getRecommendedGuides(5)
+      .then(setGuides)
+      .catch(console.error)
+      .finally(() => setIsLoadingRecommendedGuides(false));
   }, [profile]);
 
   const serviceShowcaseCards = [
@@ -48,6 +54,28 @@ export default function HomeScreen() {
       cta: 'Découvrir',
       accent: ['#365b64', '#6aa9ba'] as const,
       onPress: () => router.push('/service/visite-guidee'),
+    },
+    {
+      id: 'omra-accompagne',
+      title: 'Omra accompagné',
+      subtitle: 'Accompagnement sur place',
+      description: 'Un accompagnement complet et rassurant pour accomplir votre Omra dans les meilleures conditions.',
+      image: require('@/assets/images/mecca.jpg'),
+      badge: 'Service encadré',
+      cta: 'Voir le service',
+      accent: ['#5a4529', '#b39164'] as const,
+      onPress: () => router.push('/service/omra-accompagne'),
+    },
+    {
+      id: 'omra-pmr',
+      title: 'Omra PMR',
+      subtitle: 'Service en préparation',
+      description: "Ce service n'est pas encore disponible. Il sera bientôt proposé dans l'application.",
+      image: require('@/assets/images/medina.jpeg'),
+      badge: 'Bientôt disponible',
+      cta: 'Pas encore disponible',
+      accent: ['#5f5f5f', '#8d8d8d'] as const,
+      comingSoon: true,
     },
     {
       id: 'all-services',
@@ -186,8 +214,9 @@ export default function HomeScreen() {
                 {serviceShowcaseCards.map((card) => (
                   <TouchableOpacity
                     key={card.id}
-                    className="rounded-3xl w-80 bg-white dark:bg-zinc-800 shadow-sm border border-gray-100 dark:border-white/5 overflow-hidden"
+                    className={`rounded-3xl w-80 bg-white dark:bg-zinc-800 shadow-sm border border-gray-100 dark:border-white/5 overflow-hidden ${card.comingSoon ? 'opacity-75' : ''}`}
                     onPress={card.onPress}
+                    disabled={!!card.comingSoon}
                     activeOpacity={0.9}
                   >
                     <View className="h-52 relative">
@@ -206,9 +235,13 @@ export default function HomeScreen() {
                         {card.description}
                       </Text>
 
-                      <View className="flex-row items-center justify-between mt-4 rounded-2xl border border-gray-200 dark:border-white/15 bg-gray-50 dark:bg-zinc-700/30 px-4 py-3">
-                        <Text className="text-gray-900 dark:text-white text-sm font-semibold">{card.cta}</Text>
-                        <ArrowUpRight size={16} color={isDark ? '#ffffff' : '#18181b'} />
+                      <View className={`flex-row items-center justify-between mt-4 rounded-2xl border px-4 py-3 ${card.comingSoon
+                        ? 'border-amber-500/30 bg-amber-500/10'
+                        : 'border-gray-200 dark:border-white/15 bg-gray-50 dark:bg-zinc-700/30'}`}>
+                        <Text className={`text-sm font-semibold ${card.comingSoon ? 'text-amber-700 dark:text-amber-300' : 'text-gray-900 dark:text-white'}`}>
+                          {card.cta}
+                        </Text>
+                        <ArrowUpRight size={16} color={card.comingSoon ? '#d97706' : (isDark ? '#ffffff' : '#18181b')} />
                       </View>
                     </View>
                   </TouchableOpacity>
@@ -217,12 +250,14 @@ export default function HomeScreen() {
 
               {/* Recommended Section (Mini) */}
               <Text className="text-gray-900 dark:text-white text-lg font-bold mb-4">Guides Recommandés</Text>
-              {guides.length > 0 ? (
-                guides.slice(0, 2).map((guide) => (
+              {isLoadingRecommendedGuides ? (
+                <Text className="text-gray-500 text-sm">Chargement des guides...</Text>
+              ) : guides.length > 0 ? (
+                guides.slice(0, 5).map((guide) => (
                   <GuideCard key={guide.id} guide={guide} />
                 ))
               ) : (
-                <Text className="text-gray-500 text-sm">Chargement des guides...</Text>
+                <Text className="text-gray-500 text-sm">Aucun guide recommandé pour le moment.</Text>
               )}
             </>
           )}

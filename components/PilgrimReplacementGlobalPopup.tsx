@@ -84,7 +84,7 @@ export default function PilgrimReplacementGlobalPopup() {
     React.useEffect(() => {
         if (profile?.role !== 'pilgrim' || !profile?.id) return;
 
-        refreshReservations().catch((error) => {
+        refreshReservations({ silent: true }).catch((error) => {
             console.error('Failed to refresh reservations for global pilgrim replacement popup:', error);
         });
     }, [profile?.id, profile?.role, refreshReservations]);
@@ -103,7 +103,7 @@ export default function PilgrimReplacementGlobalPopup() {
                     filter: `user_id=eq.${profile.id}`,
                 },
                 () => {
-                    refreshReservations().catch((error) => {
+                    refreshReservations({ silent: true }).catch((error) => {
                         console.error('Failed to refresh reservations after global pilgrim replacement update:', error);
                     });
                 }
@@ -119,7 +119,7 @@ export default function PilgrimReplacementGlobalPopup() {
         if (profile?.role !== 'pilgrim' || !profile?.id) return;
 
         const intervalId = setInterval(() => {
-            refreshReservations().catch((error) => {
+            refreshReservations({ silent: true }).catch((error) => {
                 console.error('Failed to refresh reservations from global pilgrim replacement polling:', error);
             });
         }, 10000);

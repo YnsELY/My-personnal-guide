@@ -84,7 +84,7 @@ export default function GuideReplacementGlobalPopup() {
     React.useEffect(() => {
         if (profile?.role !== 'guide' || !profile?.id) return;
 
-        refreshReservations().catch((error) => {
+        refreshReservations({ silent: true }).catch((error) => {
             console.error('Failed to refresh reservations for global guide replacement popup:', error);
         });
     }, [profile?.id, profile?.role, refreshReservations]);
@@ -103,7 +103,7 @@ export default function GuideReplacementGlobalPopup() {
                     filter: `guide_id=eq.${profile.id}`,
                 },
                 () => {
-                    refreshReservations().catch((error) => {
+                    refreshReservations({ silent: true }).catch((error) => {
                         console.error('Failed to refresh reservations after global guide replacement update:', error);
                     });
                 }
@@ -119,7 +119,7 @@ export default function GuideReplacementGlobalPopup() {
         if (profile?.role !== 'guide' || !profile?.id) return;
 
         const intervalId = setInterval(() => {
-            refreshReservations().catch((error) => {
+            refreshReservations({ silent: true }).catch((error) => {
                 console.error('Failed to refresh reservations from global guide replacement polling:', error);
             });
         }, 10000);

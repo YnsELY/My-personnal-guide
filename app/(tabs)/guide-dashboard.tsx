@@ -3,12 +3,20 @@ import { useAuth } from '@/context/AuthContext';
 import { useReservations } from '@/context/ReservationsContext';
 import { formatSAR, toSar } from '@/lib/pricing';
 import { Redirect } from 'expo-router';
-import { Check, ChevronDown, ChevronUp, Clock, MapPin, User, X } from 'lucide-react-native';
+import { Check, Clock, MapPin, User, X } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { Alert, ScrollView, StatusBar, Text, TouchableOpacity, View, useColorScheme } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-type DashboardView = 'requests' | 'upcoming' | 'ongoing';
+type DashboardView = 'requests' | 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
+
+const GUIDE_DASHBOARD_FILTERS: { value: DashboardView; label: string }[] = [
+    { value: 'requests', label: 'En attente' },
+    { value: 'upcoming', label: 'À venir' },
+    { value: 'ongoing', label: 'En cours' },
+    { value: 'completed', label: 'Terminées' },
+    { value: 'cancelled', label: 'Annulées' },
+];
 
 export default function GuideDashboardScreen() {
     const { profile, isLoading: authLoading } = useAuth();
@@ -24,26 +32,23 @@ export default function GuideDashboardScreen() {
     const isDark = colorScheme === 'dark';
 
     const [activeView, setActiveView] = useState<DashboardView>('requests');
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [pendingAction, setPendingAction] = useState<{ type: 'start' | 'end' | 'cancel'; reservation: any } | null>(null);
     const [isActionSubmitting, setIsActionSubmitting] = useState(false);
-
-    const viewLabels: Record<DashboardView, string> = {
-        requests: 'Mes demandes',
-        upcoming: 'Mes prochaines visites',
-        ongoing: 'Mes visites en cours',
-    };
 
     const viewSubtitles: Record<DashboardView, string> = {
         requests: 'Vos demandes en cours',
         upcoming: 'Vos prochaines visites confirmees',
         ongoing: 'Vos visites actuellement en cours',
+        completed: 'Vos prestations terminées',
+        cancelled: 'Historique des prestations annulées',
     };
 
     const guideReservations = getReservationsByRole('guide', profile?.id || '1');
     const requests = guideReservations.filter((r) => r.status === 'pending');
     const upcomingVisits = guideReservations.filter((r) => r.status === 'confirmed');
     const ongoingVisits = guideReservations.filter((r) => r.status === 'in_progress');
+    const completedVisits = guideReservations.filter((r) => r.status === 'completed');
+    const cancelledReservations = guideReservations.filter((r) => r.status === 'cancelled');
 
     if (authLoading || dataLoading) {
         return (
@@ -176,42 +181,35 @@ export default function GuideDashboardScreen() {
                             {viewSubtitles[activeView]}
                         </Text>
                     </View>
-
-                    <View className="relative z-20">
-                        <TouchableOpacity
-                            onPress={() => setIsMenuOpen((prev) => !prev)}
-                            className="bg-[#b39164]/10 px-4 py-2 rounded-full border border-[#b39164]/20 flex-row items-center"
-                        >
-                            <Text className="text-[#b39164] font-medium text-xs mr-1.5">
-                                {viewLabels[activeView]}
-                            </Text>
-                            {isMenuOpen ? (
-                                <ChevronUp size={14} color="#b39164" />
-                            ) : (
-                                <ChevronDown size={14} color="#b39164" />
-                            )}
-                        </TouchableOpacity>
-
-                        {isMenuOpen && (
-                            <View className="absolute top-11 right-0 w-52 bg-white dark:bg-zinc-800 border border-gray-100 dark:border-white/10 rounded-xl shadow-lg overflow-hidden">
-                                {(['requests', 'upcoming', 'ongoing'] as DashboardView[]).map((view) => (
-                                    <TouchableOpacity
-                                        key={view}
-                                        onPress={() => {
-                                            setActiveView(view);
-                                            setIsMenuOpen(false);
-                                        }}
-                                        className={`px-4 py-3 border-b border-gray-100 dark:border-white/10 ${activeView === view ? 'bg-[#b39164]/10' : ''}`}
-                                    >
-                                        <Text className={`${activeView === view ? 'text-[#b39164] font-semibold' : 'text-gray-700 dark:text-gray-200'} text-sm`}>
-                                            {viewLabels[view]}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-                        )}
-                    </View>
                 </View>
+
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    className="px-6 pt-3"
+                    style={{ maxHeight: 48 }}
+                    contentContainerStyle={{ gap: 8, paddingRight: 24, alignItems: 'center' }}
+                >
+                    {GUIDE_DASHBOARD_FILTERS.map((filter) => {
+                        const isActive = activeView === filter.value;
+                        return (
+                            <TouchableOpacity
+                                key={filter.value}
+                                onPress={() => setActiveView(filter.value)}
+                                className={`h-10 px-4 rounded-full border justify-center shrink-0 ${isActive
+                                    ? 'bg-[#b39164] border-[#b39164]'
+                                    : 'bg-transparent border-gray-300 dark:border-white/15'}`}
+                            >
+                                <Text
+                                    numberOfLines={1}
+                                    className={`text-xs font-semibold ${isActive ? 'text-white' : 'text-gray-600 dark:text-gray-300'}`}
+                                >
+                                    {filter.label}
+                                </Text>
+                            </TouchableOpacity>
+                        );
+                    })}
+                </ScrollView>
 
                 <ScrollView className="flex-1 px-6 pt-4" showsVerticalScrollIndicator={false}>
                     {activeView === 'upcoming' && (
@@ -382,6 +380,84 @@ export default function GuideDashboardScreen() {
                                                     <Check size={16} color="#22c55e" className="mr-2" />
                                                     <Text className="text-green-600 font-medium text-sm">Accepter</Text>
                                                 </TouchableOpacity>
+                                            </View>
+                                        </View>
+                                    ))}
+                                </View>
+                            )}
+                        </>
+                    )}
+
+                    {activeView === 'completed' && (
+                        <>
+                            {completedVisits.length === 0 ? (
+                                <View className="items-center justify-center py-8 bg-white dark:bg-zinc-800 rounded-xl border border-dashed border-gray-200 dark:border-zinc-700">
+                                    <Text className="text-gray-400 text-sm">Aucune prestation terminée.</Text>
+                                </View>
+                            ) : (
+                                <View className="gap-3 mb-24">
+                                    {completedVisits.map((reservation) => (
+                                        <View key={reservation.id} className="bg-white dark:bg-zinc-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-white/5">
+                                            <View className="flex-row items-center justify-between">
+                                                <View className="flex-row items-center flex-1">
+                                                    <View className="bg-blue-500/10 p-3 rounded-full mr-3">
+                                                        <Check color="#3b82f6" size={20} />
+                                                    </View>
+                                                    <View className="flex-1">
+                                                        <Text className="text-gray-900 dark:text-white font-medium">{reservation.pilgrimName}</Text>
+                                                        <Text className="text-gray-500 dark:text-gray-400 text-xs mt-0.5">{reservation.serviceName}</Text>
+                                                        <Text className="text-gray-500 dark:text-gray-400 text-xs">{reservation.date} a {reservation.time}</Text>
+                                                        <View className="flex-row items-center mt-1">
+                                                            <MapPin size={10} color="#9CA3AF" />
+                                                            <Text className="text-gray-400 text-[10px] ml-1">{reservation.location || 'Lieu a definir'}</Text>
+                                                        </View>
+                                                        <Text className="text-gray-400 dark:text-gray-500 text-[10px] mt-1" numberOfLines={2}>
+                                                            {transportSummary(reservation)}
+                                                        </Text>
+                                                    </View>
+                                                </View>
+                                                <View className="bg-blue-500/10 border border-blue-500/20 px-2 py-1 rounded-full ml-3">
+                                                    <Text className="text-blue-500 text-xs font-semibold">Terminée</Text>
+                                                </View>
+                                            </View>
+                                        </View>
+                                    ))}
+                                </View>
+                            )}
+                        </>
+                    )}
+
+                    {activeView === 'cancelled' && (
+                        <>
+                            {cancelledReservations.length === 0 ? (
+                                <View className="items-center justify-center py-8 bg-white dark:bg-zinc-800 rounded-xl border border-dashed border-gray-200 dark:border-zinc-700">
+                                    <Text className="text-gray-400 text-sm">Aucune prestation annulée.</Text>
+                                </View>
+                            ) : (
+                                <View className="gap-3 mb-24">
+                                    {cancelledReservations.map((reservation) => (
+                                        <View key={reservation.id} className="bg-white dark:bg-zinc-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-white/5">
+                                            <View className="flex-row items-center justify-between">
+                                                <View className="flex-row items-center flex-1">
+                                                    <View className="bg-red-500/10 p-3 rounded-full mr-3">
+                                                        <X color="#ef4444" size={20} />
+                                                    </View>
+                                                    <View className="flex-1">
+                                                        <Text className="text-gray-900 dark:text-white font-medium">{reservation.pilgrimName}</Text>
+                                                        <Text className="text-gray-500 dark:text-gray-400 text-xs mt-0.5">{reservation.serviceName}</Text>
+                                                        <Text className="text-gray-500 dark:text-gray-400 text-xs">{reservation.date} a {reservation.time}</Text>
+                                                        <View className="flex-row items-center mt-1">
+                                                            <MapPin size={10} color="#9CA3AF" />
+                                                            <Text className="text-gray-400 text-[10px] ml-1">{reservation.location || 'Lieu a definir'}</Text>
+                                                        </View>
+                                                        <Text className="text-gray-400 dark:text-gray-500 text-[10px] mt-1" numberOfLines={2}>
+                                                            {transportSummary(reservation)}
+                                                        </Text>
+                                                    </View>
+                                                </View>
+                                                <View className="bg-red-500/10 border border-red-500/20 px-2 py-1 rounded-full ml-3">
+                                                    <Text className="text-red-500 text-xs font-semibold">Annulée</Text>
+                                                </View>
                                             </View>
                                         </View>
                                     ))}

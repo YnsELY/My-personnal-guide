@@ -1,9 +1,9 @@
 import BookingModal from '@/components/BookingModal';
 import { getServiceImageForLocation } from '@/constants/serviceLocationImages';
-import { getGuideById, getReviews, getServiceById } from '@/lib/api';
+import { getGuideById, getPublicGuideServices, getReviews, getServiceById } from '@/lib/api';
 import { formatEUR } from '@/lib/pricing';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Briefcase, ShieldCheck, Star, User } from 'lucide-react-native';
+import { ArrowLeft, Briefcase, ChevronRight, ShieldCheck, Star, User } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { Image, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -13,38 +13,71 @@ export default function GuideDetails() {
     const router = useRouter();
     const selectedStartDateParam = Array.isArray(startDate) ? startDate[0] : startDate;
     const selectedEndDateParam = Array.isArray(endDate) ? endDate[0] : endDate;
+    const selectedServiceIdParam = Array.isArray(serviceId) ? serviceId[0] : serviceId;
+    const selectedServiceTitleParam = Array.isArray(serviceTitle) ? serviceTitle[0] : serviceTitle;
+    const selectedServiceLocationParam = Array.isArray(serviceLocation) ? serviceLocation[0] : serviceLocation;
     const selectedStartDateTs = selectedStartDateParam ? Number(selectedStartDateParam) : NaN;
     const selectedEndDateTs = selectedEndDateParam ? Number(selectedEndDateParam) : NaN;
     const selectedServicePrice = servicePrice ? Number(Array.isArray(servicePrice) ? servicePrice[0] : servicePrice) : NaN;
     const selectedServiceGuideNetPrice = serviceGuideNetPrice ? Number(Array.isArray(serviceGuideNetPrice) ? serviceGuideNetPrice[0] : serviceGuideNetPrice) : NaN;
+    const isServicesListMode = !selectedServiceIdParam;
 
     const [guide, setGuide] = useState<any>(null);
     const [service, setService] = useState<any>(null);
+    const [guideServices, setGuideServices] = useState<any[]>([]);
+    const [isLoadingGuideServices, setIsLoadingGuideServices] = useState(false);
     const [reviews, setReviews] = useState<any[]>([]);
+    const [reviewsLoaded, setReviewsLoaded] = useState(false);
     const [isBookingModalVisible, setBookingModalVisible] = useState(false);
 
     React.useEffect(() => {
         if (id) {
             getGuideById(id as string).then(setGuide).catch(e => console.error("Err Guide:", e));
-            getReviews(id as string).then(setReviews).catch(e => console.error("Err Reviews:", e));
+            getReviews(id as string)
+                .then(setReviews)
+                .catch(e => console.error("Err Reviews:", e))
+                .finally(() => setReviewsLoaded(true));
         }
-        if (serviceId) {
-            getServiceById(serviceId as string).then(setService).catch(e => console.error("Err Service:", e));
+    }, [id]);
+
+    React.useEffect(() => {
+        if (!id) return;
+
+        if (selectedServiceIdParam) {
+            setIsLoadingGuideServices(false);
+            setGuideServices([]);
+            getServiceById(selectedServiceIdParam as string)
+                .then(setService)
+                .catch((e) => {
+                    console.error("Err Service:", e);
+                    setService(null);
+                });
+            return;
         }
-    }, [id, serviceId]);
+
+        setService(null);
+        setIsLoadingGuideServices(true);
+        getPublicGuideServices(id as string)
+            .then(setGuideServices)
+            .catch((e) => {
+                console.error("Err Guide Services:", e);
+                setGuideServices([]);
+            })
+            .finally(() => setIsLoadingGuideServices(false));
+    }, [id, selectedServiceIdParam]);
 
     // Construct a fallback service object if specific service fetching failed but we have params
     // OR if we are just viewing a guide profile (no serviceId) but user wants to book??
     // User feedback implies we ARE on a service context.
-    const activeService = service || (serviceTitle ? {
-        title: serviceTitle,
+    const activeService = service || (selectedServiceTitleParam ? {
+        title: selectedServiceTitleParam,
         price: Number.isFinite(selectedServicePrice) ? selectedServicePrice : undefined,
         guideNetBasePriceEur: Number.isFinite(selectedServiceGuideNetPrice)
             ? selectedServiceGuideNetPrice
             : Number.isFinite(selectedServicePrice)
                 ? selectedServicePrice
                 : undefined,
-        location: serviceLocation,
+        location: selectedServiceLocationParam,
         category: 'Omra accompagnée', // Fallback? Or try to deduce? Best to rely on serviceId fetch.
         meetingPoints: []
     } : null);
@@ -53,11 +86,65 @@ export default function GuideDetails() {
         : Number.isFinite(selectedServicePrice)
             ? selectedServicePrice
             : NaN;
-    const heroLocation = (serviceLocation || activeService?.location || guide?.location || '') as string;
+    const heroLocation = (selectedServiceLocationParam || activeService?.location || guide?.location || '') as string;
     const fallbackStartDateTs = activeService?.startDate ? new Date(activeService.startDate).getTime() : undefined;
     const fallbackEndDateTs = activeService?.endDate ? new Date(activeService.endDate).getTime() : undefined;
     const modalStartDate = Number.isFinite(selectedStartDateTs) ? selectedStartDateTs : fallbackStartDateTs;
     const modalEndDate = Number.isFinite(selectedEndDateTs) ? selectedEndDateTs : fallbackEndDateTs;
+    const computedReviewsCount = reviews.length;
+    const computedAverageRatingRaw = computedReviewsCount > 0
+        ? reviews.reduce((sum, review) => sum + Number(review?.rating || 0), 0) / computedReviewsCount
+        : 0;
+    const displayedReviewsCount = reviewsLoaded ? computedReviewsCount : Number(guide?.reviews || 0);
+    const displayedAverageRating = reviewsLoaded
+        ? computedAverageRatingRaw
+        : Number(guide?.rating || 0);
+    const formattedDisplayedAverageRating = Number.isFinite(displayedAverageRating)
+        ? displayedAverageRating.toFixed(1)
+        : '0.0';
+    const handleSelectService = (serviceItem: any) => {
+        if (!guide?.id || !serviceItem?.id) return;
+
+        const nextParams: Record<string, any> = {
+            id: guide.id,
+            serviceId: serviceItem.id,
+            serviceTitle: serviceItem.title,
+            servicePrice: serviceItem.price,
+            serviceGuideNetPrice: serviceItem.guideNetBasePriceEur,
+            serviceLocation: serviceItem.location,
+        };
+
+        if (selectedStartDateParam) {
+            nextParams.startDate = selectedStartDateParam;
+        } else if (serviceItem?.startDate) {
+            nextParams.startDate = new Date(serviceItem.startDate).getTime();
+        }
+
+        if (selectedEndDateParam) {
+            nextParams.endDate = selectedEndDateParam;
+        } else if (serviceItem?.endDate) {
+            nextParams.endDate = new Date(serviceItem.endDate).getTime();
+        }
+
+        router.push({
+            pathname: '/guide/[id]',
+            params: nextParams,
+        });
+    };
+    const formatServiceDateRange = (start?: string, end?: string) => {
+        if (!start) return 'Date à définir';
+        const startDateObject = new Date(start);
+        if (Number.isNaN(startDateObject.getTime())) return 'Date à définir';
+
+        const startLabel = startDateObject.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        if (!end) return startLabel;
+
+        const endDateObject = new Date(end);
+        if (Number.isNaN(endDateObject.getTime())) return startLabel;
+
+        const endLabel = endDateObject.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        return `${startLabel} - ${endLabel}`;
+    };
 
     if (!guide) {
         return (
@@ -111,48 +198,100 @@ export default function GuideDetails() {
                         <View className="mb-2">
                             <View className="flex-row items-center bg-primary/10 px-3 py-1.5 rounded-full border border-primary/20">
                                 <Star size={14} color="#b39164" fill="#b39164" />
-                                <Text className="text-primary font-bold ml-1.5">{guide.rating} ({guide.reviews})</Text>
+                                <Text className="text-primary font-bold ml-1.5">{formattedDisplayedAverageRating} ({displayedReviewsCount})</Text>
                             </View>
                         </View>
                     </View>
 
                     <View className="mb-6">
                         {/* Service Title */}
-                        {serviceTitle && <Text className="text-lg font-medium text-[#b39164] uppercase tracking-wide mb-1">{serviceTitle}</Text>}
+                        {selectedServiceTitleParam && <Text className="text-lg font-medium text-[#b39164] uppercase tracking-wide mb-1">{selectedServiceTitleParam}</Text>}
                         {/* Guide Name */}
                         <Text className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{guide.name}</Text>
-                        <Text className="text-gray-500 dark:text-gray-400 text-lg">{guide.role} • {serviceLocation || guide.location}</Text>
-                        {!!activeService?.description && (
+                        <Text className="text-gray-500 dark:text-gray-400 text-lg">{guide.role} • {selectedServiceLocationParam || guide.location}</Text>
+                        {!isServicesListMode && !!activeService?.description && (
                             <Text className="text-gray-500 dark:text-gray-400 text-sm leading-6 mt-3">
                                 {activeService.description}
                             </Text>
                         )}
                     </View>
 
-                    <View className="flex-row items-center mb-6">
-                        <Text className="text-3xl font-bold text-primary">
-                            {Number.isFinite(displayedServicePrice) ? formatEUR(displayedServicePrice) : guide.price}
-                        </Text>
-                        <Text className="text-gray-500 dark:text-gray-400 text-sm ml-2 self-end mb-1">{Number.isFinite(displayedServicePrice) ? '' : guide.priceUnit}</Text>
-                    </View>
+                    {!isServicesListMode && Number.isFinite(displayedServicePrice) && (
+                        <View className="flex-row items-center mb-6">
+                            <Text className="text-3xl font-bold text-primary">
+                                {formatEUR(displayedServicePrice)}
+                            </Text>
+                        </View>
+                    )}
+
+                    {isServicesListMode && (
+                        <View className="mb-8">
+                            <Text className="text-xl font-bold text-gray-900 dark:text-white mb-3">Services actuellement disponibles</Text>
+                            {isLoadingGuideServices ? (
+                                <Text className="text-gray-500 dark:text-gray-400">Chargement des services...</Text>
+                            ) : guideServices.length === 0 ? (
+                                <Text className="text-gray-500 dark:text-gray-400">Ce guide n&apos;a pas encore de service actif.</Text>
+                            ) : (
+                                guideServices.map((serviceItem) => (
+                                    <TouchableOpacity
+                                        key={serviceItem.id}
+                                        className="bg-white dark:bg-zinc-800 rounded-2xl p-4 mb-3 border border-gray-100 dark:border-white/5"
+                                        activeOpacity={0.8}
+                                        onPress={() => handleSelectService(serviceItem)}
+                                    >
+                                        <View className="flex-row items-start justify-between mb-2">
+                                            <View className="flex-1 mr-3">
+                                                <Text className="text-gray-900 dark:text-white font-bold text-base">{serviceItem.title}</Text>
+                                                <Text className="text-[#b39164] text-xs font-semibold uppercase tracking-wide mt-1">{serviceItem.category}</Text>
+                                            </View>
+                                            <View className="px-3 py-1 rounded-full bg-primary/10 border border-primary/20">
+                                                <Text className="text-primary text-xs font-bold">{formatEUR(Number(serviceItem.price || 0))}</Text>
+                                            </View>
+                                        </View>
+
+                                        {!!serviceItem.description && (
+                                            <Text className="text-gray-500 dark:text-gray-400 text-sm leading-5 mb-3" numberOfLines={3}>
+                                                {serviceItem.description}
+                                            </Text>
+                                        )}
+
+                                        <View className="flex-row items-center justify-between border-t border-gray-100 dark:border-white/5 pt-3">
+                                            <View className="flex-1 mr-3">
+                                                <Text className="text-gray-500 dark:text-gray-400 text-xs">
+                                                    {serviceItem.location || 'Lieu non renseigné'}
+                                                </Text>
+                                                <Text className="text-gray-400 text-[11px] mt-1">
+                                                    {formatServiceDateRange(serviceItem.startDate, serviceItem.endDate)}
+                                                </Text>
+                                            </View>
+                                            <View className="flex-row items-center">
+                                                <Text className="text-primary font-semibold text-xs mr-1">Réserver</Text>
+                                                <ChevronRight size={14} color="#b39164" />
+                                            </View>
+                                        </View>
+                                    </TouchableOpacity>
+                                ))
+                            )}
+                        </View>
+                    )}
 
                     {/* Stats Row */}
                     <View className="flex-row items-center justify-between py-6 border-y border-gray-100 dark:border-white/5 mb-6 bg-gray-50 dark:bg-zinc-800/30 rounded-2xl px-4">
                         <View className="items-center flex-1 border-r border-gray-200 dark:border-white/5">
                             <View className="flex-row items-center">
                                 <Star size={20} color="#b39164" fill="#b39164" />
-                                <Text className="text-xl font-bold text-gray-900 dark:text-white ml-2">{guide.rating}</Text>
+                                <Text className="text-xl font-bold text-gray-900 dark:text-white ml-2">{formattedDisplayedAverageRating}</Text>
                             </View>
                             <Text className="text-gray-500 text-xs mt-1">Note</Text>
                         </View>
 
                         <View className="items-center flex-1 border-r border-gray-200 dark:border-white/5">
-                            <Text className="text-xl font-bold text-gray-900 dark:text-white">{guide.reviews}</Text>
+                            <Text className="text-xl font-bold text-gray-900 dark:text-white">{displayedReviewsCount}</Text>
                             <Text className="text-gray-500 text-xs mt-1">Avis</Text>
                         </View>
 
                         <View className="items-center flex-1">
-                            <Text className="text-xl font-bold text-gray-900 dark:text-white">{serviceLocation || guide.location}</Text>
+                            <Text className="text-xl font-bold text-gray-900 dark:text-white">{selectedServiceLocationParam || guide.location}</Text>
                             <Text className="text-gray-500 text-xs mt-1">Lieu</Text>
                         </View>
                     </View>
@@ -221,27 +360,31 @@ export default function GuideDetails() {
             </ScrollView>
 
             {/* Bottom Action Bar */}
-            <View className="absolute bottom-0 left-0 right-0 bg-white/90 dark:bg-zinc-900/90 p-6 border-t border-gray-100 dark:border-white/5 backdrop-blur-xl">
-                <SafeAreaView edges={['bottom']} className="flex-row gap-4">
-                    <TouchableOpacity
-                        className="bg-primary flex-1 p-4 rounded-2xl items-center justify-center shadow-lg shadow-primary/20"
-                        onPress={() => setBookingModalVisible(true)}
-                    >
-                        <Text className="text-white font-bold text-lg">Réserver maintenant</Text>
-                    </TouchableOpacity>
-                </SafeAreaView>
-            </View>
+            {!isServicesListMode && activeService && (
+                <View className="absolute bottom-0 left-0 right-0 bg-white/90 dark:bg-zinc-900/90 p-6 border-t border-gray-100 dark:border-white/5 backdrop-blur-xl">
+                    <SafeAreaView edges={['bottom']} className="flex-row gap-4">
+                        <TouchableOpacity
+                            className="bg-primary flex-1 p-4 rounded-2xl items-center justify-center shadow-lg shadow-primary/20"
+                            onPress={() => setBookingModalVisible(true)}
+                        >
+                            <Text className="text-white font-bold text-lg">Réserver maintenant</Text>
+                        </TouchableOpacity>
+                    </SafeAreaView>
+                </View>
+            )}
 
             {/* Booking Modal */}
-            <BookingModal
-                visible={isBookingModalVisible}
-                onClose={() => setBookingModalVisible(false)}
-                startDate={modalStartDate}
-                endDate={modalEndDate}
-                guideName={guide.name}
-                guideId={guide.id}
-                service={activeService}
-            />
+            {!isServicesListMode && activeService && (
+                <BookingModal
+                    visible={isBookingModalVisible}
+                    onClose={() => setBookingModalVisible(false)}
+                    startDate={modalStartDate}
+                    endDate={modalEndDate}
+                    guideName={guide.name}
+                    guideId={guide.id}
+                    service={activeService}
+                />
+            )}
         </View>
     );
 }

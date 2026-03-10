@@ -86,7 +86,7 @@ export default function GuideCancellationGlobalPopup() {
     React.useEffect(() => {
         if (profile?.role !== 'guide' || !profile?.id) return;
 
-        refreshReservations().catch((error) => {
+        refreshReservations({ silent: true }).catch((error) => {
             console.error('Failed to refresh reservations for global guide cancellation popup:', error);
         });
     }, [profile?.id, profile?.role, refreshReservations]);
@@ -105,7 +105,7 @@ export default function GuideCancellationGlobalPopup() {
                     filter: `guide_id=eq.${profile.id}`,
                 },
                 () => {
-                    refreshReservations().catch((error) => {
+                    refreshReservations({ silent: true }).catch((error) => {
                         console.error('Failed to refresh reservations after global cancellation update:', error);
                     });
                 }
@@ -121,7 +121,7 @@ export default function GuideCancellationGlobalPopup() {
         if (profile?.role !== 'guide' || !profile?.id) return;
 
         const intervalId = setInterval(() => {
-            refreshReservations().catch((error) => {
+            refreshReservations({ silent: true }).catch((error) => {
                 console.error('Failed to refresh reservations from global cancellation polling:', error);
             });
         }, 10000);

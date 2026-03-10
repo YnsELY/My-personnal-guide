@@ -45,12 +45,6 @@ export function GuideCard({ guide }: { guide: GuideProps }) {
                     <Text className="text-gray-400 text-xs ml-1">{guide.location}</Text>
                 </View>
 
-                <View className="flex-row justify-between items-end mt-2">
-                    <Text className="text-primary font-bold text-lg">
-                        {guide.price}
-                        <Text className="text-gray-500 dark:text-gray-400 text-xs font-normal">{guide.priceUnit}</Text>
-                    </Text>
-                </View>
             </View>
         </TouchableOpacity>
     );

@@ -171,13 +171,22 @@ export const getGuideWalletSummary = async (): Promise<{
     const userId = await ensureUser();
     if (!userId) throw new Error("Vous devez être connecté.");
 
-    const { data, error } = await supabase
-        .from('reservations')
-        .select('total_price,commission_rate,commissionable_net_amount,transport_extra_fee_amount,platform_fee_amount,guide_net_amount,payout_status')
-        .eq('guide_id', userId)
-        .eq('status', 'completed');
+    const [{ data, error }, { data: adjustments, error: adjustmentsError }] = await Promise.all([
+        supabase
+            .from('reservations')
+            .select('total_price,commission_rate,commissionable_net_amount,transport_extra_fee_amount,platform_fee_amount,guide_net_amount,payout_status')
+            .eq('guide_id', userId)
+            .eq('status', 'completed'),
+        supabase
+            .from('guide_wallet_adjustments')
+            .select('amount_eur')
+            .eq('guide_id', userId),
+    ]);
 
     if (error) throw error;
+    const hasGuideAdjustmentsTable = !adjustmentsError
+        || !String(adjustmentsError.message || '').toLowerCase().includes('guide_wallet_adjustments');
+    if (adjustmentsError && hasGuideAdjustmentsTable) throw adjustmentsError;
 
     let totalGenerated = 0;
     let availableBalance = 0;
@@ -210,9 +219,12 @@ export const getGuideWalletSummary = async (): Promise<{
         }
     }
 
+    const adjustmentsSum = (adjustmentsError ? [] : adjustments || []).reduce((sum: number, row: any) => sum + toNumber(row.amount_eur), 0);
+    const adjustedAvailableBalance = Math.max(0, availableBalance + adjustmentsSum);
+
     return {
         currency: 'SAR',
-        availableBalance: toSar(availableBalance),
+        availableBalance: toSar(adjustedAvailableBalance),
         totalGenerated: toSar(totalGenerated),
         paidOut: toSar(paidOut),
         completedVisits: (data || []).length,
@@ -537,6 +549,37 @@ export const getGuides = async () => {
     return guides;
 };
 
+export const getRecommendedGuides = async (limit = 5) => {
+    const normalizedLimit = Math.min(5, Math.max(1, Math.trunc(limit || 5)));
+
+    const { data, error } = await supabase.rpc('get_recommended_guides', {
+        p_limit: normalizedLimit,
+    });
+
+    if (error) throw error;
+
+    const guides = (data || []).map((g: any) => {
+        const averageRating = toNumber(g.average_rating);
+        return {
+            id: g.id,
+            name: g.full_name || 'Unknown',
+            role: g.specialty || 'Guide',
+            rating: Number(averageRating.toFixed(1)),
+            reviews: Number(g.reviews_count || 0),
+            price: `${toNumber(g.price_per_day)} ${toCurrencyLabel(g.currency)}`,
+            priceUnit: g.price_unit || '',
+            languages: g.languages || [],
+            image: resolveProfileAvatarSource(g.avatar_url),
+            location: g.location || 'Lieu non renseigné',
+            verified: !!g.verified,
+            bio: g.bio || '',
+            gender: g.gender || null,
+        };
+    });
+
+    return guides;
+};
+
 export const getServices = async () => {
     let query = supabase
         .from('services')
@@ -576,6 +619,44 @@ export const getServices = async () => {
     });
 
     return services;
+};
+
+export const getPublicGuideServices = async (guideId: string) => {
+    const { data, error } = await supabase
+        .from('services')
+        .select('*, profiles(full_name, avatar_url, role, gender)')
+        .eq('guide_id', guideId)
+        .or('service_status.eq.active,service_status.is.null')
+        .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    return (data || []).map((s: any) => {
+        const guideNetBasePriceEur = toNumber(s.price_override);
+        const pilgrimDisplayPriceEur = guideNetBasePriceEur;
+
+        return {
+            id: s.id,
+            title: s.title,
+            category: s.category,
+            description: getFixedServiceDescription({
+                title: s.title,
+                category: s.category,
+                location: s.location,
+            }) || s.description || '',
+            price: pilgrimDisplayPriceEur,
+            guideNetBasePriceEur,
+            location: s.location || 'Lieu non spécifié',
+            guideId: s.guide_id,
+            guideName: s.profiles?.full_name || 'Guide Inconnu',
+            guideAvatar: s.profiles?.avatar_url,
+            guideGender: s.profiles?.gender,
+            startDate: s.availability_start,
+            endDate: s.availability_end,
+            meetingPoints: s.meeting_points || [],
+            image: getServiceImageForLocation(s.location),
+        };
+    });
 };
 
 export const getGuideServices = async (guideId: string) => {
@@ -1053,6 +1134,7 @@ export const getReviews = async (guideId: string) => {
     return data.map((r: any) => ({
         id: r.id,
         user: r.profiles?.full_name || 'Anonyme',
+        reservationId: r.reservation_id || null,
         rating: r.rating,
         comment: r.comment,
         date: new Date(r.created_at).toLocaleDateString(),
@@ -1060,6 +1142,51 @@ export const getReviews = async (guideId: string) => {
     }));
 };
 
+export const getMyReviewedReservationIds = async (): Promise<string[]> => {
+    const userId = await ensureUser();
+    if (!userId) throw new Error("Vous devez être connecté.");
+
+    const { data, error } = await supabase
+        .from('reviews')
+        .select('reservation_id')
+        .eq('reviewer_id', userId)
+        .not('reservation_id', 'is', null);
+
+    if (error) throw error;
+
+    const ids = (data || [])
+        .map((row: any) => row?.reservation_id)
+        .filter((value: any): value is string => typeof value === 'string' && value.length > 0);
+
+    return Array.from(new Set(ids));
+};
+
+export const createReviewForCompletedReservation = async (payload: {
+    reservationId: string;
+    rating: number;
+    comment?: string;
+}) => {
+    const userId = await ensureUser();
+    if (!userId) throw new Error("Vous devez être connecté pour laisser un avis.");
+
+    if (!payload.reservationId) throw new Error('Réservation requise.');
+    if (!payload.rating || payload.rating < 1 || payload.rating > 5) {
+        throw new Error('La note doit être comprise entre 1 et 5.');
+    }
+
+    const { data, error } = await supabase.rpc('create_review_for_completed_reservation', {
+        p_reservation_id: payload.reservationId,
+        p_rating: payload.rating,
+        p_comment: payload.comment?.trim() ? payload.comment.trim() : null,
+    });
+
+    if (error) throw error;
+    const review = Array.isArray(data) ? data[0] : data;
+    if (!review) throw new Error("Impossible d'enregistrer votre avis.");
+    return review;
+};
+
+// Legacy method kept for compatibility with older call sites.
 export const createReview = async (reviewData: { guideId: string, rating: number, comment: string }) => {
     const userId = await ensureUser();
     if (!userId) throw new Error("Vous devez être connecté pour laisser un avis.");

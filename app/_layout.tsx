@@ -4,6 +4,7 @@ import GuideCancellationGlobalPopup from '@/components/GuideCancellationGlobalPo
 import GuideReplacementGlobalPopup from '@/components/GuideReplacementGlobalPopup';
 import PilgrimCancellationGlobalPopup from '@/components/PilgrimCancellationGlobalPopup';
 import PilgrimReplacementGlobalPopup from '@/components/PilgrimReplacementGlobalPopup';
+import PilgrimReviewPromptGlobalPopup from '@/components/PilgrimReviewPromptGlobalPopup';
 import { ReservationsProvider } from '@/context/ReservationsContext';
 import { DarkTheme, ThemeProvider } from '@react-navigation/native';
 import { Redirect, Stack, usePathname } from 'expo-router';
@@ -39,6 +40,7 @@ export default function RootLayout() {
           <GuideReplacementGlobalPopup />
           <PilgrimCancellationGlobalPopup />
           <PilgrimReplacementGlobalPopup />
+          <PilgrimReviewPromptGlobalPopup />
           <AdminCancellationGlobalPopup />
           <StatusBar style="light" />
         </ThemeProvider>

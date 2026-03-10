@@ -9,7 +9,7 @@ import {
     getReservations,
     updateReservationStatus as apiUpdateStatus,
 } from '@/lib/api';
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 
 // Define types
 export type ReservationStatus = 'pending' | 'confirmed' | 'in_progress' | 'cancelled' | 'completed';
@@ -57,6 +57,8 @@ export interface Reservation {
     guideEndConfirmedAt?: string | null;
     pilgrimEndConfirmedAt?: string | null;
     completedAt?: string | null;
+    hasReview?: boolean;
+    reviewId?: string | null;
     image?: any;
     guideAvatar?: string;
     pilgrimAvatar?: string; // Added to match API
@@ -73,7 +75,7 @@ interface ReservationsContextType {
     confirmVisitEndAsPilgrim: (id: string) => Promise<any>;
     getReservationsByRole: (role: 'guide' | 'pilgrim', userId: string) => Reservation[];
     isLoading: boolean;
-    refreshReservations: () => Promise<void>;
+    refreshReservations: (options?: { silent?: boolean }) => Promise<void>;
 }
 
 const ReservationsContext = createContext<ReservationsContextType | undefined>(undefined);
@@ -102,22 +104,82 @@ export function ReservationsProvider({ children }: { children: React.ReactNode }
     const { user } = useAuth();
     const [reservations, setReservations] = useState<Reservation[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const hasLoadedOnceRef = useRef(false);
+    const refreshInFlightRef = useRef<Promise<void> | null>(null);
 
-    const refreshReservations = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            const data = await getReservations();
-            // Map API response to Context Reservation type if needed, but they are aligned now
-            setReservations(data as Reservation[]);
-        } catch (error) {
-            console.error("Failed to fetch reservations:", error);
-        } finally {
+    const refreshReservations = useCallback(async (options?: { silent?: boolean }) => {
+        if (!user?.id) {
+            setReservations([]);
             setIsLoading(false);
+            hasLoadedOnceRef.current = false;
+            return;
         }
-    }, []);
+
+        if (refreshInFlightRef.current) {
+            return refreshInFlightRef.current;
+        }
+
+        const shouldShowLoader = !options?.silent && !hasLoadedOnceRef.current;
+        if (shouldShowLoader) {
+            setIsLoading(true);
+        }
+
+        const run = (async () => {
+            try {
+                const data = await getReservations();
+                // Map API response to Context Reservation type if needed, but they are aligned now
+                const nextReservations = data as Reservation[];
+                setReservations((prev) => {
+                    const isSame =
+                        prev.length === nextReservations.length &&
+                        prev.every((current, index) => {
+                            const next = nextReservations[index];
+                            if (!next) return false;
+                            return (
+                                current.id === next.id &&
+                                current.status === next.status &&
+                                current.payoutStatus === next.payoutStatus &&
+                                current.guideId === next.guideId &&
+                                current.pilgrimId === next.pilgrimId &&
+                                current.cancelledAt === next.cancelledAt &&
+                                current.completedAt === next.completedAt &&
+                                current.guideStartConfirmedAt === next.guideStartConfirmedAt &&
+                                current.pilgrimStartConfirmedAt === next.pilgrimStartConfirmedAt &&
+                                current.guideEndConfirmedAt === next.guideEndConfirmedAt &&
+                                current.pilgrimEndConfirmedAt === next.pilgrimEndConfirmedAt
+                            );
+                        });
+
+                    return isSame ? prev : nextReservations;
+                });
+                hasLoadedOnceRef.current = true;
+            } catch (error) {
+                console.error("Failed to fetch reservations:", error);
+            } finally {
+                if (shouldShowLoader) {
+                    setIsLoading(false);
+                }
+                refreshInFlightRef.current = null;
+            }
+        })();
+
+        refreshInFlightRef.current = run;
+        return run;
+    }, [user?.id]);
 
     useEffect(() => {
-        refreshReservations();
+        if (!user?.id) {
+            setReservations([]);
+            setIsLoading(false);
+            hasLoadedOnceRef.current = false;
+            refreshInFlightRef.current = null;
+            return;
+        }
+
+        hasLoadedOnceRef.current = false;
+        refreshReservations().catch((error) => {
+            console.error("Failed to initialize reservations:", error);
+        });
     }, [refreshReservations, user?.id]);
 
     const addReservation = async (newRes: Omit<Reservation, 'id' | 'status'>) => {

@@ -6,9 +6,9 @@ export const DEFAULT_AVATAR_PRESET_ID: AvatarPresetId = '18';
 const AVATAR_PRESET_PREFIX = 'preset://';
 
 const AVATAR_PRESET_SOURCES: Record<AvatarPresetId, ImageSourcePropType> = {
-  '16': require('@/assets/images/Profile/16.png'),
-  '17': require('@/assets/images/Profile/17.png'),
-  '18': require('@/assets/images/Profile/18.png'),
+  '16': require('@/assets/images/Profile/16_11zon.jpg'),
+  '17': require('@/assets/images/Profile/17_11zon.jpg'),
+  '18': require('@/assets/images/Profile/18_11zon.jpg'),
 };
 
 export const AVATAR_PRESET_OPTIONS: {

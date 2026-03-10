@@ -2,14 +2,26 @@ import { SlideToConfirmModal } from '@/components/SlideToConfirmModal';
 import { useAuth } from '@/context/AuthContext';
 import { useReservations } from '@/context/ReservationsContext';
 import { resolveProfileAvatarSource } from '@/lib/avatar';
+import { createReviewForCompletedReservation, getMyReviewedReservationIds } from '@/lib/api';
 import { Stack, useRouter } from 'expo-router';
-import { ArrowLeft, Calendar, MapPin, MessageCircle } from 'lucide-react-native';
+import { ArrowLeft, Calendar, MapPin, MessageCircle, Star } from 'lucide-react-native';
 import React from 'react';
-import { ActivityIndicator, Alert, Image, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StatusBar, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const formatCurrency = (value: number) =>
     new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(value || 0);
+
+type ReservationStatusFilter = 'all' | 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled';
+
+const RESERVATION_STATUS_FILTERS: { value: ReservationStatusFilter; label: string }[] = [
+    { value: 'all', label: 'Tous' },
+    { value: 'pending', label: 'En attente' },
+    { value: 'confirmed', label: 'Confirmé' },
+    { value: 'in_progress', label: 'En cours' },
+    { value: 'completed', label: 'Terminé' },
+    { value: 'cancelled', label: 'Annulé' },
+];
 
 export default function ReservationsScreen() {
     const router = useRouter();
@@ -23,8 +35,37 @@ export default function ReservationsScreen() {
     const { user } = useAuth();
     const [pendingAction, setPendingAction] = React.useState<{ type: 'start' | 'end' | 'cancel'; reservation: any } | null>(null);
     const [isSubmittingAction, setIsSubmittingAction] = React.useState(false);
+    const [reviewedReservationIds, setReviewedReservationIds] = React.useState<Set<string>>(new Set());
+    const [pendingReviewReservation, setPendingReviewReservation] = React.useState<any | null>(null);
+    const [selectedRating, setSelectedRating] = React.useState(0);
+    const [reviewComment, setReviewComment] = React.useState('');
+    const [isSubmittingReview, setIsSubmittingReview] = React.useState(false);
+    const [statusFilter, setStatusFilter] = React.useState<ReservationStatusFilter>('all');
 
     const reservations = getReservationsByRole('pilgrim', user?.id || 'p1');
+    const filteredReservations = React.useMemo(() => {
+        if (statusFilter === 'all') return reservations;
+        return reservations.filter((reservation) => reservation.status === statusFilter);
+    }, [reservations, statusFilter]);
+
+    const refreshReviewedReservationIds = React.useCallback(async () => {
+        if (!user?.id) {
+            setReviewedReservationIds(new Set());
+            return;
+        }
+        try {
+            const ids = await getMyReviewedReservationIds();
+            setReviewedReservationIds(new Set(ids));
+        } catch (error) {
+            console.error('Failed to load reviewed reservation ids:', error);
+        }
+    }, [user?.id]);
+
+    React.useEffect(() => {
+        refreshReviewedReservationIds().catch((error) => {
+            console.error('Failed to refresh reviewed reservations:', error);
+        });
+    }, [refreshReviewedReservationIds]);
 
     const getStatusColor = (status: string) => {
         switch (status) {
@@ -68,6 +109,47 @@ export default function ReservationsScreen() {
     const closePendingAction = () => {
         if (isSubmittingAction) return;
         setPendingAction(null);
+    };
+
+    const closeReviewModal = () => {
+        if (isSubmittingReview) return;
+        setPendingReviewReservation(null);
+        setSelectedRating(0);
+        setReviewComment('');
+    };
+
+    const submitReview = async () => {
+        if (!pendingReviewReservation || isSubmittingReview) return;
+        if (selectedRating < 1 || selectedRating > 5) {
+            Alert.alert('Note requise', 'Veuillez sélectionner une note entre 1 et 5 étoiles.');
+            return;
+        }
+
+        setIsSubmittingReview(true);
+        try {
+            await createReviewForCompletedReservation({
+                reservationId: pendingReviewReservation.id,
+                rating: selectedRating,
+                comment: reviewComment.trim() || undefined,
+            });
+
+            await refreshReviewedReservationIds();
+            Alert.alert('Merci pour votre avis', 'Votre avis a bien été envoyé.');
+            closeReviewModal();
+        } catch (error: any) {
+            const message = String(error?.message || '').toLowerCase();
+            if (message.includes('déjà') || message.includes('deja') || message.includes('already')) {
+                Alert.alert('Avis déjà envoyé', 'Vous avez déjà laissé un avis pour cette réservation.');
+                await refreshReviewedReservationIds();
+                closeReviewModal();
+            } else if (message.includes('completed') || message.includes('fin')) {
+                Alert.alert('Action impossible', 'Vous pouvez laisser un avis uniquement après la fin de la visite.');
+            } else {
+                Alert.alert('Erreur', "Impossible d'envoyer votre avis pour le moment.");
+            }
+        } finally {
+            setIsSubmittingReview(false);
+        }
     };
 
     const confirmPendingAction = async () => {
@@ -155,19 +237,53 @@ export default function ReservationsScreen() {
                     <Text className="text-xl font-bold text-gray-900 dark:text-white">Mes Réservations</Text>
                 </View>
 
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    className="px-6 mb-3"
+                    style={{ maxHeight: 48 }}
+                    contentContainerStyle={{ gap: 8, paddingRight: 24, alignItems: 'center' }}
+                >
+                    {RESERVATION_STATUS_FILTERS.map((filter) => {
+                        const isActive = statusFilter === filter.value;
+                        return (
+                            <TouchableOpacity
+                                key={filter.value}
+                                onPress={() => setStatusFilter(filter.value)}
+                                className={`h-10 px-4 rounded-full border justify-center shrink-0 ${isActive
+                                    ? 'bg-[#b39164] border-[#b39164]'
+                                    : 'bg-transparent border-gray-300 dark:border-white/15'}`}
+                            >
+                                <Text
+                                    numberOfLines={1}
+                                    className={`text-xs font-semibold ${isActive ? 'text-white' : 'text-gray-600 dark:text-gray-300'}`}
+                                >
+                                    {filter.label}
+                                </Text>
+                            </TouchableOpacity>
+                        );
+                    })}
+                </ScrollView>
+
                 {isLoading ? (
                     <View className="flex-1 justify-center items-center">
                         <ActivityIndicator size="large" color="#b39164" />
                     </View>
                 ) : (
                     <ScrollView className="flex-1 px-6" showsVerticalScrollIndicator={false}>
-                        {reservations.length === 0 ? (
+                        {filteredReservations.length === 0 ? (
                             <View className="items-center justify-center py-20">
-                                <Text className="text-gray-500 text-center">Vous n&apos;avez aucune réservation pour le moment.</Text>
+                                <Text className="text-gray-500 text-center">
+                                    {statusFilter === 'all'
+                                        ? "Vous n'avez aucune réservation pour le moment."
+                                        : `Aucune réservation avec le statut "${RESERVATION_STATUS_FILTERS.find((f) => f.value === statusFilter)?.label || statusFilter}".`}
+                                </Text>
                             </View>
                         ) : (
                             <View className="gap-4 pb-20">
-                                {reservations.map((item) => (
+                                {filteredReservations.map((item) => {
+                                    const hasReview = reviewedReservationIds.has(item.id);
+                                    return (
                                     <View key={item.id} className="bg-gray-50 dark:bg-zinc-800 rounded-2xl p-4 border border-gray-200 dark:border-white/5">
                                         <View className="flex-row justify-between items-start mb-4">
                                             <View className="flex-row items-center flex-1 mr-2">
@@ -250,12 +366,32 @@ export default function ReservationsScreen() {
                                             </TouchableOpacity>
                                         )}
 
+                                        {item.status === 'completed' && !hasReview && (
+                                            <TouchableOpacity
+                                                className="mb-4 bg-[#b39164] rounded-xl py-3 items-center"
+                                                onPress={() => {
+                                                    setPendingReviewReservation(item);
+                                                    setSelectedRating(0);
+                                                    setReviewComment('');
+                                                }}
+                                            >
+                                                <Text className="text-white font-semibold text-sm">Laisser un avis</Text>
+                                            </TouchableOpacity>
+                                        )}
+
+                                        {item.status === 'completed' && hasReview && (
+                                            <View className="mb-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl py-3 items-center">
+                                                <Text className="text-emerald-500 font-semibold text-sm">Avis envoyé</Text>
+                                            </View>
+                                        )}
+
                                         <View className="pt-3 border-t border-gray-200 dark:border-white/5 flex-row justify-between items-center">
                                             <Text className="text-gray-500 text-xs">Total payé</Text>
                                             <Text className="font-bold text-primary text-lg">{formatCurrency(Number(item.price || 0))}</Text>
                                         </View>
                                     </View>
-                                ))}
+                                    );
+                                })}
                             </View>
                         )}
                     </ScrollView>
@@ -271,6 +407,80 @@ export default function ReservationsScreen() {
                 onClose={closePendingAction}
                 onConfirm={confirmPendingAction}
             />
+
+            <Modal
+                visible={!!pendingReviewReservation}
+                transparent
+                animationType="fade"
+                onRequestClose={closeReviewModal}
+            >
+                <View className="flex-1 bg-black/70">
+                    <KeyboardAvoidingView
+                        className="flex-1 justify-end"
+                        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                        keyboardVerticalOffset={Platform.OS === 'ios' ? 18 : 0}
+                    >
+                        <ScrollView
+                            keyboardShouldPersistTaps="handled"
+                            contentContainerStyle={{ flexGrow: 1, justifyContent: 'flex-end' }}
+                        >
+                            <View className="px-6 pb-6 pt-10">
+                                <View className="bg-zinc-900 border border-white/10 rounded-3xl p-5 shadow-2xl">
+                                    <Text className="text-white text-xl font-bold">Donnez votre avis</Text>
+                                    <Text className="text-zinc-300 text-sm leading-6 mt-3">
+                                        Service: <Text className="text-white font-semibold">{pendingReviewReservation?.serviceName}</Text>
+                                        {'\n'}
+                                        Guide: <Text className="text-white font-semibold">{pendingReviewReservation?.guideName}</Text>
+                                    </Text>
+
+                                    <View className="flex-row justify-center gap-2 mt-5">
+                                        {[1, 2, 3, 4, 5].map((star) => (
+                                            <TouchableOpacity
+                                                key={star}
+                                                onPress={() => setSelectedRating(star)}
+                                                className="p-1"
+                                            >
+                                                <Star
+                                                    size={30}
+                                                    color={star <= selectedRating ? '#f5c07a' : '#52525b'}
+                                                    fill={star <= selectedRating ? '#f5c07a' : 'transparent'}
+                                                />
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+
+                                    <TextInput
+                                        value={reviewComment}
+                                        onChangeText={setReviewComment}
+                                        placeholder="Commentaire (optionnel)"
+                                        placeholderTextColor="#71717a"
+                                        multiline
+                                        textAlignVertical="top"
+                                        className="mt-5 min-h-[92px] rounded-2xl border border-white/10 bg-zinc-800 px-4 py-3 text-white"
+                                    />
+
+                                    <View className="flex-row gap-3 mt-5">
+                                        <TouchableOpacity
+                                            onPress={closeReviewModal}
+                                            disabled={isSubmittingReview}
+                                            className="flex-1 bg-zinc-700 py-3 rounded-xl items-center"
+                                        >
+                                            <Text className="text-white font-semibold">Annuler</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            onPress={submitReview}
+                                            disabled={isSubmittingReview || selectedRating < 1}
+                                            className={`flex-1 py-3 rounded-xl items-center ${(isSubmittingReview || selectedRating < 1) ? 'bg-[#b39164]/50' : 'bg-[#b39164]'}`}
+                                        >
+                                            <Text className="text-white font-semibold">{isSubmittingReview ? 'Envoi...' : 'Publier l’avis'}</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+                            </View>
+                        </ScrollView>
+                    </KeyboardAvoidingView>
+                </View>
+            </Modal>
         </View>
     );
 }

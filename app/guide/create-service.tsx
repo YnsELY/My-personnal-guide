@@ -10,6 +10,7 @@ import { Alert, KeyboardAvoidingView, Modal, Platform, ScrollView, StatusBar, Te
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const LOCATION_OPTIONS = ['La Mecque', 'Médine'] as const;
+const UNAVAILABLE_SERVICE_CATEGORIES = new Set(['omra pmr ♿']);
 
 const normalizeGuideLocation = (value?: string | null) => {
     const location = (value || '').trim().toLowerCase();
@@ -21,6 +22,11 @@ const normalizeGuideLocation = (value?: string | null) => {
 
 const getGuideNetEurFromDisplayedPrice = (rawPrice: number) =>
     roundMoney(Math.max(Number(rawPrice) || 0, 0) * (1 - PLATFORM_COMMISSION_RATE));
+
+const isServiceCategoryUnavailable = (categoryValue?: string | null) => {
+    const normalized = (categoryValue || '').trim().toLowerCase();
+    return UNAVAILABLE_SERVICE_CATEGORIES.has(normalized);
+};
 
 export default function CreateServiceScreen() {
     const router = useRouter();
@@ -50,6 +56,11 @@ export default function CreateServiceScreen() {
     const handleCreateOrUpdate = async () => {
         if (!title || !price || !location || !startDate) {
             Alert.alert("Erreur", "Veuillez remplir tous les champs (y compris la date)");
+            return;
+        }
+
+        if (isServiceCategoryUnavailable(selectedServiceCategory || category)) {
+            Alert.alert("Indisponible", "Le service Omra PMR n'est pas encore disponible.");
             return;
         }
 
@@ -130,9 +141,12 @@ export default function CreateServiceScreen() {
                                 {isCategoryDropdownOpen && (
                                     <View className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl shadow-lg z-50 max-h-60 overflow-hidden">
                                         <ScrollView nestedScrollEnabled>
-                                            {SERVICE_OPTIONS.map((opt, idx) => (
+                                            {SERVICE_OPTIONS.map((opt, idx) => {
+                                                const isUnavailable = isServiceCategoryUnavailable(opt.category);
+                                                return (
                                                 <TouchableOpacity
                                                     key={idx}
+                                                    disabled={isUnavailable}
                                                     onPress={() => {
                                                         setSelectedServiceCategory(opt.category);
                                                         setCategory(opt.category); // Map to DB category field
@@ -140,11 +154,22 @@ export default function CreateServiceScreen() {
                                                         setPrice('');
                                                         setCategoryDropdownOpen(false);
                                                     }}
-                                                    className="px-4 py-3 border-b border-gray-100 dark:border-white/5 active:bg-gray-50 dark:active:bg-zinc-700"
+                                                    className={`px-4 py-3 border-b border-gray-100 dark:border-white/5 flex-row items-center justify-between ${isUnavailable
+                                                        ? 'opacity-50 bg-gray-100 dark:bg-zinc-700/40'
+                                                        : 'active:bg-gray-50 dark:active:bg-zinc-700'
+                                                        }`}
                                                 >
-                                                    <Text className="text-gray-900 dark:text-white">{opt.category}</Text>
+                                                    <Text className={`text-gray-900 dark:text-white ${isUnavailable ? 'line-through' : ''}`}>
+                                                        {opt.category}
+                                                    </Text>
+                                                    {isUnavailable && (
+                                                        <Text className="text-gray-500 dark:text-gray-400 text-xs font-medium">
+                                                            Indisponible
+                                                        </Text>
+                                                    )}
                                                 </TouchableOpacity>
-                                            ))}
+                                                );
+                                            })}
                                         </ScrollView>
                                     </View>
                                 )}

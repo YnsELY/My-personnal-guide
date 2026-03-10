@@ -1,7 +1,7 @@
 import type { ImageSourcePropType } from 'react-native';
 
-const MECCA_SERVICE_IMAGE = require('@/assets/images/services/6.png');
-const MEDINA_SERVICE_IMAGE = require('@/assets/images/services/2.png');
+const MECCA_SERVICE_IMAGE = require('@/assets/images/services/7.jpg');
+const MEDINA_SERVICE_IMAGE = require('@/assets/images/services/8.webp');
 
 const normalizeLocationKey = (location?: string | null): 'mecca' | 'medina' => {
   const value = (location || '').trim().toLowerCase();

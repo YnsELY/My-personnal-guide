@@ -177,6 +177,12 @@ export default function AdminDashboardScreen() {
                                         onPress={() => router.push('/admin/finance' as any)}
                                         trailingIcon={<CreditCard size={16} color="#9CA3AF" />}
                                     />
+                                    <ActionCard
+                                        title="Cagnottes utilisateurs"
+                                        subtitle="Rechercher et ajuster guides / pèlerins"
+                                        icon={<Wallet size={18} color="#06b6d4" />}
+                                        onPress={() => router.push('/admin/wallets' as any)}
+                                    />
                                 </View>
                             </>
                         )}

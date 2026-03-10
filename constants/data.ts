@@ -133,6 +133,17 @@ export const MESSAGES = [
 
 export const SERVICES = [
     {
+        id: 'omra-accompagne',
+        title: 'Omra accompagné',
+        titleArabic: 'Omra accompagnée',
+        shortDescription: 'Vivez votre Omra avec sérénité',
+        description: 'Accomplissez votre Omra aux côtés de guides qualifiés pour un accompagnement fiable et bienveillant.',
+        mainText: 'Accomplissez votre Omra en toute confiance aux côtés de nos guides qualifiés et reconnus pour leur sérieux, leur science et leur éthique.',
+        details: 'Présents à chaque étape, ils vous accompagnent avec bienveillance afin que vous viviez ce voyage sacré dans la sérénité, la conformité aux rites et la recherche sincère de l’agrément d’Allah.',
+        hadith: 'Le Prophète ﷺ a dit : "La Omra efface les péchés commis entre elle et la précédente."',
+        image: require('@/assets/images/mecca.jpg'),
+    },
+    {
         id: 'omra-badal',
         title: 'Omra Badal',
         titleArabic: 'Omra par Procuration', // Changed to French as requested to have "text in French"
