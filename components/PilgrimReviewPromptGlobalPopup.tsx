@@ -3,7 +3,7 @@ import { useReservations } from '@/context/ReservationsContext';
 import { getMyReviewedReservationIds } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'expo-router';
-import * as SecureStore from 'expo-secure-store';
+import { persistentStorage } from '@/lib/persistentStorage';
 import React from 'react';
 import { Modal, Text, TouchableOpacity, View } from 'react-native';
 
@@ -46,7 +46,7 @@ export default function PilgrimReviewPromptGlobalPopup() {
         if (!profile?.id) return;
 
         try {
-            await SecureStore.setItemAsync(
+            await persistentStorage.setItemAsync(
                 `${PILGRIM_SEEN_REVIEW_PROMPT_KEY_PREFIX}${profile.id}`,
                 JSON.stringify(Array.from(seenReservationIdsRef.current))
             );
@@ -82,7 +82,7 @@ export default function PilgrimReviewPromptGlobalPopup() {
         const storageKey = `${PILGRIM_SEEN_REVIEW_PROMPT_KEY_PREFIX}${profile.id}`;
         setIsReady(false);
 
-        SecureStore.getItemAsync(storageKey)
+        persistentStorage.getItemAsync(storageKey)
             .then((rawValue) => {
                 if (!isMounted) return;
                 seenReservationIdsRef.current = new Set(parseSeenReservationIds(rawValue));

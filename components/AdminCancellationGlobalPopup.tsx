@@ -1,7 +1,7 @@
 import { useAuth } from '@/context/AuthContext';
 import { useReservations } from '@/context/ReservationsContext';
 import { supabase } from '@/lib/supabase';
-import * as SecureStore from 'expo-secure-store';
+import { persistentStorage } from '@/lib/persistentStorage';
 import React from 'react';
 import { Modal, Text, TouchableOpacity, View } from 'react-native';
 
@@ -44,7 +44,7 @@ export default function AdminCancellationGlobalPopup() {
         if (!profile?.id) return;
 
         try {
-            await SecureStore.setItemAsync(
+            await persistentStorage.setItemAsync(
                 `${ADMIN_SEEN_CANCELLED_KEY_PREFIX}${profile.id}`,
                 JSON.stringify(Array.from(seenCancelledReservationIdsRef.current))
             );
@@ -65,7 +65,7 @@ export default function AdminCancellationGlobalPopup() {
         const storageKey = `${ADMIN_SEEN_CANCELLED_KEY_PREFIX}${profile.id}`;
         setIsSeenCancellationsReady(false);
 
-        SecureStore.getItemAsync(storageKey)
+        persistentStorage.getItemAsync(storageKey)
             .then((rawValue) => {
                 if (!isMounted) return;
                 seenCancelledReservationIdsRef.current = new Set(parseSeenCancellationIds(rawValue));
