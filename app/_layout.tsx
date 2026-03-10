@@ -22,11 +22,14 @@ export const unstable_settings = {
 export default function RootLayout() {
   const { setColorScheme } = useColorScheme();
 
-  // Seeding can still happen once, but maybe better inside AuthContext or just let it be.
-  // For now I'll leave seeding call but remove ensureUser since AuthContext does it.
   React.useEffect(() => {
-    // Force dark mode
-    setColorScheme('dark');
+    try {
+      // Force dark mode for the whole app (works with darkMode: 'class')
+      setColorScheme('dark');
+    } catch (error) {
+      // Avoid crashing web runtime if NativeWind config is not yet in sync
+      console.warn('Unable to force dark mode:', error);
+    }
 
     // import('@/lib/api').then(({ seedGuides }) => seedGuides().catch(console.error));
   }, [setColorScheme]);
