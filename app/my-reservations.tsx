@@ -2,7 +2,8 @@ import { SlideToConfirmModal } from '@/components/SlideToConfirmModal';
 import { useAuth } from '@/context/AuthContext';
 import { useReservations } from '@/context/ReservationsContext';
 import { resolveProfileAvatarSource } from '@/lib/avatar';
-import { createReviewForCompletedReservation, getMyReviewedReservationIds } from '@/lib/api';
+import { createReviewForCompletedReservation, getMyReviewedReservationIds, getReservationProofs } from '@/lib/api';
+import * as Linking from 'expo-linking';
 import { Stack, useRouter } from 'expo-router';
 import { ArrowLeft, Calendar, MapPin, MessageCircle, Star } from 'lucide-react-native';
 import React from 'react';
@@ -41,6 +42,9 @@ export default function ReservationsScreen() {
     const [reviewComment, setReviewComment] = React.useState('');
     const [isSubmittingReview, setIsSubmittingReview] = React.useState(false);
     const [statusFilter, setStatusFilter] = React.useState<ReservationStatusFilter>('all');
+    const [proofsModalReservation, setProofsModalReservation] = React.useState<any | null>(null);
+    const [proofsByType, setProofsByType] = React.useState<Record<string, any>>({});
+    const [proofsLoading, setProofsLoading] = React.useState(false);
 
     const reservations = getReservationsByRole('pilgrim', user?.id || 'p1');
     const filteredReservations = React.useMemo(() => {
@@ -104,6 +108,44 @@ export default function ReservationsScreen() {
         }
 
         return 'Transport: non renseigné';
+    };
+
+    const isBadalReservation = (reservation: any) => {
+        return String(reservation?.serviceName || '').toLowerCase().includes('badal');
+    };
+
+    const openProofsModal = async (reservation: any) => {
+        setProofsModalReservation(reservation);
+        setProofsLoading(true);
+        setProofsByType({});
+        try {
+            const proofs = await getReservationProofs(reservation.id);
+            const map: Record<string, any> = {};
+            for (const proof of proofs) {
+                map[proof.proofType] = proof;
+            }
+            setProofsByType(map);
+        } catch (error: any) {
+            console.error('Failed to load reservation proofs on pilgrim side:', error);
+            Alert.alert('Erreur', error?.message || 'Impossible de charger les preuves pour le moment.');
+            setProofsModalReservation(null);
+        } finally {
+            setProofsLoading(false);
+        }
+    };
+
+    const openProofVideo = async (proofType: 'ihram_start_video' | 'omra_completion_video') => {
+        const proof = proofsByType[proofType];
+        if (!proof?.videoUrl) {
+            Alert.alert('Indisponible', 'Cette preuve n’est pas encore disponible.');
+            return;
+        }
+        const canOpen = await Linking.canOpenURL(proof.videoUrl);
+        if (!canOpen) {
+            Alert.alert('Erreur', 'Impossible d’ouvrir cette vidéo sur cet appareil.');
+            return;
+        }
+        await Linking.openURL(proof.videoUrl);
     };
 
     const closePendingAction = () => {
@@ -174,11 +216,20 @@ export default function ReservationsScreen() {
             } else {
                 const result = await cancelReservationAsPilgrim(pendingAction.reservation.id);
                 const creditedAmount = Number(result?.creditedAmount || 0);
+                const retainedAmount = Number(result?.retainedAmount || 0);
+                const adminCommissionAmount = Number(result?.adminCommissionAmount || 0);
+                const guideCompensationAmount = Number(result?.guideCompensationAmount || 0);
+                const policyApplied = String(result?.policyApplied || '');
 
-                if (creditedAmount > 0) {
+                if (policyApplied === 'full_credit_over_48h') {
                     Alert.alert(
                         'Réservation annulée',
                         `Votre réservation a été annulée. ${formatCurrency(creditedAmount)} ont été crédités dans votre cagnotte.`
+                    );
+                } else if (policyApplied === 'partial_credit_under_48h') {
+                    Alert.alert(
+                        'Réservation annulée',
+                        `Votre réservation a été annulée. ${formatCurrency(creditedAmount)} (75%) ont été crédités dans votre cagnotte.\n\n${formatCurrency(retainedAmount)} (25%) sont retenus, dont ${formatCurrency(adminCommissionAmount)} pour la plateforme et ${formatCurrency(guideCompensationAmount)} pour le guide.`
                     );
                 } else {
                     Alert.alert(
@@ -217,7 +268,7 @@ export default function ReservationsScreen() {
         ? 'Est-ce que vous êtes sûr de vouloir confirmer le début de la visite maintenant ?'
         : pendingAction?.type === 'end'
             ? 'Est-ce que vous êtes sûr de vouloir confirmer la fin de la visite maintenant ?'
-            : 'Si vous annulez plus de 48h avant le début, vous recevez 100% en cagnotte. À 48h ou moins, aucun avoir. Confirmer l’annulation ?';
+            : 'Si vous annulez au moins 48h avant le début, vous recevez 100% en cagnotte. À moins de 48h, vous recevez 75% en cagnotte (25% retenus: 60% plateforme, 40% guide). Confirmer l’annulation ?';
 
     const modalSliderLabel = pendingAction?.type === 'start'
         ? 'Glissez pour valider le début'
@@ -385,6 +436,15 @@ export default function ReservationsScreen() {
                                             </View>
                                         )}
 
+                                        {isBadalReservation(item) && (
+                                            <TouchableOpacity
+                                                className="mb-4 bg-indigo-500/10 border border-indigo-500/20 rounded-xl py-3 items-center"
+                                                onPress={() => openProofsModal(item)}
+                                            >
+                                                <Text className="text-indigo-500 font-semibold text-sm">Preuves Omra Badal</Text>
+                                            </TouchableOpacity>
+                                        )}
+
                                         <View className="pt-3 border-t border-gray-200 dark:border-white/5 flex-row justify-between items-center">
                                             <Text className="text-gray-500 text-xs">Total payé</Text>
                                             <Text className="font-bold text-primary text-lg">{formatCurrency(Number(item.price || 0))}</Text>
@@ -479,6 +539,62 @@ export default function ReservationsScreen() {
                             </View>
                         </ScrollView>
                     </KeyboardAvoidingView>
+                </View>
+            </Modal>
+
+            <Modal
+                visible={!!proofsModalReservation}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setProofsModalReservation(null)}
+            >
+                <View className="flex-1 bg-black/70 justify-center px-6">
+                    <View className="bg-zinc-900 border border-white/10 rounded-3xl p-5 shadow-2xl">
+                        <Text className="text-white text-xl font-bold">Preuves Omra Badal</Text>
+                        <Text className="text-zinc-300 text-sm mt-2">
+                            {proofsModalReservation?.serviceName} {'\n'}
+                            Guide: <Text className="text-white font-semibold">{proofsModalReservation?.guideName}</Text>
+                        </Text>
+
+                        {proofsLoading ? (
+                            <View className="py-8 items-center">
+                                <ActivityIndicator color="#b39164" />
+                            </View>
+                        ) : (
+                            <View className="mt-4 gap-3">
+                                {[
+                                    { type: 'ihram_start_video', label: 'Vidéo entrée en ihram' },
+                                    { type: 'omra_completion_video', label: 'Vidéo fin de mission' },
+                                ].map((proofConfig) => {
+                                    const proof = proofsByType[proofConfig.type];
+                                    return (
+                                        <View key={proofConfig.type} className="rounded-xl border border-white/10 bg-zinc-800 p-3">
+                                            <Text className="text-white font-semibold text-sm">{proofConfig.label}</Text>
+                                            <Text className="text-zinc-400 text-xs mt-1">
+                                                {proof ? `Envoyée le ${new Date(proof.uploadedAt).toLocaleString('fr-FR')}` : 'Non envoyée'}
+                                            </Text>
+                                            <TouchableOpacity
+                                                className={`mt-3 py-2.5 rounded-lg items-center ${proof ? 'bg-[#b39164]' : 'bg-zinc-700'}`}
+                                                onPress={() => openProofVideo(proofConfig.type as 'ihram_start_video' | 'omra_completion_video')}
+                                                disabled={!proof}
+                                            >
+                                                <Text className={`font-semibold text-xs ${proof ? 'text-white' : 'text-zinc-400'}`}>
+                                                    {proof ? 'Voir la vidéo' : 'Indisponible'}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    );
+                                })}
+                            </View>
+                        )}
+
+                        <TouchableOpacity
+                            onPress={() => setProofsModalReservation(null)}
+                            className="mt-5 bg-zinc-700 py-3 rounded-xl items-center"
+                        >
+                            <Text className="text-white font-semibold">Fermer</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
             </Modal>
         </View>

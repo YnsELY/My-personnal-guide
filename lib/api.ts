@@ -94,6 +94,7 @@ export const ensureUser = async () => {
 };
 
 export const DEFAULT_PLATFORM_COMMISSION_RATE = PLATFORM_COMMISSION_RATE;
+export const PILGRIM_CHARTER_VERSION = 'pilgrim_charter_v1_2026-03';
 
 const toNumber = (value: any) => {
     const parsed = Number(value ?? 0);
@@ -101,8 +102,49 @@ const toNumber = (value: any) => {
 };
 
 const toCurrencyLabel = (currency?: string | null) => {
-    if (!currency || currency === 'EUR') return '€';
+    if (!currency || currency === 'EUR') return 'Ã¢â€šÂ¬';
     return currency;
+};
+
+const isMissingTableError = (error: any, tableName: string) => {
+    const message = String(error?.message || '').toLowerCase();
+    return message.includes(tableName.toLowerCase());
+};
+
+const formatFunctionsInvokeError = async (functionName: string, error: any) => {
+    const context = error?.context;
+    const status = Number(context?.status || 0);
+
+    let payload: any = null;
+    let rawBody: string | null = null;
+    if (context) {
+        try {
+            const responseForJson = typeof context?.clone === 'function' ? context.clone() : context;
+            rawBody = await responseForJson.text();
+            payload = rawBody ? JSON.parse(rawBody) : null;
+        } catch {
+            payload = null;
+        }
+    }
+
+    console.error(`[Edge Function Error] fn=${functionName} status=${status} errorName=${error?.name} errorMsg=${error?.message} rawBody=${rawBody}`);
+
+    const code = String(payload?.code || '').trim();
+    const payloadMessage = String(payload?.error || payload?.message || '').trim();
+
+    if (status === 404 || code === 'NOT_FOUND') {
+        return `La fonction Supabase "${functionName}" est introuvable (non deployee).`;
+    }
+
+    if (payloadMessage.toLowerCase().includes('invalid jwt')) {
+        return "Session expiree ou invalide. Veuillez vous reconnecter.";
+    }
+
+    if (payloadMessage) {
+        return payloadMessage;
+    }
+
+    return String(error?.message || `Erreur Edge Function sur "${functionName}".`);
 };
 
 const parseDateValue = (value: any): Date | null => {
@@ -157,7 +199,8 @@ export const computeReservationFinance = (totalPrice: number, commissionRate = D
 };
 
 type ReservationPayoutStatus = 'not_due' | 'to_pay' | 'processing' | 'paid' | 'failed';
-type ReservationCancellationPolicy = 'full_credit_over_48h' | 'no_credit_under_48h';
+type ReservationCancellationPolicy = 'full_credit_over_48h' | 'partial_credit_under_48h' | 'no_credit_under_48h';
+export type ReportCategory = 'harassment' | 'fraud' | 'inappropriate_content' | 'safety' | 'other';
 const DUE_PAYOUT_STATUSES: ReservationPayoutStatus[] = ['to_pay', 'processing', 'failed'];
 
 export const getGuideWalletSummary = async (): Promise<{
@@ -169,7 +212,7 @@ export const getGuideWalletSummary = async (): Promise<{
     pendingPayoutVisits: number;
 }> => {
     const userId = await ensureUser();
-    if (!userId) throw new Error("Vous devez être connecté.");
+    if (!userId) throw new Error("Vous devez ÃƒÂªtre connectÃƒÂ©.");
 
     const [{ data, error }, { data: adjustments, error: adjustmentsError }] = await Promise.all([
         supabase
@@ -240,7 +283,7 @@ export const getPilgrimWalletSummary = async (): Promise<{
     cancellationCreditsCount: number;
 }> => {
     const userId = await ensureUser();
-    if (!userId) throw new Error("Vous devez être connecté.");
+    if (!userId) throw new Error("Vous devez ÃƒÂªtre connectÃƒÂ©.");
 
     const [{ data: walletRow, error: walletError }, cancellationCount] = await Promise.all([
         supabase
@@ -469,7 +512,7 @@ export const getMyGuideInterviews = async () => {
 
 export const acceptGuideInterviewProposal = async (interviewId: string) => {
     const userId = await ensureUser();
-    if (!userId) throw new Error("Vous devez être connecté.");
+    if (!userId) throw new Error("Vous devez ÃƒÂªtre connectÃƒÂ©.");
 
     const now = new Date().toISOString();
     const { data, error } = await supabase
@@ -494,7 +537,7 @@ export const counterProposeGuideInterview = async (payload: {
     guideNote?: string;
 }) => {
     const userId = await ensureUser();
-    if (!userId) throw new Error("Vous devez être connecté.");
+    if (!userId) throw new Error("Vous devez ÃƒÂªtre connectÃƒÂ©.");
 
     const now = new Date().toISOString();
     const { data, error } = await supabase
@@ -570,7 +613,7 @@ export const getRecommendedGuides = async (limit = 5) => {
             priceUnit: g.price_unit || '',
             languages: g.languages || [],
             image: resolveProfileAvatarSource(g.avatar_url),
-            location: g.location || 'Lieu non renseigné',
+            location: g.location || 'Lieu non renseignÃƒÂ©',
             verified: !!g.verified,
             bio: g.bio || '',
             gender: g.gender || null,
@@ -606,7 +649,7 @@ export const getServices = async () => {
         }) || s.description || '',
         price: pilgrimDisplayPriceEur,
         guideNetBasePriceEur,
-        location: s.location || 'Lieu non spécifié', // Fallback
+        location: s.location || 'Lieu non spÃƒÂ©cifiÃƒÂ©', // Fallback
         guideId: s.guide_id,
         guideName: s.profiles?.full_name || 'Guide Inconnu',
         guideAvatar: s.profiles?.avatar_url,
@@ -646,7 +689,7 @@ export const getPublicGuideServices = async (guideId: string) => {
             }) || s.description || '',
             price: pilgrimDisplayPriceEur,
             guideNetBasePriceEur,
-            location: s.location || 'Lieu non spécifié',
+            location: s.location || 'Lieu non spÃƒÂ©cifiÃƒÂ©',
             guideId: s.guide_id,
             guideName: s.profiles?.full_name || 'Guide Inconnu',
             guideAvatar: s.profiles?.avatar_url,
@@ -701,7 +744,7 @@ export const getGuideById = async (id: string) => {
         priceUnit: g?.price_unit || '',
         languages: g?.languages || [],
         image: resolveProfileAvatarSource(data.avatar_url),
-        location: g?.location || 'Lieu non renseigné',
+        location: g?.location || 'Lieu non renseignÃƒÂ©',
         verified: g?.verified || false,
         bio: g?.bio || 'Aucune biographie disponible.',
         gender: data.gender,
@@ -712,7 +755,7 @@ export const getGuideById = async (id: string) => {
 
 export const createReservation = async (reservationData: any, options?: { useWallet?: boolean }) => {
     const userId = await ensureUser();
-    if (!userId) throw new Error("Vous devez être connecté pour réserver. (Test User création échouée)");
+    if (!userId) throw new Error("Vous devez ÃƒÂªtre connectÃƒÂ© pour rÃƒÂ©server. (Test User crÃƒÂ©ation ÃƒÂ©chouÃƒÂ©e)");
 
     const rawPrice = reservationData.price;
     let normalizedPrice = 0;
@@ -749,6 +792,10 @@ export const createReservation = async (reservationData: any, options?: { useWal
         ? roundMoney(Math.max(normalizedPrice - transportExtraFeeAmount, 0))
         : toNumber(rawCommissionableNetAmount);
     const transportWarningAcknowledged = !!reservationData.transportWarningAcknowledged;
+    const pilgrimCharterAccepted = reservationData.pilgrimCharterAccepted === true;
+    const pilgrimCharterVersion = String(
+        reservationData.pilgrimCharterVersion || PILGRIM_CHARTER_VERSION
+    ).trim();
 
     const { data: rpcData, error: rpcError } = await supabase.rpc('create_reservation_with_wallet', {
         p_guide_id: reservationData.guideId,
@@ -767,13 +814,15 @@ export const createReservation = async (reservationData: any, options?: { useWal
         p_transport_extra_fee_amount: transportExtraFeeAmount,
         p_transport_warning_acknowledged: transportWarningAcknowledged,
         p_commissionable_net_amount: commissionableNetAmount,
+        p_pilgrim_charter_accepted: pilgrimCharterAccepted,
+        p_pilgrim_charter_version: pilgrimCharterVersion,
     });
 
     if (rpcError) throw rpcError;
 
     const rpcPayload = Array.isArray(rpcData) ? rpcData[0] : rpcData;
     const reservationId = rpcPayload?.reservationId || rpcPayload?.reservation_id;
-    if (!reservationId) throw new Error("Impossible de créer la réservation.");
+    if (!reservationId) throw new Error("Impossible de crÃƒÂ©er la rÃƒÂ©servation.");
 
     const { data, error } = await supabase
         .from('reservations')
@@ -783,6 +832,134 @@ export const createReservation = async (reservationData: any, options?: { useWal
 
     if (error) throw error;
     return data;
+};
+
+export const startStripeCheckoutForReservation = async (payload: {
+    serviceId: string;
+    guideId: string;
+    serviceName: string;
+    startDate: string | number;
+    endDate: string | number;
+    totalPrice: number;
+    location: string;
+    visitTime: string;
+    pilgrims: string[];
+    transportPickupType: 'haram' | 'hotel';
+    hotelAddress?: string | null;
+    hotelOver2KmByCar?: boolean | null;
+    hotelDistanceKm?: number | null;
+    transportExtraFeeAmount?: number;
+    transportWarningAcknowledged?: boolean;
+    useWallet: boolean;
+    pilgrimCharterAccepted: boolean;
+    pilgrimCharterVersion: string;
+    successUrl: string;
+    cancelUrl: string;
+}) => {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+        throw new Error("Vous devez etre connecte.");
+    }
+
+    const { data, error } = await supabase.functions.invoke('stripe-create-checkout-session', {
+        body: {
+            serviceId: payload.serviceId,
+            guideId: payload.guideId,
+            serviceName: payload.serviceName,
+            startDate: toSqlDate(payload.startDate),
+            endDate: toSqlDate(payload.endDate ?? payload.startDate),
+            totalPrice: toNumber(payload.totalPrice),
+            location: payload.location || null,
+            visitTime: payload.visitTime || null,
+            pilgrims: payload.pilgrims || [],
+            transportPickupType: payload.transportPickupType,
+            hotelAddress: payload.hotelAddress || null,
+            hotelOver2KmByCar: payload.hotelOver2KmByCar ?? null,
+            hotelDistanceKm: payload.hotelDistanceKm ?? null,
+            transportExtraFeeAmount: toNumber(payload.transportExtraFeeAmount),
+            transportWarningAcknowledged: !!payload.transportWarningAcknowledged,
+            useWallet: !!payload.useWallet,
+            pilgrimCharterAccepted: payload.pilgrimCharterAccepted === true,
+            pilgrimCharterVersion: String(payload.pilgrimCharterVersion || PILGRIM_CHARTER_VERSION),
+            successUrl: payload.successUrl,
+            cancelUrl: payload.cancelUrl,
+        },
+    });
+
+    if (error) {
+        throw new Error(await formatFunctionsInvokeError('stripe-create-checkout-session', error));
+    }
+    if ((data as any)?.error) throw new Error(String((data as any).error));
+
+    const checkoutUrl = String((data as any)?.checkoutUrl || '').trim();
+    const checkoutSessionId = String((data as any)?.checkoutSessionId || '').trim();
+    const pendingCheckoutId = String((data as any)?.pendingCheckoutId || '').trim();
+
+    if (!checkoutUrl || !checkoutSessionId || !pendingCheckoutId) {
+        throw new Error("RÃƒÂ©ponse checkout Stripe invalide.");
+    }
+
+    return {
+        checkoutUrl,
+        checkoutSessionId,
+        pendingCheckoutId,
+        cardAmount: toNumber((data as any)?.cardAmount),
+        walletHoldAmount: toNumber((data as any)?.walletHoldAmount),
+        serviceCode: (data as any)?.serviceCode || null,
+    };
+};
+
+export const getStripeCheckoutReservationStatus = async (params: {
+    pendingCheckoutId?: string | null;
+    checkoutSessionId?: string | null;
+}) => {
+    const userId = await ensureUser();
+    if (!userId) throw new Error("Vous devez ÃƒÂªtre connectÃƒÂ©.");
+
+    if (!params.pendingCheckoutId && !params.checkoutSessionId) {
+        throw new Error("Identifiant checkout requis.");
+    }
+
+    const { data, error } = await supabase.rpc('get_stripe_checkout_reservation_status', {
+        p_pending_checkout_id: params.pendingCheckoutId || null,
+        p_checkout_session_id: params.checkoutSessionId || null,
+    });
+
+    if (error) throw error;
+
+    const payload = Array.isArray(data) ? data[0] : data;
+    if (!payload) throw new Error("Statut checkout introuvable.");
+
+    return {
+        pendingCheckoutId: payload.pendingCheckoutId || payload.pending_checkout_id || null,
+        checkoutSessionId: payload.checkoutSessionId || payload.checkout_session_id || null,
+        status: payload.status as 'pending' | 'finalized' | 'conflict_credited' | 'failed' | 'cancelled' | 'expired',
+        reservationId: payload.reservationId || payload.reservation_id || null,
+        message: payload.message || null,
+    };
+};
+
+export const cancelStripeCheckoutReservation = async (params: {
+    pendingCheckoutId?: string | null;
+    checkoutSessionId?: string | null;
+    reason?: string;
+}) => {
+    const userId = await ensureUser();
+    if (!userId) throw new Error("Vous devez ÃƒÂªtre connectÃƒÂ©.");
+
+    if (!params.pendingCheckoutId && !params.checkoutSessionId) {
+        throw new Error("Identifiant checkout requis.");
+    }
+
+    const { data, error } = await supabase.rpc('release_stripe_checkout_wallet_hold', {
+        p_pending_checkout_id: params.pendingCheckoutId || null,
+        p_checkout_session_id: params.checkoutSessionId || null,
+        p_new_status: 'cancelled',
+        p_reason: params.reason || 'checkout_cancelled_by_user',
+    });
+
+    if (error) throw error;
+    return Array.isArray(data) ? data[0] : data;
 };
 
 export const getReservedGuideTimeSlots = async (guideId: string, dateValue: any): Promise<string[]> => {
@@ -807,7 +984,7 @@ export const getReservedGuideTimeSlots = async (guideId: string, dateValue: any)
 
 export const updateReservationStatus = async (id: string, status: string) => {
     const userId = await ensureUser();
-    if (!userId) throw new Error("Vous devez être connecté.");
+    if (!userId) throw new Error("Vous devez ÃƒÂªtre connectÃƒÂ©.");
 
     const updates: any = {
         status,
@@ -869,11 +1046,29 @@ export const cancelReservationAsPilgrim = async (reservationId: string) => {
     const payload = Array.isArray(data) ? data[0] : data;
     if (!payload) throw new Error("Reservation introuvable ou non eligible a l'annulation.");
 
+    const creditedAmount = roundMoney(toNumber(payload.creditedAmount ?? payload.credited_amount));
+    const retainedAmount = roundMoney(toNumber(payload.retainedAmount ?? payload.retained_amount));
+    const adminCommissionAmount = roundMoney(toNumber(payload.adminCommissionAmount ?? payload.admin_commission_amount));
+    const guideCompensationAmount = roundMoney(toNumber(payload.guideCompensationAmount ?? payload.guide_compensation_amount));
+    const rawPolicyApplied = payload.policyApplied || payload.policy_applied;
+
+    const policyApplied: ReservationCancellationPolicy =
+        rawPolicyApplied === 'full_credit_over_48h'
+        || rawPolicyApplied === 'partial_credit_under_48h'
+        || rawPolicyApplied === 'no_credit_under_48h'
+            ? rawPolicyApplied
+            : creditedAmount > 0
+                ? (retainedAmount > 0 ? 'partial_credit_under_48h' : 'full_credit_over_48h')
+                : 'no_credit_under_48h';
+
     return {
         reservationId: payload.reservationId || payload.reservation_id,
         status: 'cancelled' as const,
-        creditedAmount: roundMoney(toNumber(payload.creditedAmount ?? payload.credited_amount)),
-        policyApplied: (payload.policyApplied || payload.policy_applied || 'no_credit_under_48h') as ReservationCancellationPolicy,
+        creditedAmount,
+        retainedAmount,
+        adminCommissionAmount,
+        guideCompensationAmount,
+        policyApplied,
         serviceStartAt: payload.serviceStartAt || payload.service_start_at,
         cutoffAt: payload.cutoffAt || payload.cutoff_at,
     };
@@ -934,7 +1129,7 @@ const syncReservationCompletionState = async (reservationId: string) => {
 
 export const confirmVisitStartAsGuide = async (reservationId: string) => {
     const userId = await ensureUser();
-    if (!userId) throw new Error("Vous devez être connecté.");
+    if (!userId) throw new Error("Vous devez ÃƒÂªtre connectÃƒÂ©.");
 
     const now = new Date().toISOString();
     const { data, error } = await supabase
@@ -950,14 +1145,14 @@ export const confirmVisitStartAsGuide = async (reservationId: string) => {
         .maybeSingle();
 
     if (error) throw error;
-    if (!data) throw new Error("Réservation introuvable ou non éligible au démarrage.");
+    if (!data) throw new Error("RÃƒÂ©servation introuvable ou non ÃƒÂ©ligible au dÃƒÂ©marrage.");
 
     return await syncReservationStartState(reservationId);
 };
 
 export const confirmVisitStartAsPilgrim = async (reservationId: string) => {
     const userId = await ensureUser();
-    if (!userId) throw new Error("Vous devez être connecté.");
+    if (!userId) throw new Error("Vous devez ÃƒÂªtre connectÃƒÂ©.");
 
     const now = new Date().toISOString();
     const { data, error } = await supabase
@@ -974,14 +1169,14 @@ export const confirmVisitStartAsPilgrim = async (reservationId: string) => {
         .maybeSingle();
 
     if (error) throw error;
-    if (!data) throw new Error("Le guide doit d'abord confirmer le début de la visite.");
+    if (!data) throw new Error("Le guide doit d'abord confirmer le dÃƒÂ©but de la visite.");
 
     return await syncReservationStartState(reservationId);
 };
 
 export const confirmVisitEndAsGuide = async (reservationId: string) => {
     const userId = await ensureUser();
-    if (!userId) throw new Error("Vous devez être connecté.");
+    if (!userId) throw new Error("Vous devez ÃƒÂªtre connectÃƒÂ©.");
 
     const now = new Date().toISOString();
     const { data, error } = await supabase
@@ -997,14 +1192,14 @@ export const confirmVisitEndAsGuide = async (reservationId: string) => {
         .maybeSingle();
 
     if (error) throw error;
-    if (!data) throw new Error("Réservation introuvable ou non éligible à la clôture.");
+    if (!data) throw new Error("RÃƒÂ©servation introuvable ou non ÃƒÂ©ligible ÃƒÂ  la clÃƒÂ´ture.");
 
     return await syncReservationCompletionState(reservationId);
 };
 
 export const confirmVisitEndAsPilgrim = async (reservationId: string) => {
     const userId = await ensureUser();
-    if (!userId) throw new Error("Vous devez être connecté.");
+    if (!userId) throw new Error("Vous devez ÃƒÂªtre connectÃƒÂ©.");
 
     const now = new Date().toISOString();
     const { data, error } = await supabase
@@ -1099,15 +1294,23 @@ export const getReservations = async () => {
         transportExtraFeeAmount: toNumber(r.transport_extra_fee_amount),
         walletAmountUsed: toNumber(r.wallet_amount_used),
         cardAmountPaid: toNumber(r.card_amount_paid),
+        stripeCheckoutSessionId: r.stripe_checkout_session_id || null,
+        stripePaymentIntentId: r.stripe_payment_intent_id || null,
+        paymentStatus: r.payment_status || null,
         createdAt: r.created_at,
         reassignedFromGuideId: r.reassigned_from_guide_id || null,
         reassignedByAdminId: r.reassigned_by_admin_id || null,
         reassignedAt: r.reassigned_at || null,
         reassignmentReason: r.reassignment_reason || null,
         cancellationCreditAmount: toNumber(r.cancellation_credit_amount),
+        cancellationRetainedAmount: toNumber(r.cancellation_retained_amount),
+        cancellationAdminCommissionAmount: toNumber(r.cancellation_admin_commission_amount),
+        cancellationGuideCompensationAmount: toNumber(r.cancellation_guide_compensation_amount),
         cancelledAt: r.cancelled_at,
         cancelledBy: r.cancelled_by,
         cancellationPolicyApplied: (r.cancellation_policy_applied || null) as ReservationCancellationPolicy | null,
+        pilgrimCharterAcceptedAt: r.pilgrim_charter_accepted_at || null,
+        pilgrimCharterVersion: r.pilgrim_charter_version || null,
         guideStartConfirmedAt: r.guide_start_confirmed_at,
         pilgrimStartConfirmedAt: r.pilgrim_start_confirmed_at,
         visitStartedAt: r.visit_started_at,
@@ -1116,7 +1319,7 @@ export const getReservations = async () => {
         completedAt: r.completed_at,
         guideName: r.guide_profile?.full_name || 'Guide Inconnu',
         guideAvatar: r.guide_profile?.avatar_url,
-        pilgrimName: r.pilgrim_profile?.full_name || 'Pèlerin Inconnu',
+        pilgrimName: r.pilgrim_profile?.full_name || 'PÃƒÂ¨lerin Inconnu',
         pilgrimAvatar: r.pilgrim_profile?.avatar_url,
     };
     });
@@ -1144,7 +1347,7 @@ export const getReviews = async (guideId: string) => {
 
 export const getMyReviewedReservationIds = async (): Promise<string[]> => {
     const userId = await ensureUser();
-    if (!userId) throw new Error("Vous devez être connecté.");
+    if (!userId) throw new Error("Vous devez ÃƒÂªtre connectÃƒÂ©.");
 
     const { data, error } = await supabase
         .from('reviews')
@@ -1167,11 +1370,11 @@ export const createReviewForCompletedReservation = async (payload: {
     comment?: string;
 }) => {
     const userId = await ensureUser();
-    if (!userId) throw new Error("Vous devez être connecté pour laisser un avis.");
+    if (!userId) throw new Error("Vous devez ÃƒÂªtre connectÃƒÂ© pour laisser un avis.");
 
-    if (!payload.reservationId) throw new Error('Réservation requise.');
+    if (!payload.reservationId) throw new Error('RÃƒÂ©servation requise.');
     if (!payload.rating || payload.rating < 1 || payload.rating > 5) {
-        throw new Error('La note doit être comprise entre 1 et 5.');
+        throw new Error('La note doit ÃƒÂªtre comprise entre 1 et 5.');
     }
 
     const { data, error } = await supabase.rpc('create_review_for_completed_reservation', {
@@ -1189,7 +1392,7 @@ export const createReviewForCompletedReservation = async (payload: {
 // Legacy method kept for compatibility with older call sites.
 export const createReview = async (reviewData: { guideId: string, rating: number, comment: string }) => {
     const userId = await ensureUser();
-    if (!userId) throw new Error("Vous devez être connecté pour laisser un avis.");
+    if (!userId) throw new Error("Vous devez ÃƒÂªtre connectÃƒÂ© pour laisser un avis.");
 
     const { data, error } = await supabase
         .from('reviews')
@@ -1213,11 +1416,11 @@ export const createService = async (serviceData: {
     meeting_points?: { name: string; supplement: number }[];
 }) => {
     const userId = await ensureUser();
-    if (!userId) throw new Error("Vous devez être connecté.");
+    if (!userId) throw new Error("Vous devez ÃƒÂªtre connectÃƒÂ©.");
 
     // Check if user is a guide
     const { data: profile } = await supabase.from('profiles').select('role').eq('id', userId).single();
-    if (profile?.role !== 'guide') throw new Error("Seuls les guides peuvent créer des services.");
+    if (profile?.role !== 'guide') throw new Error("Seuls les guides peuvent crÃƒÂ©er des services.");
 
     const fixedDescription = getFixedServiceDescription({
         title: serviceData.title,
@@ -1250,7 +1453,7 @@ export const createService = async (serviceData: {
 
 export const updateService = async (serviceId: string, updates: any) => {
     const userId = await ensureUser();
-    if (!userId) throw new Error("Vous devez être connecté.");
+    if (!userId) throw new Error("Vous devez ÃƒÂªtre connectÃƒÂ©.");
 
     // Check ownership
     const { data: service } = await supabase.from('services').select('guide_id').eq('id', serviceId).single();
@@ -1269,7 +1472,7 @@ export const updateService = async (serviceId: string, updates: any) => {
 
 export const deleteService = async (serviceId: string) => {
     const userId = await ensureUser();
-    if (!userId) throw new Error("Vous devez être connecté.");
+    if (!userId) throw new Error("Vous devez ÃƒÂªtre connectÃƒÂ©.");
 
     // Check ownership
     const { data: service } = await supabase.from('services').select('guide_id').eq('id', serviceId).single();
@@ -1306,7 +1509,7 @@ export const getServiceById = async (serviceId: string) => {
         }) || data.description || '',
         price: pilgrimDisplayPriceEur,
         guideNetBasePriceEur,
-        location: data.location || 'Lieu non spécifié',
+        location: data.location || 'Lieu non spÃƒÂ©cifiÃƒÂ©',
         guideId: data.guide_id,
         guideName: data.profiles?.full_name || 'Guide Inconnu',
         guideAvatar: data.profiles?.avatar_url,
@@ -1336,6 +1539,202 @@ export const uploadImage = async (uri: string) => {
     return result.data.url;
 };
 
+export const reportUser = async (payload: {
+    targetUserId: string;
+    context: 'chat' | 'guide_profile';
+    category: ReportCategory;
+    description?: string;
+    conversationUserId?: string;
+    reservationId?: string;
+}): Promise<{ reportId: string }> => {
+    const userId = await ensureUser();
+    if (!userId) throw new Error("Vous devez ÃƒÂªtre connectÃƒÂ©.");
+
+    const { data, error } = await supabase.rpc('create_user_report', {
+        p_target_user_id: payload.targetUserId,
+        p_context: payload.context,
+        p_category: payload.category,
+        p_description: payload.description?.trim() ? payload.description.trim() : null,
+        p_conversation_user_id: payload.conversationUserId || null,
+        p_reservation_id: payload.reservationId || null,
+    });
+
+    if (error) throw error;
+    const result = Array.isArray(data) ? data[0] : data;
+    if (!result?.reportId && !result?.report_id) {
+        throw new Error("Impossible d'envoyer ce signalement.");
+    }
+
+    return {
+        reportId: result.reportId || result.report_id,
+    };
+};
+
+export const blockUser = async (targetUserId: string, reason?: string) => {
+    const userId = await ensureUser();
+    if (!userId) throw new Error("Vous devez ÃƒÂªtre connectÃƒÂ©.");
+
+    const { error } = await supabase.rpc('block_user', {
+        p_blocked_user_id: targetUserId,
+        p_reason: reason?.trim() ? reason.trim() : null,
+    });
+
+    if (error) throw error;
+};
+
+export const unblockUser = async (targetUserId: string) => {
+    const userId = await ensureUser();
+    if (!userId) throw new Error("Vous devez ÃƒÂªtre connectÃƒÂ©.");
+
+    const { error } = await supabase.rpc('unblock_user', {
+        p_blocked_user_id: targetUserId,
+    });
+
+    if (error) throw error;
+};
+
+export const getBlockState = async (targetUserId: string): Promise<{
+    isBlockedByMe: boolean;
+    hasBlockedMe: boolean;
+}> => {
+    const userId = await ensureUser();
+    if (!userId) throw new Error("Vous devez ÃƒÂªtre connectÃƒÂ©.");
+
+    const { data, error } = await supabase.rpc('get_block_state', {
+        p_other_user_id: targetUserId,
+    });
+
+    if (error) throw error;
+    const result = Array.isArray(data) ? data[0] : data;
+
+    return {
+        isBlockedByMe: !!(result?.isBlockedByMe ?? result?.is_blocked_by_me),
+        hasBlockedMe: !!(result?.hasBlockedMe ?? result?.has_blocked_me),
+    };
+};
+
+export const deleteMyAccount = async () => {
+    const userId = await ensureUser();
+    if (!userId) throw new Error("Vous devez ÃƒÂªtre connectÃƒÂ©.");
+
+    const { error } = await supabase.functions.invoke('delete-my-account', {
+        body: {},
+    });
+
+    if (error) throw error;
+};
+
+type ReservationProofType = 'ihram_start_video' | 'omra_completion_video';
+
+const getFileExtensionFromUri = (uri: string) => {
+    const cleanedUri = String(uri || '').split('?')[0];
+    const extension = cleanedUri.includes('.') ? cleanedUri.split('.').pop() || '' : '';
+    return extension.toLowerCase() || 'mp4';
+};
+
+const getVideoContentType = (extension: string) => {
+    if (extension === 'mov' || extension === 'qt') return 'video/quicktime';
+    if (extension === 'webm') return 'video/webm';
+    return 'video/mp4';
+};
+
+export const uploadReservationProof = async (payload: {
+    reservationId: string;
+    proofType: ReservationProofType;
+    fileUri: string;
+}) => {
+    const userId = await ensureUser();
+    if (!userId) throw new Error("Vous devez ÃƒÂªtre connectÃƒÂ©.");
+
+    if (!payload.reservationId) throw new Error('RÃƒÂ©servation requise.');
+    if (!payload.fileUri) throw new Error('Fichier vidÃƒÂ©o requis.');
+
+    const extension = getFileExtensionFromUri(payload.fileUri);
+    const contentType = getVideoContentType(extension);
+    const storagePath = `${userId}/${payload.reservationId}/${payload.proofType}-${Date.now()}.${extension}`;
+
+    const uploadResponse = await fetch(payload.fileUri);
+    if (!uploadResponse.ok) throw new Error("Impossible de lire le fichier vidÃƒÂ©o.");
+    const fileBody = await uploadResponse.blob();
+
+    const { error: uploadError } = await supabase.storage
+        .from('omra-badal-proofs')
+        .upload(storagePath, fileBody, {
+            upsert: true,
+            contentType,
+        });
+
+    if (uploadError) throw uploadError;
+
+    const { data, error } = await supabase.rpc('upsert_reservation_proof', {
+        p_reservation_id: payload.reservationId,
+        p_proof_type: payload.proofType,
+        p_storage_path: storagePath,
+        p_public_url: storagePath,
+    });
+
+    if (error) throw error;
+    const proof = Array.isArray(data) ? data[0] : data;
+    if (!proof) throw new Error('Impossible dÃ¢â‚¬â„¢enregistrer la preuve.');
+
+    const { data: signedData } = await supabase.storage
+        .from('omra-badal-proofs')
+        .createSignedUrl(storagePath, 60 * 60);
+
+    return {
+        id: proof.id,
+        reservationId: proof.reservationId || proof.reservation_id,
+        proofType: proof.proofType || proof.proof_type,
+        storagePath: proof.storagePath || proof.storage_path || storagePath,
+        uploadedAt: proof.uploadedAt || proof.uploaded_at,
+        videoUrl: signedData?.signedUrl || null,
+    };
+};
+
+export const getReservationProofs = async (reservationId: string): Promise<Array<{
+    id: string;
+    reservationId: string;
+    proofType: ReservationProofType;
+    storagePath: string;
+    uploadedAt: string;
+    videoUrl: string | null;
+}>> => {
+    const userId = await ensureUser();
+    if (!userId) throw new Error("Vous devez ÃƒÂªtre connectÃƒÂ©.");
+    if (!reservationId) return [];
+
+    const { data, error } = await supabase.rpc('get_reservation_proofs', {
+        p_reservation_id: reservationId,
+    });
+
+    if (error) throw error;
+
+    const rows = (data || []) as any[];
+    const withUrls = await Promise.all(
+        rows.map(async (row) => {
+            const storagePath = String(row.storage_path || row.storagePath || '');
+            let videoUrl: string | null = null;
+            if (storagePath) {
+                const { data: signedData } = await supabase.storage
+                    .from('omra-badal-proofs')
+                    .createSignedUrl(storagePath, 60 * 60);
+                videoUrl = signedData?.signedUrl || null;
+            }
+
+            return {
+                id: String(row.id),
+                reservationId: String(row.reservation_id || row.reservationId || reservationId),
+                proofType: (row.proof_type || row.proofType) as ReservationProofType,
+                storagePath,
+                uploadedAt: String(row.uploaded_at || row.uploadedAt || ''),
+                videoUrl,
+            };
+        })
+    );
+
+    return withUrls;
+};
+
 // --- Messaging ---
 
 export const getMessages = async (otherUserId: string) => {
@@ -1357,21 +1756,17 @@ export const getMessages = async (otherUserId: string) => {
 
 export const sendMessage = async (receiverId: string, content: string) => {
     const userId = await ensureUser();
-    if (!userId) throw new Error("Vous devez être connecté.");
+    if (!userId) throw new Error("Vous devez ÃƒÂªtre connectÃƒÂ©.");
 
-    const { data, error } = await supabase
-        .from('messages')
-        .insert({
-            sender_id: userId,
-            receiver_id: receiverId,
-            content: content,
-            is_read: false,
-        })
-        .select()
-        .single();
+    const { data, error } = await supabase.rpc('send_message_with_guard', {
+        p_receiver_id: receiverId,
+        p_content: content,
+    });
 
     if (error) throw error;
-    return data;
+    const message = Array.isArray(data) ? data[0] : data;
+    if (!message) throw new Error("Impossible d'envoyer le message.");
+    return message;
 };
 
 export const markConversationAsRead = async (otherUserId: string) => {
@@ -1433,7 +1828,41 @@ export const getConversations = async () => {
         }
     }
 
-    return Array.from(conversations.values()).sort(
+    const items = Array.from(conversations.values());
+    const otherUserIds = items.map((item) => item.id);
+
+    let blockedByMeSet = new Set<string>();
+    let blockedMeSet = new Set<string>();
+
+    if (otherUserIds.length > 0) {
+        const [{ data: blockedByMeRows, error: blockedByMeError }, { data: blockedMeRows, error: blockedMeError }] = await Promise.all([
+            supabase
+                .from('user_blocks')
+                .select('blocked_id')
+                .eq('blocker_id', userId)
+                .in('blocked_id', otherUserIds),
+            supabase
+                .from('user_blocks')
+                .select('blocker_id')
+                .eq('blocked_id', userId)
+                .in('blocker_id', otherUserIds),
+        ]);
+
+        if (blockedByMeError && !isMissingTableError(blockedByMeError, 'user_blocks')) throw blockedByMeError;
+        if (blockedMeError && !isMissingTableError(blockedMeError, 'user_blocks')) throw blockedMeError;
+
+        blockedByMeSet = new Set(((blockedByMeRows || []) as any[]).map((row: any) => String(row.blocked_id)));
+        blockedMeSet = new Set(((blockedMeRows || []) as any[]).map((row: any) => String(row.blocker_id)));
+    }
+
+    const enriched = items.map((item) => ({
+        ...item,
+        isBlockedByMe: blockedByMeSet.has(item.id),
+        hasBlockedMe: blockedMeSet.has(item.id),
+        isBlocked: blockedByMeSet.has(item.id) || blockedMeSet.has(item.id),
+    }));
+
+    return enriched.sort(
         (a, b) => b.lastMessageDate.getTime() - a.lastMessageDate.getTime()
     );
 };
@@ -1450,3 +1879,4 @@ export const getPrayerTimes = async (city: string, country: string) => {
         console.error(e);
     }
 };
+

@@ -10,13 +10,14 @@ import {
     User
 } from 'lucide-react-native';
 import React from 'react';
-import { Alert, Image, ScrollView, StatusBar, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, Modal, ScrollView, StatusBar, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/AuthContext';
 import { AVATAR_PRESET_OPTIONS, DEFAULT_AVATAR_PRESET_ID, getAvatarPresetIdFromUrl, type AvatarPresetId, resolveProfileAvatarSource } from '@/lib/avatar';
-import { getGuideWalletSummary, getPilgrimWalletSummary } from '@/lib/api';
+import { deleteMyAccount, getGuideWalletSummary, getPilgrimWalletSummary } from '@/lib/api';
 import { formatEUR, formatSAR } from '@/lib/pricing';
+import * as Linking from 'expo-linking';
 import { useFocusEffect, useRouter } from 'expo-router';
 
 export default function ProfileScreen() {
@@ -31,6 +32,9 @@ export default function ProfileScreen() {
     const [pilgrimWalletSummary, setPilgrimWalletSummary] = React.useState<Awaited<ReturnType<typeof getPilgrimWalletSummary>> | null>(null);
     const [pilgrimWalletLoading, setPilgrimWalletLoading] = React.useState(false);
     const [pilgrimWalletError, setPilgrimWalletError] = React.useState<string | null>(null);
+    const [showDeleteModal, setShowDeleteModal] = React.useState(false);
+    const [deleteConfirmText, setDeleteConfirmText] = React.useState('');
+    const [isDeletingAccount, setIsDeletingAccount] = React.useState(false);
 
     const loadGuideWalletSummary = React.useCallback(async () => {
         if (profile?.role !== 'guide') {
@@ -91,6 +95,54 @@ export default function ProfileScreen() {
         } finally {
             setIsAvatarUpdating(false);
         }
+    };
+
+    const handleDeleteAccount = () => {
+        Alert.alert(
+            'Supprimer mon compte',
+            'Cette action est irréversible et supprimera immédiatement votre compte.',
+            [
+                { text: 'Annuler', style: 'cancel' },
+                {
+                    text: 'Continuer',
+                    style: 'destructive',
+                    onPress: () => setShowDeleteModal(true),
+                },
+            ]
+        );
+    };
+
+    const confirmDeleteAccount = async () => {
+        if (isDeletingAccount) return;
+        if (deleteConfirmText.trim().toUpperCase() !== 'SUPPRIMER') {
+            Alert.alert('Confirmation invalide', 'Saisissez exactement SUPPRIMER pour confirmer.');
+            return;
+        }
+
+        setIsDeletingAccount(true);
+        try {
+            await deleteMyAccount();
+            await signOut();
+            setShowDeleteModal(false);
+            setDeleteConfirmText('');
+            router.replace('/(auth)/login');
+        } catch (error: any) {
+            console.error('Failed to delete account:', error);
+            Alert.alert('Erreur', error?.message || 'Impossible de supprimer le compte pour le moment.');
+        } finally {
+            setIsDeletingAccount(false);
+        }
+    };
+
+    const openSupportMail = async () => {
+        const email = 'support@nefsy.app';
+        const url = `mailto:${email}`;
+        const canOpen = await Linking.canOpenURL(url);
+        if (!canOpen) {
+            Alert.alert('Support', `Contactez-nous à ${email}`);
+            return;
+        }
+        await Linking.openURL(url);
     };
 
     if (isLoading) {
@@ -294,7 +346,11 @@ export default function ProfileScreen() {
                                 }
                             />
                             <Separator />
-                            <MenuItem icon={Shield} label="Sécurité et confidentialité" />
+                            <MenuItem
+                                icon={Shield}
+                                label="Sécurité et confidentialité"
+                                onPress={() => router.push('/legal' as any)}
+                            />
                             {profile?.role === 'admin' && (
                                 <>
                                     <Separator />
@@ -312,7 +368,19 @@ export default function ProfileScreen() {
                         <View className="bg-white dark:bg-zinc-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-white/5">
                             <MenuItem icon={Settings} label="Préférences" />
                             <Separator />
-                            <MenuItem icon={CircleHelp} label="Aide et support" />
+                            <MenuItem icon={CircleHelp} label="Aide et support" onPress={() => router.push('/support' as any)} />
+                            <Separator />
+                            <MenuItem icon={CircleHelp} label="Contacter le support" onPress={openSupportMail} />
+                        </View>
+
+                        <Text className="text-gray-500 dark:text-gray-400 font-bold mb-3 mt-8 ml-1">SUPPRESSION</Text>
+                        <View className="bg-white dark:bg-zinc-800 rounded-2xl overflow-hidden border border-red-500/20">
+                            <MenuItem
+                                icon={Shield}
+                                label="Supprimer mon compte"
+                                onPress={handleDeleteAccount}
+                                labelClassName="text-red-500 font-semibold text-base"
+                            />
                         </View>
 
                         {/* Section: Logout */}
@@ -328,19 +396,58 @@ export default function ProfileScreen() {
                     </View>
                 </ScrollView>
             </SafeAreaView>
+
+            <Modal visible={showDeleteModal} transparent animationType="fade" onRequestClose={() => setShowDeleteModal(false)}>
+                <View className="flex-1 bg-black/70 justify-center px-6">
+                    <View className="bg-white dark:bg-zinc-800 rounded-2xl p-5 border border-red-500/20">
+                        <Text className="text-lg font-bold text-gray-900 dark:text-white">Confirmation finale</Text>
+                        <Text className="text-gray-500 dark:text-gray-300 text-sm mt-2">
+                            Saisissez <Text className="font-bold text-red-500">SUPPRIMER</Text> pour confirmer la suppression immédiate et irréversible de votre compte.
+                        </Text>
+                        <TextInput
+                            value={deleteConfirmText}
+                            onChangeText={setDeleteConfirmText}
+                            autoCapitalize="characters"
+                            placeholder="SUPPRIMER"
+                            placeholderTextColor="#9CA3AF"
+                            className="mt-4 bg-gray-100 dark:bg-zinc-700 rounded-xl px-4 py-3 text-gray-900 dark:text-white"
+                        />
+                        <View className="flex-row gap-3 mt-4">
+                            <TouchableOpacity
+                                className="flex-1 py-3 rounded-xl bg-gray-200 dark:bg-zinc-700 items-center"
+                                onPress={() => {
+                                    if (isDeletingAccount) return;
+                                    setShowDeleteModal(false);
+                                    setDeleteConfirmText('');
+                                }}
+                                disabled={isDeletingAccount}
+                            >
+                                <Text className="text-gray-700 dark:text-gray-200 font-semibold">Annuler</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                className="flex-1 py-3 rounded-xl bg-red-500 items-center"
+                                onPress={confirmDeleteAccount}
+                                disabled={isDeletingAccount}
+                            >
+                                <Text className="text-white font-semibold">{isDeletingAccount ? 'Suppression...' : 'Supprimer'}</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 }
 
 // Components purely for this screen to keep it clean
-function MenuItem({ icon: Icon, label, rightElement, onPress }: any) {
+function MenuItem({ icon: Icon, label, rightElement, onPress, labelClassName }: any) {
     return (
         <TouchableOpacity onPress={onPress} className="flex-row items-center justify-between p-4 active:bg-gray-50 dark:active:bg-zinc-700/50">
             <View className="flex-row items-center">
                 <View className="bg-gray-100 dark:bg-zinc-700 p-2 rounded-full mr-3">
                     <Icon size={18} color="white" />
                 </View>
-                <Text className="text-gray-900 dark:text-white font-medium text-base">{label}</Text>
+                <Text className={labelClassName || 'text-gray-900 dark:text-white font-medium text-base'}>{label}</Text>
             </View>
             {rightElement ? rightElement : <ChevronRight size={18} color="white" />}
         </TouchableOpacity>

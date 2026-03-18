@@ -6,6 +6,7 @@ import {
     confirmVisitStartAsGuide as apiConfirmVisitStartAsGuide,
     confirmVisitStartAsPilgrim as apiConfirmVisitStartAsPilgrim,
     createReservation,
+    PILGRIM_CHARTER_VERSION,
     getReservations,
     updateReservationStatus as apiUpdateStatus,
 } from '@/lib/api';
@@ -14,7 +15,7 @@ import React, { createContext, useCallback, useContext, useEffect, useRef, useSt
 // Define types
 export type ReservationStatus = 'pending' | 'confirmed' | 'in_progress' | 'cancelled' | 'completed';
 export type ReservationPayoutStatus = 'not_due' | 'to_pay' | 'processing' | 'paid' | 'failed';
-export type ReservationCancellationPolicy = 'full_credit_over_48h' | 'no_credit_under_48h';
+export type ReservationCancellationPolicy = 'full_credit_over_48h' | 'partial_credit_under_48h' | 'no_credit_under_48h';
 
 export interface Reservation {
     id: string;
@@ -41,10 +42,18 @@ export interface Reservation {
     payoutStatus?: ReservationPayoutStatus;
     walletAmountUsed?: number;
     cardAmountPaid?: number;
+    stripeCheckoutSessionId?: string | null;
+    stripePaymentIntentId?: string | null;
+    paymentStatus?: 'pending' | 'paid' | 'failed' | 'canceled' | null;
     cancellationCreditAmount?: number;
+    cancellationRetainedAmount?: number;
+    cancellationAdminCommissionAmount?: number;
+    cancellationGuideCompensationAmount?: number;
     cancelledAt?: string | null;
     cancelledBy?: string | null;
     cancellationPolicyApplied?: ReservationCancellationPolicy | null;
+    pilgrimCharterAcceptedAt?: string | null;
+    pilgrimCharterVersion?: string | null;
     createdAt?: string | null;
     reassignedFromGuideId?: string | null;
     reassignedByAdminId?: string | null;
@@ -198,6 +207,8 @@ export function ReservationsProvider({ children }: { children: React.ReactNode }
                 transportPickupType: 'haram',
                 transportExtraFeeAmount: 0,
                 transportWarningAcknowledged: true,
+                pilgrimCharterAccepted: true,
+                pilgrimCharterVersion: PILGRIM_CHARTER_VERSION,
             });
             await refreshReservations();
             console.log("Reservation added to DB");

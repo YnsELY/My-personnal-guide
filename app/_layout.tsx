@@ -86,6 +86,7 @@ function AppStack() {
       <Stack.Screen name="guide/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="date-select" options={{ headerShown: false }} />
       <Stack.Screen name="booking-summary" options={{ headerShown: false }} />
+      <Stack.Screen name="payment-status" options={{ headerShown: false }} />
       <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
     </Stack>
   );

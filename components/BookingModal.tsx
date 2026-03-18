@@ -3,13 +3,14 @@ import { CHARTER_TEXT } from '@/constants/charter';
 import { CATEGORIES } from '@/constants/data';
 import { useAuth } from '@/context/AuthContext';
 import { useReservations } from '@/context/ReservationsContext';
-import { createReservation, getPilgrimWalletSummary, getReservedGuideTimeSlots } from '@/lib/api';
+import { cancelStripeCheckoutReservation, createReservation, getPilgrimWalletSummary, getReservedGuideTimeSlots, PILGRIM_CHARTER_VERSION, startStripeCheckoutForReservation } from '@/lib/api';
 import { computePilgrimTotalFromGuideNet, formatEUR, roundMoney } from '@/lib/pricing';
 import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 import { Calendar, MapPin, Plus, Trash2, User, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { Alert, Modal, Platform, ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Platform, ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import * as Linking from 'expo-linking';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface BookingModalProps {
@@ -53,6 +54,7 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
     const [showCalendar, setShowCalendar] = useState(false);
     const [loading, setLoading] = useState(false);
     const [showCharterModal, setShowCharterModal] = useState(false);
+    const [pilgrimCharterAccepted, setPilgrimCharterAccepted] = useState(false);
     const [useWalletBalance, setUseWalletBalance] = useState(false);
     const [walletSummary, setWalletSummary] = useState<Awaited<ReturnType<typeof getPilgrimWalletSummary>> | null>(null);
     const [walletLoading, setWalletLoading] = useState(false);
@@ -76,6 +78,7 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
         setHotelDistanceKm('');
         setTransportWarningAcknowledged(false);
         setUseWalletBalance(false);
+        setPilgrimCharterAccepted(false);
         setWalletLoading(true);
         getPilgrimWalletSummary()
             .then((summary) => {
@@ -130,12 +133,7 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
     // Use passed service directly
     const activeService = service;
 
-    // Price logic (EUR): base service + suppléments pèlerins + transport
-    const soloOrCoupleText = `${activeService?.title || ''} ${activeService?.category || ''} ${selectedService || ''}`.toLowerCase();
-    const isSoloOrCoupleService = soloOrCoupleText.includes('seul ou en couple');
-    const includedPilgrimsWithoutSupplement = isSoloOrCoupleService ? 2 : 1;
-    const chargeableExtraPilgrims = Math.max(0, pilgrims.length - includedPilgrimsWithoutSupplement);
-    const extraPilgrimsNetAmount = chargeableExtraPilgrims * 50;
+    // Price logic (EUR): base service + transport
     const normalizedHotelDistanceInput = hotelDistanceKm.replace(',', '.');
     const parsedHotelDistanceKm = Number(normalizedHotelDistanceInput);
     const hotelDistanceIsValid = Number.isFinite(parsedHotelDistanceKm) && parsedHotelDistanceKm > 2;
@@ -149,7 +147,6 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
             : 200;
     const pricingPreview = computePilgrimTotalFromGuideNet({
         serviceNetAmountEur: serviceGuideNetPrice,
-        extraPilgrimsNetAmountEur: extraPilgrimsNetAmount,
         transportExtraFeeEur: transportExtraFeeAmount,
     });
     const commissionableNetAmount = pricingPreview.commissionableNetAmountEur;
@@ -169,7 +166,7 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                 || (hotelOver2KmByCar === false && transportWarningAcknowledged)
             )
         );
-    const canOpenConfirmation = !!transportPickupType && !!visitDate && !!visitTime && hasMinPilgrimsForFemale && isHotelFlowValid;
+    const canOpenConfirmation = !!transportPickupType && !!visitDate && !!visitTime && hasMinPilgrimsForFemale && isHotelFlowValid && pilgrimCharterAccepted;
 
     const handleAddPilgrim = () => {
         if (newPilgrimName.trim().length > 0) {
@@ -210,6 +207,10 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
             Alert.alert("Date manquante", "Veuillez sélectionner une date de visite.");
             return;
         }
+        if (!pilgrimCharterAccepted) {
+            Alert.alert("Charte requise", "Vous devez cocher \"J'ai lu et j'accepte la Charte du Pèlerin\" avant de réserver.");
+            return;
+        }
         if (!visitTime) {
             Alert.alert("Heure manquante", "Veuillez sélectionner une heure de visite.");
             return;
@@ -240,8 +241,47 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                 : null;
             const normalizedHotelAddress = transportPickupType === 'hotel' ? hotelAddress.trim() : null;
             const resolvedLocation = transportPickupType === 'hotel'
-                ? `Rendez-vous à l’hôtel - ${normalizedHotelAddress}`
+                ? `Rendez-vous à l'hôtel - ${normalizedHotelAddress}`
                 : 'Rendez-vous au haram';
+
+            if (cardAmountPaid > 0) {
+                const paymentStatusUrl = Linking.createURL('/payment-status');
+                const checkout = await startStripeCheckoutForReservation({
+                    serviceId: String(activeService?.id || ''),
+                    guideId,
+                    serviceName: selectedService,
+                    startDate: visitDate,
+                    endDate: visitDate,
+                    totalPrice,
+                    location: resolvedLocation,
+                    visitTime: visitTime,
+                    pilgrims: formattedPilgrims,
+                    transportPickupType,
+                    hotelAddress: normalizedHotelAddress,
+                    hotelOver2KmByCar: transportPickupType === 'hotel' ? hotelOver2KmByCar : null,
+                    hotelDistanceKm: normalizedHotelDistanceKm,
+                    transportExtraFeeAmount,
+                    transportWarningAcknowledged: transportPickupType === 'hotel' ? transportWarningAcknowledged : true,
+                    useWallet: useWalletBalance,
+                    pilgrimCharterAccepted: true,
+                    pilgrimCharterVersion: PILGRIM_CHARTER_VERSION,
+                    successUrl: paymentStatusUrl,
+                    cancelUrl: paymentStatusUrl,
+                });
+
+                const canOpenCheckout = await Linking.canOpenURL(checkout.checkoutUrl);
+                if (!canOpenCheckout) {
+                    await cancelStripeCheckoutReservation({
+                        pendingCheckoutId: checkout.pendingCheckoutId,
+                        reason: 'unable_to_open_checkout_url',
+                    });
+                    throw new Error("Impossible d'ouvrir la page de paiement Stripe.");
+                }
+
+                onClose();
+                await Linking.openURL(checkout.checkoutUrl);
+                return;
+            }
 
             const createdReservation = await createReservation({
                 guideId,
@@ -260,6 +300,8 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                 transportExtraFeeAmount,
                 commissionableNetAmount,
                 transportWarningAcknowledged: transportPickupType === 'hotel' ? transportWarningAcknowledged : true,
+                pilgrimCharterAccepted: true,
+                pilgrimCharterVersion: PILGRIM_CHARTER_VERSION,
             }, { useWallet: useWalletBalance });
             await refreshReservations();
 
@@ -295,6 +337,10 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                 || normalizedMessage.includes('minimum 2')
             ) {
                 Alert.alert("Nombre de pèlerins insuffisant", "Pour un compte femme, ajoutez au moins un deuxième pèlerin.");
+            } else if (normalizedMessage.includes('charte du pèlerin') || normalizedMessage.includes('charte du pelerin')) {
+                Alert.alert("Charte requise", "Vous devez accepter la Charte du Pèlerin avant de réserver.");
+            } else if (normalizedMessage.includes('blocage')) {
+                Alert.alert("Action impossible", "Réservation impossible: un blocage existe entre vous et ce guide.");
             } else {
                 Alert.alert("Erreur", error.message || "Une erreur est survenue lors de la réservation.");
             }
@@ -432,16 +478,6 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                                                 </View>
                                             ))}
                                         </View>
-                                        {chargeableExtraPilgrims > 0 && (
-                                            <Text className="text-zinc-500 text-xs mt-3 italic text-right">
-                                                +50 € par pèlerin supp.
-                                            </Text>
-                                        )}
-                                        {isSoloOrCoupleService && pilgrims.length === 2 && (
-                                            <Text className="text-emerald-300 text-xs mt-3 italic text-right">
-                                                Aucun supplément pour le 2e pèlerin (offre seul ou en couple).
-                                            </Text>
-                                        )}
                                     </View>
                                     {isFemalePilgrim && !hasMinPilgrimsForFemale && (
                                         <View className="mb-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2">
@@ -564,14 +600,8 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                                     <Text className="text-white font-bold text-3xl">{formatCurrency(totalPrice)}</Text>
                                 </View>
                             </View>
-                            {(extraPilgrimsNetAmount > 0 || transportExtraFeeAmount > 0) && (
+                            {transportExtraFeeAmount > 0 && (
                                 <View className="mb-4 rounded-xl border border-white/10 bg-zinc-800/70 px-4 py-3">
-                                {extraPilgrimsNetAmount > 0 && (
-                                    <View className="flex-row justify-between items-center mt-1.5">
-                                        <Text className="text-zinc-400 text-xs">Supplément pèlerins</Text>
-                                        <Text className="text-zinc-200 text-xs font-medium">{formatCurrency(extraPilgrimsNetAmount)}</Text>
-                                    </View>
-                                )}
                                 {transportExtraFeeAmount > 0 && (
                                     <View className="flex-row justify-between items-center mt-1.5">
                                         <Text className="text-zinc-400 text-xs">Transport</Text>
@@ -609,8 +639,9 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                                 </View>
                             </View>
                             <TouchableOpacity
-                                className={`py-4 rounded-2xl items-center shadow-lg ${canOpenConfirmation ? 'bg-[#b39164] shadow-[#b39164]/20' : 'bg-zinc-700'}`}
+                                className={`py-4 rounded-2xl items-center shadow-lg ${canOpenConfirmation && !loading ? 'bg-[#b39164] shadow-[#b39164]/20' : 'bg-zinc-700'}`}
                                 onPress={() => {
+                                    if (loading) return;
                                     if (!transportPickupType) return;
                                     if (!hasMinPilgrimsForFemale) {
                                         Alert.alert("Nombre de pèlerins insuffisant", "Pour un compte femme, ajoutez au moins un deuxième pèlerin.");
@@ -618,14 +649,41 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                                     }
                                     if (!visitDate || !visitTime) { Alert.alert("Incomplet", "Veuillez sélectionner date et heure."); return; }
                                     if (!isHotelFlowValid) { Alert.alert("Transport incomplet", "Veuillez compléter les informations de prise en charge."); return; }
-                                    setShowCharterModal(true);
+                                    if (!pilgrimCharterAccepted) {
+                                        Alert.alert("Charte requise", "Vous devez cocher \"J'ai lu et j'accepte la Charte du Pèlerin\" avant de réserver.");
+                                        return;
+                                    }
+                                    handleValidate();
                                 }}
-                                disabled={!canOpenConfirmation}
+                                disabled={!canOpenConfirmation || loading}
                             >
-                                <Text className={`font-bold text-lg ${canOpenConfirmation ? 'text-white' : 'text-zinc-500'}`}>
-                                    Réserver
-                                </Text>
+                                {loading ? (
+                                    <View className="flex-row items-center gap-3">
+                                        <ActivityIndicator color="#ffffff" size="small" />
+                                        <Text className="text-white font-bold text-lg">Redirection vers le paiement...</Text>
+                                    </View>
+                                ) : (
+                                    <Text className={`font-bold text-lg ${canOpenConfirmation ? 'text-white' : 'text-zinc-500'}`}>
+                                        Réserver
+                                    </Text>
+                                )}
                             </TouchableOpacity>
+                            <View className="mt-4 rounded-xl border border-white/10 bg-zinc-800/70 px-4 py-3">
+                                <TouchableOpacity
+                                    onPress={() => setPilgrimCharterAccepted((prev) => !prev)}
+                                    className="flex-row items-center"
+                                >
+                                    <View className={`w-5 h-5 rounded-md border mr-2 items-center justify-center ${pilgrimCharterAccepted ? 'bg-[#b39164] border-[#b39164]' : 'border-white/30 bg-zinc-900'}`}>
+                                        {pilgrimCharterAccepted ? <Text className="text-white text-[10px]">✓</Text> : null}
+                                    </View>
+                                    <Text className="text-zinc-200 text-xs flex-1">
+                                        J&apos;ai lu et j&apos;accepte la Charte du Pèlerin
+                                    </Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => setShowCharterModal(true)} className="mt-2 self-start">
+                                    <Text className="text-[#b39164] text-xs font-semibold">Lire la charte</Text>
+                                </TouchableOpacity>
+                            </View>
                         </View>
                     </SafeAreaView>
                 </BlurView>
@@ -645,16 +703,16 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                             <Text className="text-zinc-300 leading-6 text-base">{CHARTER_TEXT}</Text>
                         </ScrollView>
                         <View className="p-4 border-t border-white/10 bg-zinc-800">
-                            <Text className="text-zinc-400 text-xs mb-4 text-center">En cliquant ci-dessous, vous acceptez à nouveau la charte et confirmez votre réservation.</Text>
+                            <Text className="text-zinc-400 text-xs mb-4 text-center">Veuillez confirmer la lecture de la charte pour poursuivre la réservation.</Text>
                             <TouchableOpacity
                                 onPress={() => {
+                                    setPilgrimCharterAccepted(true);
                                     setShowCharterModal(false);
-                                    handleValidate();
                                 }}
                                 disabled={loading}
                                 className="bg-[#b39164] py-4 rounded-xl items-center shadow-sm"
                             >
-                                <Text className="text-white font-bold text-lg">{loading ? 'Finalisation...' : 'Accepter et Confirmer'}</Text>
+                                <Text className="text-white font-bold text-lg">{loading ? 'Finalisation...' : "J'ai lu la charte"}</Text>
                             </TouchableOpacity>
                         </View>
                     </SafeAreaView>

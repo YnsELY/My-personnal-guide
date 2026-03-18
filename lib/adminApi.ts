@@ -25,6 +25,30 @@ export type GuideCandidate = {
 
 export type AdminWalletRoleFilter = 'all' | 'guide' | 'pilgrim';
 export type AdminWalletRole = 'guide' | 'pilgrim';
+export type AdminReportStatus = 'open' | 'in_review' | 'resolved' | 'rejected';
+export type AdminReportCategory = 'harassment' | 'fraud' | 'inappropriate_content' | 'safety' | 'other';
+
+export type AdminReport = {
+    id: string;
+    reporterId: string;
+    reporterName: string;
+    reporterEmail: string;
+    targetUserId: string;
+    targetUserName: string;
+    targetUserEmail: string;
+    context: 'chat' | 'guide_profile';
+    category: AdminReportCategory;
+    description: string | null;
+    conversationUserId: string | null;
+    reservationId: string | null;
+    status: AdminReportStatus;
+    adminNote: string | null;
+    resolvedAt: string | null;
+    resolvedBy: string | null;
+    resolvedByName: string | null;
+    createdAt: string;
+    updatedAt: string;
+};
 
 export type AdminWalletRow = {
     userId: string;
@@ -1189,6 +1213,140 @@ export const assignReplacementGuide = async (params: {
         newGuideId: payload.newGuideId || payload.new_guide_id,
         status: 'confirmed',
     };
+};
+
+export const getAdminReports = async (filters?: {
+    search?: string;
+    status?: AdminReportStatus | 'all';
+    category?: AdminReportCategory | 'all';
+    periodDays?: number;
+}): Promise<AdminReport[]> => {
+    await ensureAdmin();
+
+    const search = filters?.search?.trim().toLowerCase();
+    const periodDays = filters?.periodDays || 90;
+    const startISO = periodStartISO(periodDays);
+
+    let query = supabase
+        .from('user_reports')
+        .select(`
+            id,
+            reporter_id,
+            target_user_id,
+            context,
+            category,
+            description,
+            conversation_user_id,
+            reservation_id,
+            status,
+            admin_note,
+            resolved_at,
+            resolved_by,
+            created_at,
+            updated_at,
+            reporter_profile:profiles!user_reports_reporter_id_fkey (
+                full_name,
+                email
+            ),
+            target_profile:profiles!user_reports_target_user_id_fkey (
+                full_name,
+                email
+            ),
+            resolver_profile:profiles!user_reports_resolved_by_fkey (
+                full_name
+            )
+        `)
+        .gte('created_at', startISO)
+        .order('created_at', { ascending: false });
+
+    if (filters?.status && filters.status !== 'all') {
+        query = query.eq('status', filters.status);
+    }
+
+    if (filters?.category && filters.category !== 'all') {
+        query = query.eq('category', filters.category);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    const rows = (data || []).map((row: any): AdminReport => {
+        const reporter = fromMaybeArray<any>(row.reporter_profile);
+        const target = fromMaybeArray<any>(row.target_profile);
+        const resolver = fromMaybeArray<any>(row.resolver_profile);
+
+        return {
+            id: row.id,
+            reporterId: row.reporter_id,
+            reporterName: reporter?.full_name || 'Utilisateur',
+            reporterEmail: reporter?.email || '',
+            targetUserId: row.target_user_id,
+            targetUserName: target?.full_name || 'Utilisateur',
+            targetUserEmail: target?.email || '',
+            context: row.context as 'chat' | 'guide_profile',
+            category: row.category as AdminReportCategory,
+            description: row.description || null,
+            conversationUserId: row.conversation_user_id || null,
+            reservationId: row.reservation_id || null,
+            status: row.status as AdminReportStatus,
+            adminNote: row.admin_note || null,
+            resolvedAt: row.resolved_at || null,
+            resolvedBy: row.resolved_by || null,
+            resolvedByName: resolver?.full_name || null,
+            createdAt: row.created_at,
+            updatedAt: row.updated_at,
+        };
+    });
+
+    if (!search) return rows;
+
+    return rows.filter((row) => (
+        row.reporterName.toLowerCase().includes(search)
+        || row.reporterEmail.toLowerCase().includes(search)
+        || row.targetUserName.toLowerCase().includes(search)
+        || row.targetUserEmail.toLowerCase().includes(search)
+        || row.category.toLowerCase().includes(search)
+        || (row.description || '').toLowerCase().includes(search)
+    ));
+};
+
+export const updateAdminReportStatus = async (payload: {
+    reportId: string;
+    status: AdminReportStatus;
+    note?: string;
+}) => {
+    const { adminId } = await ensureAdmin();
+
+    const isResolved = payload.status === 'resolved' || payload.status === 'rejected';
+    const updates: any = {
+        status: payload.status,
+        admin_note: payload.note?.trim() ? payload.note.trim() : null,
+        updated_at: new Date().toISOString(),
+        resolved_at: isResolved ? new Date().toISOString() : null,
+        resolved_by: isResolved ? adminId : null,
+    };
+
+    const { data, error } = await supabase
+        .from('user_reports')
+        .update(updates)
+        .eq('id', payload.reportId)
+        .select('*')
+        .single();
+
+    if (error) throw error;
+
+    await logAdminAction({
+        adminId,
+        entityType: 'user_report',
+        entityId: payload.reportId,
+        action: 'update_report_status',
+        details: {
+            status: payload.status,
+            note: payload.note?.trim() || null,
+        },
+    });
+
+    return data;
 };
 
 export const getAdminFinance = async (periodDays = 30) => {

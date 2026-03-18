@@ -1,12 +1,21 @@
 import BookingModal from '@/components/BookingModal';
 import { getServiceImageForLocation } from '@/constants/serviceLocationImages';
-import { getGuideById, getPublicGuideServices, getReviews, getServiceById } from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
+import { blockUser, getBlockState, getGuideById, getPublicGuideServices, getReviews, getServiceById, reportUser, unblockUser, type ReportCategory } from '@/lib/api';
 import { formatEUR } from '@/lib/pricing';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Briefcase, ChevronRight, ShieldCheck, Star, User } from 'lucide-react-native';
+import { ArrowLeft, Briefcase, ChevronRight, Flag, ShieldBan, ShieldCheck, Star, User } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { Image, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, Modal, ScrollView, StatusBar, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+const REPORT_CATEGORIES: { value: ReportCategory; label: string }[] = [
+    { value: 'harassment', label: 'Harcèlement' },
+    { value: 'fraud', label: 'Fraude' },
+    { value: 'inappropriate_content', label: 'Contenu inapproprié' },
+    { value: 'safety', label: 'Sécurité' },
+    { value: 'other', label: 'Autre' },
+];
 
 export default function GuideDetails() {
     const { id, startDate, endDate, servicePrice, serviceGuideNetPrice, serviceLocation, serviceTitle, serviceId } = useLocalSearchParams();
@@ -21,6 +30,7 @@ export default function GuideDetails() {
     const selectedServicePrice = servicePrice ? Number(Array.isArray(servicePrice) ? servicePrice[0] : servicePrice) : NaN;
     const selectedServiceGuideNetPrice = serviceGuideNetPrice ? Number(Array.isArray(serviceGuideNetPrice) ? serviceGuideNetPrice[0] : serviceGuideNetPrice) : NaN;
     const isServicesListMode = !selectedServiceIdParam;
+    const { profile } = useAuth();
 
     const [guide, setGuide] = useState<any>(null);
     const [service, setService] = useState<any>(null);
@@ -29,6 +39,12 @@ export default function GuideDetails() {
     const [reviews, setReviews] = useState<any[]>([]);
     const [reviewsLoaded, setReviewsLoaded] = useState(false);
     const [isBookingModalVisible, setBookingModalVisible] = useState(false);
+    const [blockState, setBlockState] = useState({ isBlockedByMe: false, hasBlockedMe: false });
+    const [isUpdatingBlock, setIsUpdatingBlock] = useState(false);
+    const [showReportModal, setShowReportModal] = useState(false);
+    const [reportCategory, setReportCategory] = useState<ReportCategory>('other');
+    const [reportDescription, setReportDescription] = useState('');
+    const [isSubmittingReport, setIsSubmittingReport] = useState(false);
 
     React.useEffect(() => {
         if (id) {
@@ -39,6 +55,25 @@ export default function GuideDetails() {
                 .finally(() => setReviewsLoaded(true));
         }
     }, [id]);
+
+    const refreshBlockState = React.useCallback(async () => {
+        if (typeof id !== 'string' || profile?.role !== 'pilgrim') {
+            setBlockState({ isBlockedByMe: false, hasBlockedMe: false });
+            return;
+        }
+        try {
+            const state = await getBlockState(id);
+            setBlockState(state);
+        } catch (error) {
+            console.error('Failed to refresh block state on guide profile:', error);
+        }
+    }, [id, profile?.role]);
+
+    React.useEffect(() => {
+        refreshBlockState().catch((error) => {
+            console.error('Failed to initialize block state on guide profile:', error);
+        });
+    }, [refreshBlockState]);
 
     React.useEffect(() => {
         if (!id) return;
@@ -102,6 +137,7 @@ export default function GuideDetails() {
     const formattedDisplayedAverageRating = Number.isFinite(displayedAverageRating)
         ? displayedAverageRating.toFixed(1)
         : '0.0';
+    const isGuideBlockedForBooking = blockState.isBlockedByMe || blockState.hasBlockedMe;
     const handleSelectService = (serviceItem: any) => {
         if (!guide?.id || !serviceItem?.id) return;
 
@@ -129,7 +165,7 @@ export default function GuideDetails() {
         router.push({
             pathname: '/guide/[id]',
             params: nextParams,
-        });
+        } as any);
     };
     const formatServiceDateRange = (start?: string, end?: string) => {
         if (!start) return 'Date à définir';
@@ -144,6 +180,63 @@ export default function GuideDetails() {
 
         const endLabel = endDateObject.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
         return `${startLabel} - ${endLabel}`;
+    };
+
+    const handleToggleBlock = async () => {
+        if (typeof id !== 'string' || profile?.role !== 'pilgrim' || isUpdatingBlock) return;
+        const shouldBlock = !blockState.isBlockedByMe;
+
+        Alert.alert(
+            shouldBlock ? 'Bloquer ce guide' : 'Débloquer ce guide',
+            shouldBlock
+                ? 'Le blocage coupe la messagerie et les nouvelles réservations avec ce guide.'
+                : 'Le déblocage réactive la messagerie et les nouvelles réservations.',
+            [
+                { text: 'Annuler', style: 'cancel' },
+                {
+                    text: shouldBlock ? 'Bloquer' : 'Débloquer',
+                    style: shouldBlock ? 'destructive' : 'default',
+                    onPress: async () => {
+                        setIsUpdatingBlock(true);
+                        try {
+                            if (shouldBlock) {
+                                await blockUser(id);
+                            } else {
+                                await unblockUser(id);
+                            }
+                            await refreshBlockState();
+                        } catch (error: any) {
+                            console.error('Failed to toggle guide block:', error);
+                            Alert.alert('Erreur', error?.message || 'Impossible de mettre à jour le blocage.');
+                        } finally {
+                            setIsUpdatingBlock(false);
+                        }
+                    },
+                }
+            ]
+        );
+    };
+
+    const submitReport = async () => {
+        if (typeof id !== 'string' || profile?.role !== 'pilgrim' || isSubmittingReport) return;
+        setIsSubmittingReport(true);
+        try {
+            await reportUser({
+                targetUserId: id,
+                context: 'guide_profile',
+                category: reportCategory,
+                description: reportDescription.trim() || undefined,
+            });
+            setShowReportModal(false);
+            setReportDescription('');
+            setReportCategory('other');
+            Alert.alert('Signalement envoyé', 'Merci, votre signalement a bien été pris en compte.');
+        } catch (error: any) {
+            console.error('Failed to report guide profile:', error);
+            Alert.alert('Erreur', error?.message || 'Impossible d’envoyer le signalement.');
+        } finally {
+            setIsSubmittingReport(false);
+        }
     };
 
     if (!guide) {
@@ -215,6 +308,47 @@ export default function GuideDetails() {
                             </Text>
                         )}
                     </View>
+
+                    {profile?.role === 'pilgrim' && (
+                        <View className="mb-6">
+                            <View className="flex-row gap-2">
+                                <TouchableOpacity
+                                    className="flex-1 rounded-xl border border-amber-500/30 bg-amber-500/10 py-2.5 items-center"
+                                    onPress={() => setShowReportModal(true)}
+                                >
+                                    <View className="flex-row items-center">
+                                        <Flag size={14} color="#f59e0b" />
+                                        <Text className="text-amber-400 text-xs font-semibold ml-1.5">Signaler ce guide</Text>
+                                    </View>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    className={`flex-1 rounded-xl border py-2.5 items-center ${blockState.isBlockedByMe
+                                        ? 'border-emerald-500/30 bg-emerald-500/10'
+                                        : 'border-red-500/30 bg-red-500/10'}`}
+                                    onPress={handleToggleBlock}
+                                    disabled={isUpdatingBlock}
+                                >
+                                    <View className="flex-row items-center">
+                                        {blockState.isBlockedByMe
+                                            ? <ShieldCheck size={14} color="#22c55e" />
+                                            : <ShieldBan size={14} color="#ef4444" />}
+                                        <Text className={`text-xs font-semibold ml-1.5 ${blockState.isBlockedByMe ? 'text-emerald-400' : 'text-red-400'}`}>
+                                            {blockState.isBlockedByMe ? 'Débloquer ce guide' : 'Bloquer ce guide'}
+                                        </Text>
+                                    </View>
+                                </TouchableOpacity>
+                            </View>
+                            {(blockState.isBlockedByMe || blockState.hasBlockedMe) && (
+                                <View className="mt-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2">
+                                    <Text className="text-amber-300 text-xs">
+                                        {blockState.isBlockedByMe
+                                            ? 'Vous avez bloqué ce guide: messagerie et nouvelles réservations désactivées.'
+                                            : 'Ce guide vous a bloqué: messagerie et nouvelles réservations indisponibles.'}
+                                    </Text>
+                                </View>
+                            )}
+                        </View>
+                    )}
 
                     {!isServicesListMode && Number.isFinite(displayedServicePrice) && (
                         <View className="flex-row items-center mb-6">
@@ -364,10 +498,16 @@ export default function GuideDetails() {
                 <View className="absolute bottom-0 left-0 right-0 bg-white/90 dark:bg-zinc-900/90 p-6 border-t border-gray-100 dark:border-white/5 backdrop-blur-xl">
                     <SafeAreaView edges={['bottom']} className="flex-row gap-4">
                         <TouchableOpacity
-                            className="bg-primary flex-1 p-4 rounded-2xl items-center justify-center shadow-lg shadow-primary/20"
-                            onPress={() => setBookingModalVisible(true)}
+                            className={`flex-1 p-4 rounded-2xl items-center justify-center ${isGuideBlockedForBooking ? 'bg-zinc-700' : 'bg-primary shadow-lg shadow-primary/20'}`}
+                            onPress={() => {
+                                if (isGuideBlockedForBooking) return;
+                                setBookingModalVisible(true);
+                            }}
+                            disabled={isGuideBlockedForBooking}
                         >
-                            <Text className="text-white font-bold text-lg">Réserver maintenant</Text>
+                            <Text className={`font-bold text-lg ${isGuideBlockedForBooking ? 'text-zinc-400' : 'text-white'}`}>
+                                {isGuideBlockedForBooking ? 'Réservation indisponible (blocage)' : 'Réserver maintenant'}
+                            </Text>
                         </TouchableOpacity>
                     </SafeAreaView>
                 </View>
@@ -385,6 +525,66 @@ export default function GuideDetails() {
                     service={activeService}
                 />
             )}
+
+            <Modal
+                visible={showReportModal}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setShowReportModal(false)}
+            >
+                <View className="flex-1 bg-black/70 justify-center p-6">
+                    <View className="bg-white dark:bg-zinc-800 rounded-2xl p-5">
+                        <Text className="text-lg font-bold text-gray-900 dark:text-white">Signaler ce guide</Text>
+                        <Text className="text-gray-500 text-xs mt-1 mb-3">Choisissez une catégorie et ajoutez des détails si nécessaire.</Text>
+
+                        <View className="flex-row flex-wrap gap-2 mb-3">
+                            {REPORT_CATEGORIES.map((category) => {
+                                const active = reportCategory === category.value;
+                                return (
+                                    <TouchableOpacity
+                                        key={category.value}
+                                        onPress={() => setReportCategory(category.value)}
+                                        className={`px-3 py-1.5 rounded-full border ${active
+                                            ? 'bg-[#b39164] border-[#b39164]'
+                                            : 'bg-gray-100 dark:bg-zinc-700 border-gray-200 dark:border-zinc-600'
+                                            }`}
+                                    >
+                                        <Text className={active ? 'text-white text-xs font-semibold' : 'text-gray-700 dark:text-gray-200 text-xs'}>
+                                            {category.label}
+                                        </Text>
+                                    </TouchableOpacity>
+                                );
+                            })}
+                        </View>
+
+                        <TextInput
+                            value={reportDescription}
+                            onChangeText={setReportDescription}
+                            multiline
+                            placeholder="Détails (optionnel)"
+                            placeholderTextColor="#9CA3AF"
+                            className="min-h-[90px] rounded-xl bg-gray-100 dark:bg-zinc-700 p-3 text-gray-900 dark:text-white"
+                        />
+
+                        <View className="flex-row gap-3 mt-4">
+                            <TouchableOpacity
+                                className="flex-1 py-3 rounded-xl bg-gray-200 dark:bg-zinc-700 items-center"
+                                onPress={() => setShowReportModal(false)}
+                                disabled={isSubmittingReport}
+                            >
+                                <Text className="text-gray-700 dark:text-gray-100 font-semibold">Annuler</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                className="flex-1 py-3 rounded-xl bg-[#b39164] items-center"
+                                onPress={submitReport}
+                                disabled={isSubmittingReport}
+                            >
+                                <Text className="text-white font-semibold">{isSubmittingReport ? 'Envoi...' : 'Envoyer'}</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 }

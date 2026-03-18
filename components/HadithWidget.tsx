@@ -48,7 +48,7 @@ export const HadithWidget = () => {
                 {/* Animated Text */}
                 <Animated.View style={{ opacity: fadeAnim }}>
                     <Text className="text-gray-800 dark:text-gray-100 font-serif text-base italic leading-6 mb-3">
-                        "{hadith.text}"
+                        &ldquo;{hadith.text}&rdquo;
                     </Text>
                     <Text className="text-gray-500 dark:text-gray-400 text-xs text-right font-medium">
                         — {hadith.source}

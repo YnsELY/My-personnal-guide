@@ -1,26 +1,23 @@
 import { Stack, useRouter } from 'expo-router';
-import { ArrowLeft, Headphones, Send } from 'lucide-react-native';
-import React, { useState } from 'react';
-import { FlatList, KeyboardAvoidingView, Platform, StatusBar, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ArrowLeft, Headphones, Mail } from 'lucide-react-native';
+import React from 'react';
+import { Alert, StatusBar, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Linking from 'expo-linking';
+
+const SUPPORT_EMAIL = 'support@nefsy.app';
 
 export default function SupportScreen() {
     const router = useRouter();
 
-    const [messages, setMessages] = useState([
-        { id: '1', text: 'Bonjour ! Comment pouvons-nous vous aider aujourd\'hui ?', sender: 'support' },
-    ]);
-    const [inputText, setInputText] = useState('');
-
-    const sendMessage = () => {
-        if (inputText.trim()) {
-            setMessages(prev => [...prev, { id: Date.now().toString(), text: inputText, sender: 'user' }]);
-            setInputText('');
-            // Simulate reply
-            setTimeout(() => {
-                setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), text: "Un agent va prendre en charge votre demande dans quelques instants.", sender: 'support' }]);
-            }, 1500);
+    const openSupportMail = async () => {
+        const url = `mailto:${SUPPORT_EMAIL}`;
+        const canOpen = await Linking.canOpenURL(url);
+        if (!canOpen) {
+            Alert.alert('Support', `Contactez-nous à ${SUPPORT_EMAIL}`);
+            return;
         }
+        await Linking.openURL(url);
     };
 
     return (
@@ -29,7 +26,6 @@ export default function SupportScreen() {
             <Stack.Screen options={{ headerShown: false }} />
             <SafeAreaView className="flex-1" edges={['top']}>
 
-                {/* Header */}
                 <View className="flex-row items-center px-4 py-3 border-b border-gray-100 dark:border-white/5 bg-white dark:bg-zinc-900 z-10">
                     <TouchableOpacity onPress={() => router.back()} className="mr-3">
                         <ArrowLeft size={24} className="text-gray-900 dark:text-white" />
@@ -38,51 +34,32 @@ export default function SupportScreen() {
                         <Headphones color="white" size={20} />
                     </View>
                     <View>
-                        <Text className="text-gray-900 dark:text-white font-bold text-base">Service Client</Text>
-                        <Text className="text-green-500 text-xs">En ligne 24/7</Text>
+                        <Text className="text-gray-900 dark:text-white font-bold text-base">Support</Text>
+                        <Text className="text-gray-500 text-xs">Assistance client</Text>
                     </View>
                 </View>
 
-                {/* Messages List */}
-                <FlatList
-                    data={[...messages].reverse()} // Reverse for Chat UI
-                    inverted
-                    keyExtractor={item => item.id}
-                    contentContainerStyle={{ padding: 16 }}
-                    renderItem={({ item }) => (
-                        <View className={`mb-4 max-w-[80%] ${item.sender === 'user' ? 'self-end' : 'self-start'}`}>
-                            <View className={`p-4 rounded-2xl ${item.sender === 'user'
-                                    ? 'bg-[#b39164] rounded-br-none'
-                                    : 'bg-gray-100 dark:bg-zinc-800 rounded-bl-none'
-                                }`}>
-                                <Text className={`text-base ${item.sender === 'user' ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
-                                    {item.text}
-                                </Text>
-                            </View>
-                        </View>
-                    )}
-                />
+                <View className="flex-1 px-6 pt-8">
+                    <View className="bg-white dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-2xl p-5">
+                        <Text className="text-gray-900 dark:text-white text-lg font-bold">Contacter le support</Text>
+                        <Text className="text-gray-500 dark:text-gray-300 text-sm mt-2 leading-6">
+                            Pour toute demande liée à votre compte, vos réservations ou votre sécurité, contactez-nous directement par email.
+                        </Text>
 
-                {/* Input Area */}
-                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={10}>
-                    <View className="px-4 py-3 border-t border-gray-100 dark:border-white/5 bg-white dark:bg-zinc-900 flex-row items-end">
-                        <TextInput
-                            className="flex-1 bg-gray-100 dark:bg-zinc-800 rounded-2xl px-4 py-3 text-gray-900 dark:text-white min-h-[50px] max-h-[100px]"
-                            placeholder="Écrivez votre message..."
-                            placeholderTextColor="#9CA3AF"
-                            multiline
-                            value={inputText}
-                            onChangeText={setInputText}
-                        />
+                        <View className="mt-4 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-zinc-700 px-4 py-3">
+                            <Text className="text-gray-500 text-xs uppercase tracking-wider">Email SAV</Text>
+                            <Text className="text-gray-900 dark:text-white font-semibold mt-1">{SUPPORT_EMAIL}</Text>
+                        </View>
+
                         <TouchableOpacity
-                            onPress={sendMessage}
-                            className={`ml-3 w-12 h-12 rounded-full items-center justify-center ${inputText.trim() ? 'bg-[#b39164]' : 'bg-gray-200 dark:bg-zinc-700'}`}
-                            disabled={!inputText.trim()}
+                            onPress={openSupportMail}
+                            className="mt-5 bg-[#b39164] rounded-xl py-3.5 flex-row items-center justify-center"
                         >
-                            <Send size={20} color="white" />
+                            <Mail size={18} color="white" />
+                            <Text className="text-white font-semibold ml-2">Ouvrir votre messagerie</Text>
                         </TouchableOpacity>
                     </View>
-                </KeyboardAvoidingView>
+                </View>
 
             </SafeAreaView>
         </View>

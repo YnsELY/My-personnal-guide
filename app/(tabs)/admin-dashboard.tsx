@@ -165,6 +165,12 @@ export default function AdminDashboardScreen() {
                                         onPress={() => router.push('/admin/reservations' as any)}
                                     />
                                     <ActionCard
+                                        title="Signalements UGC"
+                                        subtitle="Modérer les signalements utilisateurs"
+                                        icon={<FileClock size={18} color="#ef4444" />}
+                                        onPress={() => router.push('/admin/reports' as any)}
+                                    />
+                                    <ActionCard
                                         title="Entretiens guides"
                                         subtitle="Créneaux WhatsApp, réponses et validations"
                                         icon={<CalendarClock size={18} color="#6366f1" />}

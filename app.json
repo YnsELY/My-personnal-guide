@@ -38,6 +38,13 @@
           }
         }
       ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Autorisez l'accès à vos médias pour envoyer les preuves vidéo Omra Badal.",
+          "cameraPermission": "Autorisez l'accès à la caméra pour capturer les preuves vidéo Omra Badal."
+        }
+      ],
       "expo-secure-store"
     ],
     "experiments": {

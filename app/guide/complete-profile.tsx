@@ -148,6 +148,12 @@ export default function CompleteProfileScreen() {
                     <Text className="text-xl font-bold dark:text-white">Profil Guide</Text>
                 </View>
 
+                <View className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+                    <Text className="text-amber-200 text-xs">
+                        Compte strictement personnel: le prêt, le partage et la délégation du compte guide sont interdits.
+                    </Text>
+                </View>
+
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
                     <View className="gap-5">
 

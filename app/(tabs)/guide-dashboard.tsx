@@ -2,7 +2,7 @@ import { SlideToConfirmModal } from '@/components/SlideToConfirmModal';
 import { useAuth } from '@/context/AuthContext';
 import { useReservations } from '@/context/ReservationsContext';
 import { formatSAR, toSar } from '@/lib/pricing';
-import { Redirect } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { Check, Clock, MapPin, User, X } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { Alert, ScrollView, StatusBar, Text, TouchableOpacity, View, useColorScheme } from 'react-native';
@@ -19,6 +19,7 @@ const GUIDE_DASHBOARD_FILTERS: { value: DashboardView; label: string }[] = [
 ];
 
 export default function GuideDashboardScreen() {
+    const router = useRouter();
     const { profile, isLoading: authLoading } = useAuth();
     const {
         confirmVisitEndAsGuide,
@@ -168,6 +169,10 @@ export default function GuideDashboardScreen() {
         return 'Transport: non renseigné';
     };
 
+    const isBadalReservation = (reservation: any) => {
+        return String(reservation?.serviceName || '').toLowerCase().includes('badal');
+    };
+
     return (
         <View className="flex-1 bg-gray-50 dark:bg-zinc-900">
             <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
@@ -181,6 +186,12 @@ export default function GuideDashboardScreen() {
                             {viewSubtitles[activeView]}
                         </Text>
                     </View>
+                </View>
+
+                <View className="mx-6 mt-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5">
+                    <Text className="text-amber-200 text-xs">
+                        Rappel conformité: votre compte guide est strictement personnel, sans prêt ni délégation.
+                    </Text>
                 </View>
 
                 <ScrollView
@@ -269,6 +280,15 @@ export default function GuideDashboardScreen() {
                                                 >
                                                     <Text className="text-red-500 font-semibold text-sm">Annuler la prestation</Text>
                                                 </TouchableOpacity>
+
+                                                {isBadalReservation(visit) && (
+                                                    <TouchableOpacity
+                                                        className="bg-indigo-500/10 border border-indigo-500/20 py-3 rounded-lg items-center"
+                                                        onPress={() => router.push(`/guide/proofs/${visit.id}` as any)}
+                                                    >
+                                                        <Text className="text-indigo-500 font-semibold text-sm">Onglet Preuves Omra Badal</Text>
+                                                    </TouchableOpacity>
+                                                )}
                                             </View>
                                         </View>
                                     ))
@@ -324,6 +344,15 @@ export default function GuideDashboardScreen() {
                                                     onPress={() => openActionConfirmation('end', visit)}
                                                 >
                                                     <Text className="text-white font-semibold text-sm">Terminer la visite</Text>
+                                                </TouchableOpacity>
+                                            )}
+
+                                            {isBadalReservation(visit) && (
+                                                <TouchableOpacity
+                                                    className="mt-2 bg-indigo-500/10 border border-indigo-500/20 py-3 rounded-lg items-center"
+                                                    onPress={() => router.push(`/guide/proofs/${visit.id}` as any)}
+                                                >
+                                                    <Text className="text-indigo-500 font-semibold text-sm">Onglet Preuves Omra Badal</Text>
                                                 </TouchableOpacity>
                                             )}
                                         </View>
@@ -420,6 +449,14 @@ export default function GuideDashboardScreen() {
                                                     <Text className="text-blue-500 text-xs font-semibold">Terminée</Text>
                                                 </View>
                                             </View>
+                                            {isBadalReservation(reservation) && (
+                                                <TouchableOpacity
+                                                    className="mt-3 bg-indigo-500/10 border border-indigo-500/20 py-2.5 rounded-lg items-center"
+                                                    onPress={() => router.push(`/guide/proofs/${reservation.id}` as any)}
+                                                >
+                                                    <Text className="text-indigo-500 font-semibold text-xs">Voir / mettre à jour les preuves Omra Badal</Text>
+                                                </TouchableOpacity>
+                                            )}
                                         </View>
                                     ))}
                                 </View>

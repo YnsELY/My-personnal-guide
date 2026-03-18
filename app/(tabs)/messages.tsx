@@ -89,8 +89,15 @@ export default function MessagesScreen() {
                                         numberOfLines={1}
                                         className={`text-sm ${item.unread > 0 ? 'text-gray-900 dark:text-gray-200 font-semibold' : 'text-gray-500 dark:text-gray-400'}`}
                                     >
-                                        {item.message}
+                                        {item.isBlocked
+                                            ? (item.isBlockedByMe ? 'Utilisateur bloqué' : 'Vous êtes bloqué')
+                                            : item.message}
                                     </Text>
+                                    {item.isBlocked && (
+                                        <Text className="text-[11px] text-amber-500 mt-1">
+                                            {item.isBlockedByMe ? 'Messagerie suspendue (blocage actif)' : 'Cette conversation est bloquée'}
+                                        </Text>
+                                    )}
                                 </View>
                             </TouchableOpacity>
                         )}
