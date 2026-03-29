@@ -2,6 +2,7 @@ import { useAuth } from '@/context/AuthContext';
 import { signIn as apiSignIn, updateCurrentEmail, updateCurrentPassword, updateCurrentProfile } from '@/lib/api';
 import { useRouter } from 'expo-router';
 import { ChevronDown, ChevronLeft, Lock, Mail, User } from 'lucide-react-native';
+import { Stack } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
     Alert,
@@ -135,9 +136,11 @@ export default function EditProfileScreen() {
 
     return (
         <View className="flex-1 bg-gray-50 dark:bg-zinc-900">
+            <Stack.Screen options={{ headerShown: false }} />
             <StatusBar barStyle="dark-content" />
             <SafeAreaView className="flex-1">
                 <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
+
                     {/* Header */}
                     <View className="flex-row items-center px-5 py-4 border-b border-gray-100 dark:border-white/5 bg-white dark:bg-zinc-900">
                         <TouchableOpacity onPress={() => router.back()} className="mr-4 p-1">

@@ -8,7 +8,7 @@ import {
     roundMoney,
     toSar,
 } from '@/lib/pricing';
-import { supabase } from '@/lib/supabase';
+import { supabase, supabaseUrl } from '@/lib/supabase';
 
 // --- Auth & Seeding ---
 
@@ -1684,16 +1684,32 @@ export const uploadReservationProof = async (payload: {
     const contentType = getVideoContentType(extension);
     const storagePath = `${userId}/${payload.reservationId}/${payload.proofType}-${Date.now()}.${extension}`;
 
-    const uploadResponse = await fetch(payload.fileUri);
-    if (!uploadResponse.ok) throw new Error("Impossible de lire le fichier vidÃƒÂ©o.");
-    const fileBody = await uploadResponse.blob();
+    const formData = new FormData();
+    formData.append('file', {
+        uri: payload.fileUri,
+        name: `${payload.proofType}-${Date.now()}.${extension}`,
+        type: contentType,
+    } as any);
 
-    const { error: uploadError } = await supabase.storage
-        .from('omra-badal-proofs')
-        .upload(storagePath, fileBody, {
-            upsert: true,
-            contentType,
-        });
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) throw new Error("Session expirée.");
+
+    const uploadRes = await fetch(
+        `${supabaseUrl}/storage/v1/object/omra-badal-proofs/${storagePath}`,
+        {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${session.access_token}`,
+                'x-upsert': 'true',
+            },
+            body: formData,
+        }
+    );
+    if (!uploadRes.ok) {
+        const errBody = await uploadRes.text();
+        throw new Error(`Upload échoué: ${errBody}`);
+    }
+    const uploadError = null;
 
     if (uploadError) throw uploadError;
 
