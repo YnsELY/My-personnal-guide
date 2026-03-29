@@ -5,7 +5,6 @@ import {
     ChevronRight,
     CircleHelp, LogOut,
     LayoutDashboard,
-    Settings,
     Shield,
     User
 } from 'lucide-react-native';
@@ -316,7 +315,7 @@ export default function ProfileScreen() {
                                     if (profile?.role === 'guide') {
                                         router.push('/guide/complete-profile');
                                     } else {
-                                        Alert.alert("Info", "L'édition du profil pèlerin arrive bientôt.");
+                                        router.push('/edit-profile');
                                     }
                                 }}
                             />
@@ -366,8 +365,6 @@ export default function ProfileScreen() {
                         {/* Section: App */}
                         <Text className="text-gray-500 dark:text-gray-400 font-bold mb-3 mt-8 ml-1">APPLICATION</Text>
                         <View className="bg-white dark:bg-zinc-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-white/5">
-                            <MenuItem icon={Settings} label="Préférences" />
-                            <Separator />
                             <MenuItem icon={CircleHelp} label="Aide et support" onPress={() => router.push('/support' as any)} />
                             <Separator />
                             <MenuItem icon={CircleHelp} label="Contacter le support" onPress={openSupportMail} />

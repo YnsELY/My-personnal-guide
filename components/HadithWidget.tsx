@@ -32,7 +32,7 @@ export const HadithWidget = () => {
     const hadith = HADITHS[index];
 
     return (
-        <View className="mx-6 mb-6">
+        <View className="mb-6">
             <View className="bg-white dark:bg-zinc-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-white/5 relative overflow-hidden">
                 {/* Decorative Quote Icon Background */}
                 <View className="absolute -top-4 -right-4 opacity-5">

@@ -140,12 +140,11 @@ export default function ReservationsScreen() {
             Alert.alert('Indisponible', 'Cette preuve n’est pas encore disponible.');
             return;
         }
-        const canOpen = await Linking.canOpenURL(proof.videoUrl);
-        if (!canOpen) {
+        try {
+            await Linking.openURL(proof.videoUrl);
+        } catch {
             Alert.alert('Erreur', 'Impossible d’ouvrir cette vidéo sur cet appareil.');
-            return;
         }
-        await Linking.openURL(proof.videoUrl);
     };
 
     const closePendingAction = () => {

@@ -87,6 +87,33 @@ export const updateCurrentProfileAvatar = async (presetId: AvatarPresetId) => {
     return payload;
 };
 
+export const updateCurrentProfile = async (fields: {
+    full_name?: string;
+    gender?: 'male' | 'female';
+    date_of_birth?: string;
+    language?: 'fr' | 'ar';
+}) => {
+    const user = await getCurrentUser();
+    if (!user) throw new Error("Non connecté.");
+
+    const { error } = await supabase
+        .from('profiles')
+        .update(fields)
+        .eq('id', user.id);
+
+    if (error) throw error;
+};
+
+export const updateCurrentEmail = async (newEmail: string) => {
+    const { error } = await supabase.auth.updateUser({ email: newEmail });
+    if (error) throw error;
+};
+
+export const updateCurrentPassword = async (newPassword: string) => {
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) throw error;
+};
+
 // Kept for legacy/testing if needed, but updated to use real auth check only
 export const ensureUser = async () => {
     const user = await getCurrentUser();
@@ -717,7 +744,11 @@ export const getGuideServices = async (guideId: string) => {
         category: s.category,
         price: s.price_override,
         status: s.service_status || 'active',
-        meetingPoints: s.meeting_points || []
+        meetingPoints: s.meeting_points || [],
+        location: s.location || null,
+        imageUrl: s.image_url || null,
+        availabilityStart: s.availability_start || null,
+        availabilityEnd: s.availability_end || null,
     }));
 };
 
@@ -1677,15 +1708,17 @@ export const uploadReservationProof = async (payload: {
     const proof = Array.isArray(data) ? data[0] : data;
     if (!proof) throw new Error('Impossible dÃ¢â‚¬â„¢enregistrer la preuve.');
 
+    const resolvedStoragePath = String(proof.storagePath || proof.storage_path || storagePath);
+
     const { data: signedData } = await supabase.storage
         .from('omra-badal-proofs')
-        .createSignedUrl(storagePath, 60 * 60);
+        .createSignedUrl(resolvedStoragePath, 60 * 60);
 
     return {
         id: proof.id,
         reservationId: proof.reservationId || proof.reservation_id,
         proofType: proof.proofType || proof.proof_type,
-        storagePath: proof.storagePath || proof.storage_path || storagePath,
+        storagePath: resolvedStoragePath,
         uploadedAt: proof.uploadedAt || proof.uploaded_at,
         videoUrl: signedData?.signedUrl || null,
     };
@@ -1703,13 +1736,24 @@ export const getReservationProofs = async (reservationId: string): Promise<Array
     if (!userId) throw new Error("Vous devez ÃƒÂªtre connectÃƒÂ©.");
     if (!reservationId) return [];
 
-    const { data, error } = await supabase.rpc('get_reservation_proofs', {
-        p_reservation_id: reservationId,
-    });
+    let rows: any[] = [];
 
-    if (error) throw error;
+    const { data: tableData, error: tableError } = await supabase
+        .from('reservation_proofs')
+        .select('id,reservation_id,proof_type,storage_path,uploaded_at')
+        .eq('reservation_id', reservationId)
+        .order('uploaded_at', { ascending: false });
 
-    const rows = (data || []) as any[];
+    if (!tableError) {
+        rows = (tableData || []) as any[];
+    } else {
+        const { data: rpcData, error: rpcError } = await supabase.rpc('get_reservation_proofs', {
+            p_reservation_id: reservationId,
+        });
+        if (rpcError) throw rpcError;
+        rows = (rpcData || []) as any[];
+    }
+
     const withUrls = await Promise.all(
         rows.map(async (row) => {
             const storagePath = String(row.storage_path || row.storagePath || '');
@@ -1879,4 +1923,3 @@ export const getPrayerTimes = async (city: string, country: string) => {
         console.error(e);
     }
 };
-

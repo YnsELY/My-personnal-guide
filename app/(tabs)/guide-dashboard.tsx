@@ -173,6 +173,14 @@ export default function GuideDashboardScreen() {
         return String(reservation?.serviceName || '').toLowerCase().includes('badal');
     };
 
+    const isWaitingPilgrimStartConfirmation = (reservation: any) => {
+        return !!reservation?.guideStartConfirmedAt && !reservation?.pilgrimStartConfirmedAt;
+    };
+
+    const isWaitingPilgrimEndConfirmation = (reservation: any) => {
+        return !!reservation?.guideEndConfirmedAt && !reservation?.pilgrimEndConfirmedAt;
+    };
+
     return (
         <View className="flex-1 bg-gray-50 dark:bg-zinc-900">
             <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
@@ -233,6 +241,10 @@ export default function GuideDashboardScreen() {
                                 ) : (
                                     upcomingVisits.map((visit) => (
                                         <View key={visit.id} className="bg-white dark:bg-zinc-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-white/5">
+                                            {(() => {
+                                                const isWaitingStartConfirmation = isWaitingPilgrimStartConfirmation(visit);
+                                                return (
+                                                    <>
                                             <View className="flex-row items-center justify-between">
                                                 <View className="flex-row items-center flex-1">
                                                     <View className="bg-green-500/10 p-3 rounded-full mr-3">
@@ -252,17 +264,19 @@ export default function GuideDashboardScreen() {
                                                 </View>
                                                 <View className="items-end ml-3">
                                                     <Text className="text-gray-900 dark:text-white font-bold">{visit.time}</Text>
-                                                    <View className="bg-green-500/20 px-2 py-0.5 rounded-full mt-1">
-                                                        <Text className="text-green-600 text-[10px] font-medium">Confirmee</Text>
+                                                    <View className={`px-2 py-0.5 rounded-full mt-1 ${isWaitingStartConfirmation ? 'bg-amber-500/20' : 'bg-green-500/20'}`}>
+                                                        <Text className={`text-[10px] font-medium ${isWaitingStartConfirmation ? 'text-amber-600' : 'text-green-600'}`}>
+                                                            {isWaitingStartConfirmation ? 'Debut en attente' : 'Confirmee'}
+                                                        </Text>
                                                     </View>
                                                 </View>
                                             </View>
 
                                             <View className="mt-4 gap-2">
-                                                {visit.guideStartConfirmedAt ? (
+                                                {isWaitingStartConfirmation ? (
                                                     <View className="bg-amber-100 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 py-3 rounded-lg items-center">
                                                         <Text className="text-amber-700 dark:text-amber-300 font-semibold text-sm">
-                                                            En attente de confirmation du pelerin
+                                                            En attente de confirmation de debut par le pelerin
                                                         </Text>
                                                     </View>
                                                 ) : (
@@ -286,10 +300,13 @@ export default function GuideDashboardScreen() {
                                                         className="bg-indigo-500/10 border border-indigo-500/20 py-3 rounded-lg items-center"
                                                         onPress={() => router.push(`/guide/proofs/${visit.id}` as any)}
                                                     >
-                                                        <Text className="text-indigo-500 font-semibold text-sm">Onglet Preuves Omra Badal</Text>
+                                                        <Text className="text-indigo-500 font-semibold text-sm">Déposer les preuves Omra Badal</Text>
                                                     </TouchableOpacity>
                                                 )}
                                             </View>
+                                                    </>
+                                                );
+                                            })()}
                                         </View>
                                     ))
                                 )}
@@ -307,6 +324,10 @@ export default function GuideDashboardScreen() {
                                 ) : (
                                     ongoingVisits.map((visit) => (
                                         <View key={visit.id} className="bg-white dark:bg-zinc-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-white/5">
+                                            {(() => {
+                                                const isWaitingEndConfirmation = isWaitingPilgrimEndConfirmation(visit);
+                                                return (
+                                                    <>
                                             <View className="flex-row items-center justify-between">
                                                 <View className="flex-row items-center flex-1">
                                                     <View className="bg-blue-500/10 p-3 rounded-full mr-3">
@@ -326,13 +347,15 @@ export default function GuideDashboardScreen() {
                                                 </View>
                                                 <View className="items-end ml-3">
                                                     <Text className="text-gray-900 dark:text-white font-bold">{visit.time}</Text>
-                                                    <View className="bg-blue-500/20 px-2 py-0.5 rounded-full mt-1">
-                                                        <Text className="text-blue-600 text-[10px] font-medium">En cours</Text>
+                                                    <View className={`px-2 py-0.5 rounded-full mt-1 ${isWaitingEndConfirmation ? 'bg-amber-500/20' : 'bg-blue-500/20'}`}>
+                                                        <Text className={`text-[10px] font-medium ${isWaitingEndConfirmation ? 'text-amber-600' : 'text-blue-600'}`}>
+                                                            {isWaitingEndConfirmation ? 'Fin en attente' : 'En cours'}
+                                                        </Text>
                                                     </View>
                                                 </View>
                                             </View>
 
-                                            {visit.guideEndConfirmedAt ? (
+                                            {isWaitingEndConfirmation ? (
                                                 <View className="mt-4 bg-amber-100 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 py-3 rounded-lg items-center">
                                                     <Text className="text-amber-700 dark:text-amber-300 font-semibold text-sm">
                                                         En attente de confirmation de fin par le pelerin
@@ -352,9 +375,12 @@ export default function GuideDashboardScreen() {
                                                     className="mt-2 bg-indigo-500/10 border border-indigo-500/20 py-3 rounded-lg items-center"
                                                     onPress={() => router.push(`/guide/proofs/${visit.id}` as any)}
                                                 >
-                                                    <Text className="text-indigo-500 font-semibold text-sm">Onglet Preuves Omra Badal</Text>
+                                                    <Text className="text-indigo-500 font-semibold text-sm">Déposer les preuves Omra Badal</Text>
                                                 </TouchableOpacity>
                                             )}
+                                                    </>
+                                                );
+                                            })()}
                                         </View>
                                     ))
                                 )}

@@ -309,44 +309,15 @@ export default function GuideDetails() {
                         )}
                     </View>
 
-                    {profile?.role === 'pilgrim' && (
+                    {profile?.role === 'pilgrim' && (blockState.isBlockedByMe || blockState.hasBlockedMe) && (
                         <View className="mb-6">
-                            <View className="flex-row gap-2">
-                                <TouchableOpacity
-                                    className="flex-1 rounded-xl border border-amber-500/30 bg-amber-500/10 py-2.5 items-center"
-                                    onPress={() => setShowReportModal(true)}
-                                >
-                                    <View className="flex-row items-center">
-                                        <Flag size={14} color="#f59e0b" />
-                                        <Text className="text-amber-400 text-xs font-semibold ml-1.5">Signaler ce guide</Text>
-                                    </View>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    className={`flex-1 rounded-xl border py-2.5 items-center ${blockState.isBlockedByMe
-                                        ? 'border-emerald-500/30 bg-emerald-500/10'
-                                        : 'border-red-500/30 bg-red-500/10'}`}
-                                    onPress={handleToggleBlock}
-                                    disabled={isUpdatingBlock}
-                                >
-                                    <View className="flex-row items-center">
-                                        {blockState.isBlockedByMe
-                                            ? <ShieldCheck size={14} color="#22c55e" />
-                                            : <ShieldBan size={14} color="#ef4444" />}
-                                        <Text className={`text-xs font-semibold ml-1.5 ${blockState.isBlockedByMe ? 'text-emerald-400' : 'text-red-400'}`}>
-                                            {blockState.isBlockedByMe ? 'Débloquer ce guide' : 'Bloquer ce guide'}
-                                        </Text>
-                                    </View>
-                                </TouchableOpacity>
+                            <View className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2">
+                                <Text className="text-amber-300 text-xs">
+                                    {blockState.isBlockedByMe
+                                        ? 'Vous avez bloqué ce guide: messagerie et nouvelles réservations désactivées.'
+                                        : 'Ce guide vous a bloqué: messagerie et nouvelles réservations indisponibles.'}
+                                </Text>
                             </View>
-                            {(blockState.isBlockedByMe || blockState.hasBlockedMe) && (
-                                <View className="mt-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2">
-                                    <Text className="text-amber-300 text-xs">
-                                        {blockState.isBlockedByMe
-                                            ? 'Vous avez bloqué ce guide: messagerie et nouvelles réservations désactivées.'
-                                            : 'Ce guide vous a bloqué: messagerie et nouvelles réservations indisponibles.'}
-                                    </Text>
-                                </View>
-                            )}
                         </View>
                     )}
 

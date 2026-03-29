@@ -133,6 +133,9 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
     // Use passed service directly
     const activeService = service;
 
+    // Omra Badal : prestation à distance, pas de lieu de prise en charge
+    const isBadal = (selectedService || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().includes('badal');
+
     // Price logic (EUR): base service + transport
     const normalizedHotelDistanceInput = hotelDistanceKm.replace(',', '.');
     const parsedHotelDistanceKm = Number(normalizedHotelDistanceInput);
@@ -166,7 +169,7 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                 || (hotelOver2KmByCar === false && transportWarningAcknowledged)
             )
         );
-    const canOpenConfirmation = !!transportPickupType && !!visitDate && !!visitTime && hasMinPilgrimsForFemale && isHotelFlowValid && pilgrimCharterAccepted;
+    const canOpenConfirmation = (isBadal || !!transportPickupType) && !!visitDate && !!visitTime && hasMinPilgrimsForFemale && (isBadal || isHotelFlowValid) && pilgrimCharterAccepted;
 
     const handleAddPilgrim = () => {
         if (newPilgrimName.trim().length > 0) {
@@ -183,25 +186,27 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
     };
 
     const handleValidate = async () => {
-        if (!transportPickupType) {
-            Alert.alert("Transport manquant", "Veuillez sélectionner un mode de prise en charge.");
-            return;
-        }
-        if (transportPickupType === 'hotel' && !hotelAddress.trim()) {
-            Alert.alert("Adresse requise", "Veuillez renseigner l'adresse de l'hôtel.");
-            return;
-        }
-        if (transportPickupType === 'hotel' && hotelOver2KmByCar === null) {
-            Alert.alert("Distance requise", "Veuillez préciser si l'hôtel est à plus de 2 km du haram.");
-            return;
-        }
-        if (transportPickupType === 'hotel' && hotelOver2KmByCar === true && !hotelDistanceIsValid) {
-            Alert.alert("Distance invalide", "Veuillez saisir une distance strictement supérieure à 2 km.");
-            return;
-        }
-        if (transportPickupType === 'hotel' && hotelOver2KmByCar === false && !transportWarningAcknowledged) {
-            Alert.alert("Confirmation requise", "Veuillez confirmer l'avertissement concernant le supplément possible à l'arrivée.");
-            return;
+        if (!isBadal) {
+            if (!transportPickupType) {
+                Alert.alert("Transport manquant", "Veuillez sélectionner un mode de prise en charge.");
+                return;
+            }
+            if (transportPickupType === 'hotel' && !hotelAddress.trim()) {
+                Alert.alert("Adresse requise", "Veuillez renseigner l'adresse de l'hôtel.");
+                return;
+            }
+            if (transportPickupType === 'hotel' && hotelOver2KmByCar === null) {
+                Alert.alert("Distance requise", "Veuillez préciser si l'hôtel est à plus de 2 km du haram.");
+                return;
+            }
+            if (transportPickupType === 'hotel' && hotelOver2KmByCar === true && !hotelDistanceIsValid) {
+                Alert.alert("Distance invalide", "Veuillez saisir une distance strictement supérieure à 2 km.");
+                return;
+            }
+            if (transportPickupType === 'hotel' && hotelOver2KmByCar === false && !transportWarningAcknowledged) {
+                Alert.alert("Confirmation requise", "Veuillez confirmer l'avertissement concernant le supplément possible à l'arrivée.");
+                return;
+            }
         }
         if (!visitDate) {
             Alert.alert("Date manquante", "Veuillez sélectionner une date de visite.");
@@ -240,9 +245,11 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                 ? parsedHotelDistanceKm
                 : null;
             const normalizedHotelAddress = transportPickupType === 'hotel' ? hotelAddress.trim() : null;
-            const resolvedLocation = transportPickupType === 'hotel'
-                ? `Rendez-vous à l'hôtel - ${normalizedHotelAddress}`
-                : 'Rendez-vous au haram';
+            const resolvedLocation = isBadal
+                ? 'Prestation à distance (Omra Badal)'
+                : transportPickupType === 'hotel'
+                    ? `Rendez-vous à l'hôtel - ${normalizedHotelAddress}`
+                    : 'Rendez-vous au haram';
 
             if (cardAmountPaid > 0) {
                 const paymentStatusUrl = Linking.createURL('/payment-status');
@@ -256,7 +263,7 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                     location: resolvedLocation,
                     visitTime: visitTime,
                     pilgrims: formattedPilgrims,
-                    transportPickupType,
+                    transportPickupType: (transportPickupType ?? 'haram') as 'haram' | 'hotel',
                     hotelAddress: normalizedHotelAddress,
                     hotelOver2KmByCar: transportPickupType === 'hotel' ? hotelOver2KmByCar : null,
                     hotelDistanceKm: normalizedHotelDistanceKm,
@@ -293,7 +300,7 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                 location: resolvedLocation,
                 visitTime: visitTime,
                 pilgrims: formattedPilgrims,
-                transportPickupType,
+                transportPickupType: (transportPickupType ?? 'haram') as 'haram' | 'hotel',
                 hotelAddress: normalizedHotelAddress,
                 hotelOver2KmByCar: transportPickupType === 'hotel' ? hotelOver2KmByCar : null,
                 hotelDistanceKm: normalizedHotelDistanceKm,
@@ -490,101 +497,105 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                                 </>
                             )}
 
-                            {/* Transport Section */}
-                            <Text className="text-white font-bold text-lg mb-4">Prise en charge</Text>
-                            <View className="flex-row flex-wrap gap-3 mb-4">
-                                <TouchableOpacity
-                                    onPress={() => {
-                                        setTransportPickupType('haram');
-                                        setHotelAddress('');
-                                        setHotelOver2KmByCar(null);
-                                        setHotelDistanceKm('');
-                                        setTransportWarningAcknowledged(false);
-                                    }}
-                                    className={`px-4 py-3 rounded-xl border flex-row items-center ${transportPickupType === 'haram' ? 'bg-primary/20 border-primary' : 'bg-zinc-800 border-white/5'}`}
-                                >
-                                    <MapPin size={16} color={transportPickupType === 'haram' ? '#b39164' : '#A1A1AA'} />
-                                    <Text className={`ml-2 font-medium ${transportPickupType === 'haram' ? 'text-primary' : 'text-zinc-400'}`}>
-                                        Rendez-vous au haram
-                                    </Text>
-                                </TouchableOpacity>
-
-                                <TouchableOpacity
-                                    onPress={() => setTransportPickupType('hotel')}
-                                    className={`px-4 py-3 rounded-xl border flex-row items-center ${transportPickupType === 'hotel' ? 'bg-primary/20 border-primary' : 'bg-zinc-800 border-white/5'}`}
-                                >
-                                    <MapPin size={16} color={transportPickupType === 'hotel' ? '#b39164' : '#A1A1AA'} />
-                                    <Text className={`ml-2 font-medium ${transportPickupType === 'hotel' ? 'text-primary' : 'text-zinc-400'}`}>
-                                        Rendez-vous à l&apos;hôtel
-                                    </Text>
-                                </TouchableOpacity>
-                            </View>
-
-                            {transportPickupType === 'hotel' && (
-                                <View className="bg-zinc-800 border border-white/5 rounded-2xl p-4 mb-8">
-                                    <Text className="text-white font-semibold mb-2">Adresse de l&apos;hôtel</Text>
-                                    <TextInput
-                                        value={hotelAddress}
-                                        onChangeText={setHotelAddress}
-                                        placeholder="Adresse complète de l'hôtel"
-                                        placeholderTextColor="#71717A"
-                                        className="bg-zinc-900 border border-white/5 rounded-xl px-4 py-3 text-white mb-4"
-                                    />
-
-                                    <Text className="text-white font-semibold mb-2">Cet hôtel est-il à plus de 2 km en voiture du haram ?</Text>
-                                    <View className="flex-row gap-2 mb-3">
+                            {/* Transport Section — masqué pour Omra Badal (prestation à distance) */}
+                            {!isBadal && <Text className="text-white font-bold text-lg mb-4">Prise en charge</Text>}
+                            {!isBadal && (
+                                <>
+                                    <View className="flex-row flex-wrap gap-3 mb-4">
                                         <TouchableOpacity
                                             onPress={() => {
-                                                setHotelOver2KmByCar(false);
+                                                setTransportPickupType('haram');
+                                                setHotelAddress('');
+                                                setHotelOver2KmByCar(null);
                                                 setHotelDistanceKm('');
-                                            }}
-                                            className={`flex-1 py-2.5 rounded-xl border items-center ${hotelOver2KmByCar === false ? 'bg-primary/20 border-primary' : 'bg-zinc-900 border-white/5'}`}
-                                        >
-                                            <Text className={`${hotelOver2KmByCar === false ? 'text-primary' : 'text-zinc-300'} font-medium`}>Non</Text>
-                                        </TouchableOpacity>
-                                        <TouchableOpacity
-                                            onPress={() => {
-                                                setHotelOver2KmByCar(true);
                                                 setTransportWarningAcknowledged(false);
                                             }}
-                                            className={`flex-1 py-2.5 rounded-xl border items-center ${hotelOver2KmByCar === true ? 'bg-primary/20 border-primary' : 'bg-zinc-900 border-white/5'}`}
+                                            className={`px-4 py-3 rounded-xl border flex-row items-center ${transportPickupType === 'haram' ? 'bg-primary/20 border-primary' : 'bg-zinc-800 border-white/5'}`}
                                         >
-                                            <Text className={`${hotelOver2KmByCar === true ? 'text-primary' : 'text-zinc-300'} font-medium`}>Oui</Text>
+                                            <MapPin size={16} color={transportPickupType === 'haram' ? '#b39164' : '#A1A1AA'} />
+                                            <Text className={`ml-2 font-medium ${transportPickupType === 'haram' ? 'text-primary' : 'text-zinc-400'}`}>
+                                                Rendez-vous au haram
+                                            </Text>
+                                        </TouchableOpacity>
+
+                                        <TouchableOpacity
+                                            onPress={() => setTransportPickupType('hotel')}
+                                            className={`px-4 py-3 rounded-xl border flex-row items-center ${transportPickupType === 'hotel' ? 'bg-primary/20 border-primary' : 'bg-zinc-800 border-white/5'}`}
+                                        >
+                                            <MapPin size={16} color={transportPickupType === 'hotel' ? '#b39164' : '#A1A1AA'} />
+                                            <Text className={`ml-2 font-medium ${transportPickupType === 'hotel' ? 'text-primary' : 'text-zinc-400'}`}>
+                                                Rendez-vous à l&apos;hôtel
+                                            </Text>
                                         </TouchableOpacity>
                                     </View>
 
-                                    {hotelOver2KmByCar === false && (
-                                        <View className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
-                                            <Text className="text-amber-200 text-xs leading-5">
-                                                Si l&apos;adresse envoyée au guide est en réalité à plus de 2 km, un supplément sera facturé à l&apos;arrivée du guide.
-                                            </Text>
-                                            <TouchableOpacity
-                                                onPress={() => setTransportWarningAcknowledged((prev) => !prev)}
-                                                className="mt-3 flex-row items-center"
-                                            >
-                                                <View className={`w-5 h-5 rounded-md border mr-2 items-center justify-center ${transportWarningAcknowledged ? 'bg-[#b39164] border-[#b39164]' : 'border-white/20 bg-zinc-900'}`}>
-                                                    {transportWarningAcknowledged ? <Text className="text-white text-[10px]">✓</Text> : null}
-                                                </View>
-                                                <Text className="text-zinc-200 text-xs">J&apos;ai compris cet avertissement</Text>
-                                            </TouchableOpacity>
-                                        </View>
-                                    )}
-
-                                    {hotelOver2KmByCar === true && (
-                                        <View>
-                                            <Text className="text-white font-semibold mb-2">Distance (km)</Text>
+                                    {transportPickupType === 'hotel' && (
+                                        <View className="bg-zinc-800 border border-white/5 rounded-2xl p-4 mb-8">
+                                            <Text className="text-white font-semibold mb-2">Adresse de l&apos;hôtel</Text>
                                             <TextInput
-                                                value={hotelDistanceKm}
-                                                onChangeText={setHotelDistanceKm}
-                                                placeholder="Ex: 3.5"
+                                                value={hotelAddress}
+                                                onChangeText={setHotelAddress}
+                                                placeholder="Adresse complète de l'hôtel"
                                                 placeholderTextColor="#71717A"
-                                                keyboardType="decimal-pad"
-                                                className="bg-zinc-900 border border-white/5 rounded-xl px-4 py-3 text-white mb-2"
+                                                className="bg-zinc-900 border border-white/5 rounded-xl px-4 py-3 text-white mb-4"
                                             />
-                                            <Text className="text-emerald-300 text-xs">Supplément transport fixe appliqué: +10 €</Text>
+
+                                            <Text className="text-white font-semibold mb-2">Cet hôtel est-il à plus de 2 km en voiture du haram ?</Text>
+                                            <View className="flex-row gap-2 mb-3">
+                                                <TouchableOpacity
+                                                    onPress={() => {
+                                                        setHotelOver2KmByCar(false);
+                                                        setHotelDistanceKm('');
+                                                    }}
+                                                    className={`flex-1 py-2.5 rounded-xl border items-center ${hotelOver2KmByCar === false ? 'bg-primary/20 border-primary' : 'bg-zinc-900 border-white/5'}`}
+                                                >
+                                                    <Text className={`${hotelOver2KmByCar === false ? 'text-primary' : 'text-zinc-300'} font-medium`}>Non</Text>
+                                                </TouchableOpacity>
+                                                <TouchableOpacity
+                                                    onPress={() => {
+                                                        setHotelOver2KmByCar(true);
+                                                        setTransportWarningAcknowledged(false);
+                                                    }}
+                                                    className={`flex-1 py-2.5 rounded-xl border items-center ${hotelOver2KmByCar === true ? 'bg-primary/20 border-primary' : 'bg-zinc-900 border-white/5'}`}
+                                                >
+                                                    <Text className={`${hotelOver2KmByCar === true ? 'text-primary' : 'text-zinc-300'} font-medium`}>Oui</Text>
+                                                </TouchableOpacity>
+                                            </View>
+
+                                            {hotelOver2KmByCar === false && (
+                                                <View className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
+                                                    <Text className="text-amber-200 text-xs leading-5">
+                                                        Si l&apos;adresse envoyée au guide est en réalité à plus de 2 km, un supplément sera facturé à l&apos;arrivée du guide.
+                                                    </Text>
+                                                    <TouchableOpacity
+                                                        onPress={() => setTransportWarningAcknowledged((prev) => !prev)}
+                                                        className="mt-3 flex-row items-center"
+                                                    >
+                                                        <View className={`w-5 h-5 rounded-md border mr-2 items-center justify-center ${transportWarningAcknowledged ? 'bg-[#b39164] border-[#b39164]' : 'border-white/20 bg-zinc-900'}`}>
+                                                            {transportWarningAcknowledged ? <Text className="text-white text-[10px]">✓</Text> : null}
+                                                        </View>
+                                                        <Text className="text-zinc-200 text-xs">J&apos;ai compris cet avertissement</Text>
+                                                    </TouchableOpacity>
+                                                </View>
+                                            )}
+
+                                            {hotelOver2KmByCar === true && (
+                                                <View>
+                                                    <Text className="text-white font-semibold mb-2">Distance (km)</Text>
+                                                    <TextInput
+                                                        value={hotelDistanceKm}
+                                                        onChangeText={setHotelDistanceKm}
+                                                        placeholder="Ex: 3.5"
+                                                        placeholderTextColor="#71717A"
+                                                        keyboardType="decimal-pad"
+                                                        className="bg-zinc-900 border border-white/5 rounded-xl px-4 py-3 text-white mb-2"
+                                                    />
+                                                    <Text className="text-emerald-300 text-xs">Supplément transport fixe appliqué: +10 €</Text>
+                                                </View>
+                                            )}
                                         </View>
                                     )}
-                                </View>
+                                </>
                             )}
 
                         </ScrollView>
@@ -642,7 +653,7 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                                 className={`py-4 rounded-2xl items-center shadow-lg ${canOpenConfirmation && !loading ? 'bg-[#b39164] shadow-[#b39164]/20' : 'bg-zinc-700'}`}
                                 onPress={() => {
                                     if (loading) return;
-                                    if (!transportPickupType) return;
+                                    if (!isBadal && !transportPickupType) return;
                                     if (!hasMinPilgrimsForFemale) {
                                         Alert.alert("Nombre de pèlerins insuffisant", "Pour un compte femme, ajoutez au moins un deuxième pèlerin.");
                                         return;

@@ -1,9 +1,10 @@
 import { deleteService, getCurrentUser, getGuideServices } from '@/lib/api';
 import { formatSAR, toSar } from '@/lib/pricing';
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
-import { ArrowRight, MapPin, Pencil, Plus, Trash2 } from 'lucide-react-native';
+import { ArrowRight, Calendar, Pencil, Plus, Trash2 } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, StatusBar, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Image, StatusBar, Text, TouchableOpacity, View } from 'react-native';
+import { getServiceImageForLocation } from '@/constants/serviceLocationImages';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function MyServicesScreen() {
@@ -61,38 +62,59 @@ export default function MyServicesScreen() {
         );
     };
 
-    const renderServiceItem = ({ item }: { item: any }) => (
-        <View className="bg-white dark:bg-zinc-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-white/5 mb-4">
-            <View className="flex-row justify-between items-start mb-2">
-                <Text className="text-gray-900 dark:text-white font-bold text-lg flex-1 mr-2">{item.title}</Text>
-                <Text className="text-[#b39164] font-bold">{formatSAR(toSar(Number(item.price || 0)))}</Text>
-            </View>
+    const formatDateRange = (start: string | null, end: string | null) => {
+        if (!start && !end) return null;
+        const fmt = (d: string) => new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+        if (start && end) return `${fmt(start)} → ${fmt(end)}`;
+        if (start) return `Dès le ${fmt(start)}`;
+        return null;
+    };
 
-            <View className="flex-row items-center mb-1">
-                <Text className="text-gray-500 dark:text-gray-400 text-sm">{item.category}</Text>
-            </View>
+    const renderServiceItem = ({ item }: { item: any }) => {
+        const imageSource = item.imageUrl ? { uri: item.imageUrl } : getServiceImageForLocation(item.location);
+        const dateLabel = formatDateRange(item.availabilityStart, item.availabilityEnd);
 
-            <View className="flex-row items-center mt-2">
-                <MapPin size={14} color="#9CA3AF" />
-                <Text className="text-gray-400 text-xs ml-1">Transport fixe: Haram / Hôtel (+40 SAR si hôtel {'>'} 2 km)</Text>
-            </View>
+        return (
+            <View className="bg-white dark:bg-zinc-800 rounded-2xl shadow-sm border border-gray-100 dark:border-white/5 mb-4 overflow-hidden">
+                {/* Photo + pastille date */}
+                <View className="h-36 relative">
+                    <Image source={imageSource} className="w-full h-full" resizeMode="cover" />
+                    <View className="absolute inset-0 bg-black/20" />
+                    {dateLabel && (
+                        <View className="absolute top-3 right-3 bg-black/60 rounded-full px-3 py-1 flex-row items-center gap-1">
+                            <Calendar size={11} color="#b39164" />
+                            <Text className="text-white text-xs font-medium">{dateLabel}</Text>
+                        </View>
+                    )}
+                </View>
 
-            <View className="flex-row justify-end gap-3 mt-4 border-t border-gray-100 dark:border-white/5 pt-3">
-                <TouchableOpacity
-                    onPress={() => handleEdit(item)}
-                    className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg"
-                >
-                    <Pencil size={18} color="#3b82f6" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                    onPress={() => handleDelete(item.id)}
-                    className="p-2 bg-red-50 dark:bg-red-900/20 rounded-lg"
-                >
-                    <Trash2 size={18} color="#ef4444" />
-                </TouchableOpacity>
+                {/* Contenu */}
+                <View className="p-4">
+                    <View className="flex-row justify-between items-start mb-1">
+                        <Text className="text-gray-900 dark:text-white font-bold text-base flex-1 mr-2">{item.title}</Text>
+                        <Text className="text-[#b39164] font-bold">{formatSAR(toSar(Number(item.price || 0)))}</Text>
+                    </View>
+
+                    <Text className="text-gray-500 dark:text-gray-400 text-sm mb-3">{item.category}</Text>
+
+                    <View className="flex-row justify-end gap-3 border-t border-gray-100 dark:border-white/5 pt-3">
+                        <TouchableOpacity
+                            onPress={() => handleEdit(item)}
+                            className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg"
+                        >
+                            <Pencil size={18} color="#3b82f6" />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => handleDelete(item.id)}
+                            className="p-2 bg-red-50 dark:bg-red-900/20 rounded-lg"
+                        >
+                            <Trash2 size={18} color="#ef4444" />
+                        </TouchableOpacity>
+                    </View>
+                </View>
             </View>
-        </View>
-    );
+        );
+    };
 
     return (
         <View className="flex-1 bg-gray-50 dark:bg-zinc-900">

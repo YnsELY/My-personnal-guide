@@ -24,13 +24,6 @@ export const SERVICE_OPTIONS = [
         ]
     },
     {
-        category: 'Omra PMR ♿',
-        options: [
-            { label: 'Standard', price: 200 },
-            { label: 'Ramadan', price: 300 }
-        ]
-    },
-    {
         category: 'Omra Badal',
         options: [
             { label: 'Standard', price: 150 },

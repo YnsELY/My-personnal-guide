@@ -1,5 +1,5 @@
 import { Stack, useRouter } from 'expo-router';
-import { ArrowLeft, Ban, FileText, Mail, Shield } from 'lucide-react-native';
+import { ArrowLeft, Ban, BookOpen, FileText, Mail, Shield } from 'lucide-react-native';
 import React from 'react';
 import { StatusBar, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -61,6 +61,17 @@ export default function LegalIndexScreen() {
                         <View className="ml-3 flex-1">
                             <Text className="text-gray-900 dark:text-white font-semibold">Politique de confidentialite</Text>
                             <Text className="text-gray-500 text-xs mt-1">Protection des donnees et droits RGPD</Text>
+                        </View>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        onPress={() => router.push('/legal/charter' as any)}
+                        className="bg-white dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-2xl p-4 flex-row items-center"
+                    >
+                        <BookOpen size={18} color="#b39164" />
+                        <View className="ml-3 flex-1">
+                            <Text className="text-gray-900 dark:text-white font-semibold">Charte du pèlerin</Text>
+                            <Text className="text-gray-500 text-xs mt-1">Règles, engagements et droits du pèlerin</Text>
                         </View>
                     </TouchableOpacity>
 
