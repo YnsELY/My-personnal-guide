@@ -1,6 +1,8 @@
 import { type AvatarPresetId } from '@/lib/avatar';
 import { getCurrentProfile, getCurrentUser, getGuideApprovalInfo, signIn as apiSignIn, signOut as apiSignOut, signUp as apiSignUp, updateCurrentProfileAvatar } from '@/lib/api';
+import { registerForPushNotificationsAsync, savePushToken } from '@/lib/notifications';
 import { supabase } from '@/lib/supabase';
+import i18n from '@/lib/i18n';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 type SignUpRole = 'guide' | 'pilgrim';
@@ -56,7 +58,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     setGuideApprovalStatus('pending_review');
                     setIsGuideApproved(false);
                     if (options?.throwOnSuspended) {
-                        throw new Error("Votre compte a été suspendu. Contactez le support.");
+                        throw new Error(i18n.t('auth:accountSuspended'));
                     }
                     return;
                 }
@@ -71,6 +73,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                         account_status: 'active',
                     }
                 );
+
+                // Register push token (silently – no crash on failure)
+                registerForPushNotificationsAsync()
+                    .then((token) => {
+                        if (token) savePushToken(u.id, token);
+                    })
+                    .catch(() => undefined);
 
                 if (effectiveRole === 'guide') {
                     const approval = await getGuideApprovalInfo(u.id);

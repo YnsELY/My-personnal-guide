@@ -4,6 +4,7 @@ import {
     Camera,
     ChevronRight,
     CircleHelp, LogOut,
+    Globe2,
     LayoutDashboard,
     Shield,
     User
@@ -11,16 +12,21 @@ import {
 import React from 'react';
 import { Alert, Image, Modal, ScrollView, StatusBar, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { AVATAR_PRESET_OPTIONS, DEFAULT_AVATAR_PRESET_ID, getAvatarPresetIdFromUrl, type AvatarPresetId, resolveProfileAvatarSource } from '@/lib/avatar';
 import { deleteMyAccount, getGuideWalletSummary, getPilgrimWalletSummary } from '@/lib/api';
 import { formatEUR, formatSAR } from '@/lib/pricing';
+import { directionStyle, flipChevron, forceLTRText, rowStyle, textEnd, textStart } from '@/lib/rtl';
 import * as Linking from 'expo-linking';
 import { useFocusEffect, useRouter } from 'expo-router';
 
 export default function ProfileScreen() {
     const { user, profile, signOut, isLoading, updateProfileAvatar } = useAuth();
+    const { t } = useTranslation('profile');
+    const { language, setLanguage, isRTL } = useLanguage();
     const router = useRouter();
     const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
     const [isAvatarPickerOpen, setIsAvatarPickerOpen] = React.useState(false);
@@ -48,11 +54,11 @@ export default function ProfileScreen() {
             const summary = await getGuideWalletSummary();
             setWalletSummary(summary);
         } catch (error: any) {
-            setWalletError(error?.message || "Impossible de charger la cagnotte.");
+            setWalletError(error?.message || t('walletLoadError'));
         } finally {
             setWalletLoading(false);
         }
-    }, [profile?.role]);
+    }, [profile?.role, t]);
 
     const loadPilgrimWalletSummary = React.useCallback(async () => {
         if (profile?.role !== 'pilgrim') {
@@ -67,11 +73,11 @@ export default function ProfileScreen() {
             const summary = await getPilgrimWalletSummary();
             setPilgrimWalletSummary(summary);
         } catch (error: any) {
-            setPilgrimWalletError(error?.message || "Impossible de charger votre cagnotte.");
+            setPilgrimWalletError(error?.message || t('pilgrimWalletLoadError'));
         } finally {
             setPilgrimWalletLoading(false);
         }
-    }, [profile?.role]);
+    }, [profile?.role, t]);
 
     useFocusEffect(
         React.useCallback(() => {
@@ -90,7 +96,7 @@ export default function ProfileScreen() {
             await updateProfileAvatar(presetId);
             setIsAvatarPickerOpen(false);
         } catch (error: any) {
-            Alert.alert('Erreur', error?.message || "Impossible de mettre a jour l'avatar.");
+            Alert.alert(t('common:error'), error?.message || t('avatarError'));
         } finally {
             setIsAvatarUpdating(false);
         }
@@ -98,12 +104,12 @@ export default function ProfileScreen() {
 
     const handleDeleteAccount = () => {
         Alert.alert(
-            'Supprimer mon compte',
-            'Cette action est irréversible et supprimera immédiatement votre compte.',
+            t('deleteAccount'),
+            t('deleteAccountWarning'),
             [
-                { text: 'Annuler', style: 'cancel' },
+                { text: t('common:cancel'), style: 'cancel' },
                 {
-                    text: 'Continuer',
+                    text: t('common:continue'),
                     style: 'destructive',
                     onPress: () => setShowDeleteModal(true),
                 },
@@ -114,7 +120,7 @@ export default function ProfileScreen() {
     const confirmDeleteAccount = async () => {
         if (isDeletingAccount) return;
         if (deleteConfirmText.trim().toUpperCase() !== 'SUPPRIMER') {
-            Alert.alert('Confirmation invalide', 'Saisissez exactement SUPPRIMER pour confirmer.');
+            Alert.alert(t('deleteConfirmLabel'), t('deleteConfirmInvalid'));
             return;
         }
 
@@ -127,7 +133,7 @@ export default function ProfileScreen() {
             router.replace('/(auth)/login');
         } catch (error: any) {
             console.error('Failed to delete account:', error);
-            Alert.alert('Erreur', error?.message || 'Impossible de supprimer le compte pour le moment.');
+            Alert.alert(t('common:error'), error?.message || t('deleteError'));
         } finally {
             setIsDeletingAccount(false);
         }
@@ -138,33 +144,33 @@ export default function ProfileScreen() {
         const url = `mailto:${email}`;
         const canOpen = await Linking.canOpenURL(url);
         if (!canOpen) {
-            Alert.alert('Support', `Contactez-nous à ${email}`);
+            Alert.alert(t('contactSupport'), t('supportEmail', { email }));
             return;
         }
         await Linking.openURL(url);
     };
 
     if (isLoading) {
-        return <View className="flex-1 bg-gray-50 dark:bg-zinc-900 justify-center items-center"><Text className="text-gray-500">Chargement...</Text></View>;
+        return <View className="flex-1 bg-gray-50 dark:bg-zinc-900 justify-center items-center"><Text className="text-gray-500">{t('common:loading')}</Text></View>;
     }
 
     if (!user) {
         return (
-            <View className="flex-1 bg-gray-50 dark:bg-zinc-900">
+            <View className="flex-1 bg-gray-50 dark:bg-zinc-900" style={directionStyle(isRTL)}>
                 <StatusBar barStyle="light-content" />
                 <View className="h-48 bg-zinc-900 relative justify-center items-center">
                     <Text className="text-white text-3xl font-bold font-serif">Guide Omra</Text>
                 </View>
                 <View className="flex-1 px-6 pt-10 items-center">
-                    <Text className="text-xl font-bold text-gray-900 dark:text-white mb-2">Connectez-vous</Text>
-                    <Text className="text-gray-500 text-center mb-8">Accédez à votre compte pour gérer vos réservations ou proposer vos services.</Text>
+                    <Text className="text-xl font-bold text-gray-900 dark:text-white mb-2">{t('connectPrompt')}</Text>
+                    <Text className="text-gray-500 text-center mb-8">{t('connectDescription')}</Text>
 
                     <TouchableOpacity onPress={() => router.push('/(auth)/login')} className="bg-[#b39164] w-full py-4 rounded-xl items-center mb-4 shadow-lg shadow-[#b39164]/20">
-                        <Text className="text-white font-bold text-lg">Se connecter</Text>
+                        <Text className="text-white font-bold text-lg">{t('auth:signIn')}</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity onPress={() => router.push('/(auth)/register')} className="bg-white dark:bg-zinc-800 w-full py-4 rounded-xl items-center border border-gray-200 dark:border-white/10">
-                        <Text className="text-gray-900 dark:text-white font-bold text-lg">Créer un compte</Text>
+                        <Text className="text-gray-900 dark:text-white font-bold text-lg">{t('auth:createAccount')}</Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -172,7 +178,7 @@ export default function ProfileScreen() {
     }
 
     return (
-        <View className="flex-1 bg-gray-50 dark:bg-zinc-900">
+        <View className="flex-1 bg-gray-50 dark:bg-zinc-900" style={directionStyle(isRTL)}>
             <StatusBar barStyle="light-content" />
 
             {/* Header Background */}
@@ -194,12 +200,12 @@ export default function ProfileScreen() {
                                 <Camera size={14} color="white" />
                             </TouchableOpacity>
                         </View>
-                        <Text className="text-2xl font-bold text-white mt-3 mb-1">{profile?.full_name || 'Utilisateur'}</Text>
-                        <Text className="text-gray-300 text-sm">{user.email}</Text>
+                        <Text className="text-2xl font-bold text-white mt-3 mb-1" style={textStart(isRTL)}>{profile?.full_name || t('user')}</Text>
+                        <Text className="text-gray-300 text-sm" style={forceLTRText()}>{user.email}</Text>
                         {isAvatarPickerOpen && (
                             <View className="mt-4 bg-white dark:bg-zinc-800 rounded-2xl border border-gray-200 dark:border-white/10 p-3 w-[92%]">
-                                <Text className="text-gray-500 dark:text-gray-300 text-xs mb-3">Choisissez votre photo de profil</Text>
-                                <View className="flex-row items-center justify-between">
+                                <Text className="text-gray-500 dark:text-gray-300 text-xs mb-3" style={textStart(isRTL)}>{t('chooseAvatar')}</Text>
+                                <View className="flex-row items-center justify-between" style={rowStyle(isRTL)}>
                                     {AVATAR_PRESET_OPTIONS.map((avatar) => {
                                         const isSelected = currentAvatarPresetId === avatar.id;
                                         return (
@@ -215,18 +221,18 @@ export default function ProfileScreen() {
                                     })}
                                 </View>
                                 {isAvatarUpdating && (
-                                    <Text className="text-gray-400 text-xs mt-2">Mise a jour...</Text>
+                                    <Text className="text-gray-400 text-xs mt-2">{t('common:updating')}</Text>
                                 )}
                             </View>
                         )}
-                        <View className="flex-row gap-2 mt-4">
+                        <View className="gap-2 mt-4" style={rowStyle(isRTL)}>
 
                             {profile?.role === 'guide' && (
                                 <TouchableOpacity
                                     onPress={() => router.push('/guide/create-service')}
                                     className="bg-[#b39164] px-5 py-2 rounded-full border border-[#b39164]"
                                 >
-                                    <Text className="text-white text-xs font-bold">+ Créer un service</Text>
+                                    <Text className="text-white text-xs font-bold">{t('createService')}</Text>
                                 </TouchableOpacity>
                             )}
                             {profile?.role === 'admin' && (
@@ -234,7 +240,7 @@ export default function ProfileScreen() {
                                     onPress={() => router.push('/(tabs)/admin-dashboard' as any)}
                                     className="bg-blue-500 px-5 py-2 rounded-full border border-blue-500"
                                 >
-                                    <Text className="text-white text-xs font-bold">Espace Admin</Text>
+                                    <Text className="text-white text-xs font-bold">{t('adminSpace')}</Text>
                                 </TouchableOpacity>
                             )}
                         </View>
@@ -244,12 +250,12 @@ export default function ProfileScreen() {
                     <View className="px-5 pb-10">
                         {profile?.role === 'guide' && (
                             <View className="mb-4 bg-white dark:bg-zinc-800 rounded-2xl border border-gray-100 dark:border-white/10 p-4">
-                                <Text className="text-gray-500 text-xs uppercase tracking-wider">Cagnotte guide</Text>
+                                <Text className="text-gray-500 text-xs uppercase tracking-wider">{t('guideWallet')}</Text>
                                 <Text className="text-3xl font-bold text-gray-900 dark:text-white mt-1">
                                     {formatSAR(walletSummary?.availableBalance || 0)}
                                 </Text>
                                 <Text className="text-gray-500 text-xs mt-2">
-                                    La cagnotte se crédite à la fin validée de la visite.
+                                    {t('guideWalletDescription')}
                                 </Text>
 
                                 {walletLoading && !walletSummary ? (
@@ -262,26 +268,26 @@ export default function ProfileScreen() {
                                     <View className="mt-3 rounded-xl border border-red-500/20 bg-red-500/10 p-3">
                                         <Text className="text-red-400 text-xs">{walletError}</Text>
                                         <TouchableOpacity onPress={loadGuideWalletSummary} className="mt-2 self-start">
-                                            <Text className="text-red-300 text-xs font-semibold">Réessayer</Text>
+                                            <Text className="text-red-300 text-xs font-semibold">{t('common:retry')}</Text>
                                         </TouchableOpacity>
                                     </View>
                                 ) : (
                                     <View className="mt-4 gap-2">
-                                        <WalletRow label="Total généré" value={formatSAR(walletSummary?.totalGenerated || 0)} />
-                                        <WalletRow label="Déjà payé" value={formatSAR(walletSummary?.paidOut || 0)} />
-                                        <WalletRow label="Visites terminées" value={`${walletSummary?.completedVisits || 0}`} />
+                                        <WalletRow label={t('totalGenerated')} value={formatSAR(walletSummary?.totalGenerated || 0)} />
+                                        <WalletRow label={t('paidOut')} value={formatSAR(walletSummary?.paidOut || 0)} />
+                                        <WalletRow label={t('completedVisits')} value={`${walletSummary?.completedVisits || 0}`} />
                                     </View>
                                 )}
                             </View>
                         )}
                         {profile?.role === 'pilgrim' && (
                             <View className="mb-4 bg-white dark:bg-zinc-800 rounded-2xl border border-gray-100 dark:border-white/10 p-4">
-                                <Text className="text-gray-500 text-xs uppercase tracking-wider">Cagnotte pèlerin</Text>
+                                <Text className="text-gray-500 text-xs uppercase tracking-wider">{t('pilgrimWallet')}</Text>
                                 <Text className="text-3xl font-bold text-gray-900 dark:text-white mt-1">
                                     {formatEUR(pilgrimWalletSummary?.availableBalance || 0)}
                                 </Text>
                                 <Text className="text-gray-500 text-xs mt-2">
-                                    Solde d&apos;avoir disponible pour vos prochaines réservations.
+                                    {t('pilgrimWalletDescription')}
                                 </Text>
 
                                 {pilgrimWalletLoading && !pilgrimWalletSummary ? (
@@ -294,23 +300,23 @@ export default function ProfileScreen() {
                                     <View className="mt-3 rounded-xl border border-red-500/20 bg-red-500/10 p-3">
                                         <Text className="text-red-400 text-xs">{pilgrimWalletError}</Text>
                                         <TouchableOpacity onPress={loadPilgrimWalletSummary} className="mt-2 self-start">
-                                            <Text className="text-red-300 text-xs font-semibold">Réessayer</Text>
+                                            <Text className="text-red-300 text-xs font-semibold">{t('common:retry')}</Text>
                                         </TouchableOpacity>
                                     </View>
                                 ) : (
                                     <View className="mt-4 gap-2">
-                                        <WalletRow label="Crédits d'annulation" value={`${pilgrimWalletSummary?.cancellationCreditsCount || 0}`} />
+                                        <WalletRow label={t('cancellationCredits')} value={`${pilgrimWalletSummary?.cancellationCreditsCount || 0}`} />
                                     </View>
                                 )}
                             </View>
                         )}
 
                         {/* Section: Account */}
-                        <Text className="text-gray-500 dark:text-gray-400 font-bold mb-3 mt-4 ml-1">COMPTE</Text>
+                        <Text className="text-gray-500 dark:text-gray-400 font-bold mb-3 mt-4 ml-1" style={textStart(isRTL)}>{t('sectionAccount')}</Text>
                         <View className="bg-white dark:bg-zinc-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-white/5">
                             <MenuItem
                                 icon={User}
-                                label="Modifier mes informations"
+                                label={t('editInfo')}
                                 onPress={() => {
                                     if (profile?.role === 'guide') {
                                         router.push('/guide/complete-profile');
@@ -323,18 +329,18 @@ export default function ProfileScreen() {
                             {profile?.role === 'guide' ? (
                                 <MenuItem
                                     icon={Calendar}
-                                    label="Mes Services"
+                                    label={t('myServices')}
                                     onPress={() => router.push('/guide/my-services')}
                                 />
                             ) : (
                                 <MenuItem
                                     icon={Calendar}
-                                    label="Mes Réservations"
+                                    label={t('myReservations')}
                                     onPress={() => router.push('/my-reservations')}
                                 />
                             )}
                             <Separator />
-                            <MenuItem icon={Bell} label="Notifications"
+                            <MenuItem icon={Bell} label={t('notifications')}
                                 rightElement={
                                     <Switch
                                         trackColor={{ false: "#767577", true: "#b39164" }}
@@ -347,7 +353,7 @@ export default function ProfileScreen() {
                             <Separator />
                             <MenuItem
                                 icon={Shield}
-                                label="Sécurité et confidentialité"
+                                label={t('securityPrivacy')}
                                 onPress={() => router.push('/legal' as any)}
                             />
                             {profile?.role === 'admin' && (
@@ -355,7 +361,7 @@ export default function ProfileScreen() {
                                     <Separator />
                                     <MenuItem
                                         icon={LayoutDashboard}
-                                        label="Pilotage Admin"
+                                        label={t('adminDashboard')}
                                         onPress={() => router.push('/(tabs)/admin-dashboard' as any)}
                                     />
                                 </>
@@ -363,18 +369,38 @@ export default function ProfileScreen() {
                         </View>
 
                         {/* Section: App */}
-                        <Text className="text-gray-500 dark:text-gray-400 font-bold mb-3 mt-8 ml-1">APPLICATION</Text>
+                        <Text className="text-gray-500 dark:text-gray-400 font-bold mb-3 mt-8 ml-1" style={textStart(isRTL)}>{t('sectionApp')}</Text>
                         <View className="bg-white dark:bg-zinc-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-white/5">
-                            <MenuItem icon={CircleHelp} label="Aide et support" onPress={() => router.push('/support' as any)} />
+                            <MenuItem icon={CircleHelp} label={t('helpSupport')} onPress={() => router.push('/support' as any)} />
                             <Separator />
-                            <MenuItem icon={CircleHelp} label="Contacter le support" onPress={openSupportMail} />
+                            <MenuItem icon={CircleHelp} label={t('contactSupport')} onPress={openSupportMail} />
+                            <Separator />
+                            <MenuItem
+                                icon={Globe2}
+                                label={t('appLanguage')}
+                                rightElement={
+                                    <TouchableOpacity
+                                        onPress={async () => {
+                                            const newLang = language === 'fr' ? 'ar' : 'fr';
+                                            await setLanguage(newLang);
+                                        }}
+                                        className="flex-row items-center gap-2 bg-gray-100 dark:bg-zinc-700 px-3 py-1.5 rounded-full"
+                                        style={rowStyle(isRTL)}
+                                    >
+                                        <Text className="text-sm">{language === 'fr' ? '\u{1F1EB}\u{1F1F7}' : '\u{1F1F8}\u{1F1E6}'}</Text>
+                                        <Text className="text-gray-900 dark:text-white text-sm font-medium">
+                                            {language === 'fr' ? t('common:french') : t('common:arabic')}
+                                        </Text>
+                                    </TouchableOpacity>
+                                }
+                            />
                         </View>
 
-                        <Text className="text-gray-500 dark:text-gray-400 font-bold mb-3 mt-8 ml-1">SUPPRESSION</Text>
+                        <Text className="text-gray-500 dark:text-gray-400 font-bold mb-3 mt-8 ml-1" style={textStart(isRTL)}>{t('sectionDeletion')}</Text>
                         <View className="bg-white dark:bg-zinc-800 rounded-2xl overflow-hidden border border-red-500/20">
                             <MenuItem
                                 icon={Shield}
-                                label="Supprimer mon compte"
+                                label={t('deleteAccount')}
                                 onPress={handleDeleteAccount}
                                 labelClassName="text-red-500 font-semibold text-base"
                             />
@@ -384,12 +410,13 @@ export default function ProfileScreen() {
                         <TouchableOpacity
                             onPress={signOut}
                             className="flex-row items-center justify-center bg-red-500/10 dark:bg-red-500/10 mt-8 p-4 rounded-2xl border border-red-500/20"
+                            style={rowStyle(isRTL)}
                         >
                             <LogOut size={20} color="#ef4444" />
-                            <Text className="text-red-500 font-bold ml-2">Se déconnecter</Text>
+                            <Text className="text-red-500 font-bold ml-2">{t('signOut')}</Text>
                         </TouchableOpacity>
 
-                        <Text className="text-gray-400 text-xs text-center mt-6">Version 1.0.0</Text>
+                        <Text className="text-gray-400 text-xs text-center mt-6">{t('common:version', { version: '1.0.0' })}</Text>
                     </View>
                 </ScrollView>
             </SafeAreaView>
@@ -397,9 +424,9 @@ export default function ProfileScreen() {
             <Modal visible={showDeleteModal} transparent animationType="fade" onRequestClose={() => setShowDeleteModal(false)}>
                 <View className="flex-1 bg-black/70 justify-center px-6">
                     <View className="bg-white dark:bg-zinc-800 rounded-2xl p-5 border border-red-500/20">
-                        <Text className="text-lg font-bold text-gray-900 dark:text-white">Confirmation finale</Text>
-                        <Text className="text-gray-500 dark:text-gray-300 text-sm mt-2">
-                            Saisissez <Text className="font-bold text-red-500">SUPPRIMER</Text> pour confirmer la suppression immédiate et irréversible de votre compte.
+                        <Text className="text-lg font-bold text-gray-900 dark:text-white" style={textStart(isRTL)}>{t('deleteConfirmTitle')}</Text>
+                        <Text className="text-gray-500 dark:text-gray-300 text-sm mt-2" style={textStart(isRTL)}>
+                            {t('deleteConfirmMessage')}
                         </Text>
                         <TextInput
                             value={deleteConfirmText}
@@ -408,8 +435,9 @@ export default function ProfileScreen() {
                             placeholder="SUPPRIMER"
                             placeholderTextColor="#9CA3AF"
                             className="mt-4 bg-gray-100 dark:bg-zinc-700 rounded-xl px-4 py-3 text-gray-900 dark:text-white"
+                            style={forceLTRText()}
                         />
-                        <View className="flex-row gap-3 mt-4">
+                        <View className="gap-3 mt-4" style={rowStyle(isRTL)}>
                             <TouchableOpacity
                                 className="flex-1 py-3 rounded-xl bg-gray-200 dark:bg-zinc-700 items-center"
                                 onPress={() => {
@@ -419,14 +447,14 @@ export default function ProfileScreen() {
                                 }}
                                 disabled={isDeletingAccount}
                             >
-                                <Text className="text-gray-700 dark:text-gray-200 font-semibold">Annuler</Text>
+                                <Text className="text-gray-700 dark:text-gray-200 font-semibold">{t('common:cancel')}</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 className="flex-1 py-3 rounded-xl bg-red-500 items-center"
                                 onPress={confirmDeleteAccount}
                                 disabled={isDeletingAccount}
                             >
-                                <Text className="text-white font-semibold">{isDeletingAccount ? 'Suppression...' : 'Supprimer'}</Text>
+                                <Text className="text-white font-semibold">{isDeletingAccount ? t('deleting') : t('common:delete')}</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -438,15 +466,17 @@ export default function ProfileScreen() {
 
 // Components purely for this screen to keep it clean
 function MenuItem({ icon: Icon, label, rightElement, onPress, labelClassName }: any) {
+    const { isRTL } = useLanguage();
+
     return (
-        <TouchableOpacity onPress={onPress} className="flex-row items-center justify-between p-4 active:bg-gray-50 dark:active:bg-zinc-700/50">
-            <View className="flex-row items-center">
+        <TouchableOpacity onPress={onPress} className="flex-row items-center justify-between p-4 active:bg-gray-50 dark:active:bg-zinc-700/50" style={rowStyle(isRTL)}>
+            <View className="flex-row items-center" style={rowStyle(isRTL)}>
                 <View className="bg-gray-100 dark:bg-zinc-700 p-2 rounded-full mr-3">
                     <Icon size={18} color="white" />
                 </View>
-                <Text className={labelClassName || 'text-gray-900 dark:text-white font-medium text-base'}>{label}</Text>
+                <Text className={labelClassName || 'text-gray-900 dark:text-white font-medium text-base'} style={textStart(isRTL)}>{label}</Text>
             </View>
-            {rightElement ? rightElement : <ChevronRight size={18} color="white" />}
+            {rightElement ? rightElement : <ChevronRight size={18} color="white" style={flipChevron(isRTL)} />}
         </TouchableOpacity>
     );
 }
@@ -456,10 +486,12 @@ function Separator() {
 }
 
 function WalletRow({ label, value }: { label: string; value: string }) {
+    const { isRTL } = useLanguage();
+
     return (
-        <View className="flex-row items-center justify-between">
-            <Text className="text-gray-500 text-xs">{label}</Text>
-            <Text className="text-gray-900 dark:text-white text-sm font-semibold">{value}</Text>
+        <View className="flex-row items-center justify-between" style={rowStyle(isRTL)}>
+            <Text className="text-gray-500 text-xs" style={textStart(isRTL)}>{label}</Text>
+            <Text className="text-gray-900 dark:text-white text-sm font-semibold" style={textEnd(isRTL)}>{value}</Text>
         </View>
     );
 }

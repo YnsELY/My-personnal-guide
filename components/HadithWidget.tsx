@@ -1,11 +1,16 @@
-import { HADITHS } from '@/constants/data';
+import { useLanguage } from '@/context/LanguageContext';
+import { textEnd, textStart } from '@/lib/rtl';
 import { Quote } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Animated, Text, View } from 'react-native';
 
 export const HadithWidget = () => {
+    const { t } = useTranslation('content');
+    const { isRTL } = useLanguage();
     const [index, setIndex] = useState(0);
     const [fadeAnim] = useState(new Animated.Value(1));
+    const hadiths = t('hadiths', { returnObjects: true }) as { text: string; source: string }[];
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -16,7 +21,7 @@ export const HadithWidget = () => {
                 useNativeDriver: true,
             }).start(() => {
                 // Change index
-                setIndex((prevIndex) => (prevIndex + 1) % HADITHS.length);
+                setIndex((prevIndex) => (prevIndex + 1) % hadiths.length);
                 // Fade in
                 Animated.timing(fadeAnim, {
                     toValue: 1,
@@ -27,9 +32,9 @@ export const HadithWidget = () => {
         }, 8000); // 8 seconds
 
         return () => clearInterval(interval);
-    }, []);
+    }, [fadeAnim, hadiths.length]);
 
-    const hadith = HADITHS[index];
+    const hadith = hadiths[index] || hadiths[0];
 
     return (
         <View className="mb-6">
@@ -42,15 +47,15 @@ export const HadithWidget = () => {
                 {/* Header with small icon */}
                 <View className="flex-row items-center mb-3">
                     <Quote size={16} color="#b39164" fill="#b39164" className="mr-2" style={{ transform: [{ rotate: '180deg' }] }} />
-                    <Text className="text-[#b39164] font-bold text-xs uppercase tracking-wider">Hadith du jour</Text>
+                    <Text className="text-[#b39164] font-bold text-xs uppercase tracking-wider" style={textStart(isRTL)}>{t('hadithToday')}</Text>
                 </View>
 
                 {/* Animated Text */}
                 <Animated.View style={{ opacity: fadeAnim }}>
-                    <Text className="text-gray-800 dark:text-gray-100 font-serif text-base italic leading-6 mb-3">
+                    <Text className="text-gray-800 dark:text-gray-100 font-serif text-base italic leading-6 mb-3" style={textStart(isRTL)}>
                         &ldquo;{hadith.text}&rdquo;
                     </Text>
-                    <Text className="text-gray-500 dark:text-gray-400 text-xs text-right font-medium">
+                    <Text className="text-gray-500 dark:text-gray-400 text-xs text-right font-medium" style={textEnd(isRTL)}>
                         — {hadith.source}
                     </Text>
                 </Animated.View>

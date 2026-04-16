@@ -2,22 +2,27 @@ import BookingModal from '@/components/BookingModal';
 import { getServiceImageForLocation } from '@/constants/serviceLocationImages';
 import { useAuth } from '@/context/AuthContext';
 import { blockUser, getBlockState, getGuideById, getPublicGuideServices, getReviews, getServiceById, reportUser, unblockUser, type ReportCategory } from '@/lib/api';
+import i18n from '@/lib/i18n';
 import { formatEUR } from '@/lib/pricing';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Briefcase, ChevronRight, Flag, ShieldBan, ShieldCheck, Star, User } from 'lucide-react-native';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, Image, Modal, ScrollView, StatusBar, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const REPORT_CATEGORIES: { value: ReportCategory; label: string }[] = [
-    { value: 'harassment', label: 'Harcèlement' },
-    { value: 'fraud', label: 'Fraude' },
-    { value: 'inappropriate_content', label: 'Contenu inapproprié' },
-    { value: 'safety', label: 'Sécurité' },
-    { value: 'other', label: 'Autre' },
+const REPORT_CATEGORY_KEYS: { value: ReportCategory; key: string }[] = [
+    { value: 'harassment', key: 'harassment' },
+    { value: 'fraud', key: 'fraud' },
+    { value: 'inappropriate_content', key: 'inappropriateContent' },
+    { value: 'safety', key: 'safety' },
+    { value: 'other', key: 'other' },
 ];
 
+const getLocale = () => i18n.language === 'ar' ? 'ar-SA' : 'fr-FR';
+
 export default function GuideDetails() {
+    const { t } = useTranslation('guide');
     const { id, startDate, endDate, servicePrice, serviceGuideNetPrice, serviceLocation, serviceTitle, serviceId } = useLocalSearchParams();
     const router = useRouter();
     const selectedStartDateParam = Array.isArray(startDate) ? startDate[0] : startDate;
@@ -168,18 +173,18 @@ export default function GuideDetails() {
         } as any);
     };
     const formatServiceDateRange = (start?: string, end?: string) => {
-        if (!start) return 'Date à définir';
+        if (!start) return t('profile.dateTbd');
         const startDateObject = new Date(start);
-        if (Number.isNaN(startDateObject.getTime())) return 'Date à définir';
+        if (Number.isNaN(startDateObject.getTime())) return t('profile.dateTbd');
 
-        const startLabel = startDateObject.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        const startLabel = startDateObject.toLocaleDateString(getLocale(), { day: '2-digit', month: '2-digit', year: 'numeric' });
         if (!end) return startLabel;
 
         const endDateObject = new Date(end);
         if (Number.isNaN(endDateObject.getTime())) return startLabel;
 
-        const endLabel = endDateObject.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-        return `${startLabel} - ${endLabel}`;
+        const endLabel = endDateObject.toLocaleDateString(getLocale(), { day: '2-digit', month: '2-digit', year: 'numeric' });
+        return t('profile.dateRange', { start: startLabel, end: endLabel });
     };
 
     const handleToggleBlock = async () => {
@@ -187,14 +192,14 @@ export default function GuideDetails() {
         const shouldBlock = !blockState.isBlockedByMe;
 
         Alert.alert(
-            shouldBlock ? 'Bloquer ce guide' : 'Débloquer ce guide',
+            shouldBlock ? t('profile.blockGuide') : t('profile.unblockGuide'),
             shouldBlock
-                ? 'Le blocage coupe la messagerie et les nouvelles réservations avec ce guide.'
-                : 'Le déblocage réactive la messagerie et les nouvelles réservations.',
+                ? t('profile.blockMessage')
+                : t('profile.unblockMessage'),
             [
-                { text: 'Annuler', style: 'cancel' },
+                { text: t('common:cancel'), style: 'cancel' },
                 {
-                    text: shouldBlock ? 'Bloquer' : 'Débloquer',
+                    text: shouldBlock ? t('profile.block') : t('profile.unblock'),
                     style: shouldBlock ? 'destructive' : 'default',
                     onPress: async () => {
                         setIsUpdatingBlock(true);
@@ -207,7 +212,7 @@ export default function GuideDetails() {
                             await refreshBlockState();
                         } catch (error: any) {
                             console.error('Failed to toggle guide block:', error);
-                            Alert.alert('Erreur', error?.message || 'Impossible de mettre à jour le blocage.');
+                            Alert.alert(t('common:error'), error?.message || t('profile.blockError'));
                         } finally {
                             setIsUpdatingBlock(false);
                         }
@@ -230,10 +235,10 @@ export default function GuideDetails() {
             setShowReportModal(false);
             setReportDescription('');
             setReportCategory('other');
-            Alert.alert('Signalement envoyé', 'Merci, votre signalement a bien été pris en compte.');
+            Alert.alert(t('profile.reportSent'), t('profile.reportSentMessage'));
         } catch (error: any) {
             console.error('Failed to report guide profile:', error);
-            Alert.alert('Erreur', error?.message || 'Impossible d’envoyer le signalement.');
+            Alert.alert(t('common:error'), error?.message || t('profile.reportError'));
         } finally {
             setIsSubmittingReport(false);
         }
@@ -242,7 +247,7 @@ export default function GuideDetails() {
     if (!guide) {
         return (
             <View className="flex-1 bg-white items-center justify-center">
-                <Text>Chargement...</Text>
+                <Text>{t('profile.loading')}</Text>
             </View>
         );
     }
@@ -314,8 +319,8 @@ export default function GuideDetails() {
                             <View className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2">
                                 <Text className="text-amber-300 text-xs">
                                     {blockState.isBlockedByMe
-                                        ? 'Vous avez bloqué ce guide: messagerie et nouvelles réservations désactivées.'
-                                        : 'Ce guide vous a bloqué: messagerie et nouvelles réservations indisponibles.'}
+                                        ? t('profile.blockedByMe')
+                                        : t('profile.blockedByGuide')}
                                 </Text>
                             </View>
                         </View>
@@ -331,11 +336,11 @@ export default function GuideDetails() {
 
                     {isServicesListMode && (
                         <View className="mb-8">
-                            <Text className="text-xl font-bold text-gray-900 dark:text-white mb-3">Services actuellement disponibles</Text>
+                            <Text className="text-xl font-bold text-gray-900 dark:text-white mb-3">{t('profile.availableServices')}</Text>
                             {isLoadingGuideServices ? (
-                                <Text className="text-gray-500 dark:text-gray-400">Chargement des services...</Text>
+                                <Text className="text-gray-500 dark:text-gray-400">{t('profile.loadingServices')}</Text>
                             ) : guideServices.length === 0 ? (
-                                <Text className="text-gray-500 dark:text-gray-400">Ce guide n&apos;a pas encore de service actif.</Text>
+                                <Text className="text-gray-500 dark:text-gray-400">{t('profile.noActiveService')}</Text>
                             ) : (
                                 guideServices.map((serviceItem) => (
                                     <TouchableOpacity
@@ -363,14 +368,14 @@ export default function GuideDetails() {
                                         <View className="flex-row items-center justify-between border-t border-gray-100 dark:border-white/5 pt-3">
                                             <View className="flex-1 mr-3">
                                                 <Text className="text-gray-500 dark:text-gray-400 text-xs">
-                                                    {serviceItem.location || 'Lieu non renseigné'}
+                                                    {serviceItem.location || t('profile.locationTbd')}
                                                 </Text>
                                                 <Text className="text-gray-400 text-[11px] mt-1">
                                                     {formatServiceDateRange(serviceItem.startDate, serviceItem.endDate)}
                                                 </Text>
                                             </View>
                                             <View className="flex-row items-center">
-                                                <Text className="text-primary font-semibold text-xs mr-1">Réserver</Text>
+                                                <Text className="text-primary font-semibold text-xs mr-1">{t('profile.book')}</Text>
                                                 <ChevronRight size={14} color="#b39164" />
                                             </View>
                                         </View>
@@ -387,21 +392,21 @@ export default function GuideDetails() {
                                 <Star size={20} color="#b39164" fill="#b39164" />
                                 <Text className="text-xl font-bold text-gray-900 dark:text-white ml-2">{formattedDisplayedAverageRating}</Text>
                             </View>
-                            <Text className="text-gray-500 text-xs mt-1">Note</Text>
+                            <Text className="text-gray-500 text-xs mt-1">{t('profile.rating')}</Text>
                         </View>
 
                         <View className="items-center flex-1 border-r border-gray-200 dark:border-white/5">
                             <Text className="text-xl font-bold text-gray-900 dark:text-white">{displayedReviewsCount}</Text>
-                            <Text className="text-gray-500 text-xs mt-1">Avis</Text>
+                            <Text className="text-gray-500 text-xs mt-1">{t('profile.reviews')}</Text>
                         </View>
 
                         <View className="items-center flex-1">
                             <Text className="text-xl font-bold text-gray-900 dark:text-white">{selectedServiceLocationParam || guide.location}</Text>
-                            <Text className="text-gray-500 text-xs mt-1">Lieu</Text>
+                            <Text className="text-gray-500 text-xs mt-1">{t('profile.place')}</Text>
                         </View>
                     </View>
 
-                    <Text className="text-xl font-bold text-gray-900 dark:text-white mb-3">À propos du guide</Text>
+                    <Text className="text-xl font-bold text-gray-900 dark:text-white mb-3">{t('profile.aboutGuide')}</Text>
                     <Text className="text-gray-500 dark:text-gray-400 leading-7 mb-8 text-base">
                         {guide.bio}
                     </Text>
@@ -411,25 +416,25 @@ export default function GuideDetails() {
                         {guide.experience > 0 && (
                             <View className="bg-primary/10 px-4 py-2 rounded-full border border-primary/20 flex-row items-center">
                                 <Briefcase size={16} color="#b39164" />
-                                <Text className="text-primary font-bold ml-2">{guide.experience} ans d&apos;expérience</Text>
+                                <Text className="text-primary font-bold ml-2">{t('profile.yearsExperience', { count: guide.experience })}</Text>
                             </View>
                         )}
                         {guide.age && (
                             <View className="bg-gray-100 dark:bg-zinc-800 px-4 py-2 rounded-full border border-gray-200 dark:border-white/5 flex-row items-center">
-                                <Text className="text-gray-700 dark:text-gray-300 font-medium">{guide.age} ans</Text>
+                                <Text className="text-gray-700 dark:text-gray-300 font-medium">{t('profile.yearsOld', { count: guide.age })}</Text>
                             </View>
                         )}
                         {guide.gender && (
                             <View className="bg-gray-100 dark:bg-zinc-800 px-4 py-2 rounded-full border border-gray-200 dark:border-white/5 flex-row items-center">
                                 <User size={16} color="#4B5563" />
                                 <Text className="text-gray-700 dark:text-gray-300 font-medium ml-2 capitalize">
-                                    {guide.gender === 'male' ? 'Homme' : 'Femme'}
+                                    {guide.gender === 'male' ? t('common:male') : t('common:female')}
                                 </Text>
                             </View>
                         )}
                     </View>
 
-                    <Text className="text-xl font-bold text-gray-900 dark:text-white mb-3">Langues parlées</Text>
+                    <Text className="text-xl font-bold text-gray-900 dark:text-white mb-3">{t('profile.spokenLanguages')}</Text>
                     <View className="flex-row flex-wrap gap-2 mb-6">
                         {guide.languages.map((lang: string, idx: number) => (
                             <View key={idx} className="bg-white dark:bg-zinc-800 px-5 py-3 rounded-xl border border-gray-200 dark:border-white/5 shadow-sm">
@@ -439,9 +444,9 @@ export default function GuideDetails() {
                     </View>
 
                     {/* Reviews List */}
-                    <Text className="text-xl font-bold text-gray-900 dark:text-white mb-3 mt-4">Avis ({reviews.length})</Text>
+                    <Text className="text-xl font-bold text-gray-900 dark:text-white mb-3 mt-4">{t('profile.reviewsCount', { count: reviews.length })}</Text>
                     <View className="mb-6">
-                        {reviews.length === 0 && <Text className="text-gray-500 italic mb-4">Aucun avis pour le moment.</Text>}
+                        {reviews.length === 0 && <Text className="text-gray-500 italic mb-4">{t('profile.noReviews')}</Text>}
                         {reviews.map((r, i) => (
                             <View key={i} className="bg-gray-50 dark:bg-zinc-800 p-4 rounded-xl mb-3 border border-gray-100 dark:border-white/5">
                                 <View className="flex-row justify-between mb-2">
@@ -477,7 +482,7 @@ export default function GuideDetails() {
                             disabled={isGuideBlockedForBooking}
                         >
                             <Text className={`font-bold text-lg ${isGuideBlockedForBooking ? 'text-zinc-400' : 'text-white'}`}>
-                                {isGuideBlockedForBooking ? 'Réservation indisponible (blocage)' : 'Réserver maintenant'}
+                                {isGuideBlockedForBooking ? t('profile.bookingUnavailable') : t('profile.bookNow')}
                             </Text>
                         </TouchableOpacity>
                     </SafeAreaView>
@@ -493,6 +498,7 @@ export default function GuideDetails() {
                     endDate={modalEndDate}
                     guideName={guide.name}
                     guideId={guide.id}
+                    guideGender={(activeService?.guideGender || guide.gender) as 'male' | 'female'}
                     service={activeService}
                 />
             )}
@@ -505,11 +511,11 @@ export default function GuideDetails() {
             >
                 <View className="flex-1 bg-black/70 justify-center p-6">
                     <View className="bg-white dark:bg-zinc-800 rounded-2xl p-5">
-                        <Text className="text-lg font-bold text-gray-900 dark:text-white">Signaler ce guide</Text>
-                        <Text className="text-gray-500 text-xs mt-1 mb-3">Choisissez une catégorie et ajoutez des détails si nécessaire.</Text>
+                        <Text className="text-lg font-bold text-gray-900 dark:text-white">{t('profile.reportGuide')}</Text>
+                        <Text className="text-gray-500 text-xs mt-1 mb-3">{t('profile.reportSubtitle')}</Text>
 
                         <View className="flex-row flex-wrap gap-2 mb-3">
-                            {REPORT_CATEGORIES.map((category) => {
+                            {REPORT_CATEGORY_KEYS.map((category) => {
                                 const active = reportCategory === category.value;
                                 return (
                                     <TouchableOpacity
@@ -521,7 +527,7 @@ export default function GuideDetails() {
                                             }`}
                                     >
                                         <Text className={active ? 'text-white text-xs font-semibold' : 'text-gray-700 dark:text-gray-200 text-xs'}>
-                                            {category.label}
+                                            {t(`profile.reportCategories.${category.key}`)}
                                         </Text>
                                     </TouchableOpacity>
                                 );
@@ -532,7 +538,7 @@ export default function GuideDetails() {
                             value={reportDescription}
                             onChangeText={setReportDescription}
                             multiline
-                            placeholder="Détails (optionnel)"
+                            placeholder={t('profile.reportDetailsPlaceholder')}
                             placeholderTextColor="#9CA3AF"
                             className="min-h-[90px] rounded-xl bg-gray-100 dark:bg-zinc-700 p-3 text-gray-900 dark:text-white"
                         />
@@ -543,14 +549,14 @@ export default function GuideDetails() {
                                 onPress={() => setShowReportModal(false)}
                                 disabled={isSubmittingReport}
                             >
-                                <Text className="text-gray-700 dark:text-gray-100 font-semibold">Annuler</Text>
+                                <Text className="text-gray-700 dark:text-gray-100 font-semibold">{t('common:cancel')}</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 className="flex-1 py-3 rounded-xl bg-[#b39164] items-center"
                                 onPress={submitReport}
                                 disabled={isSubmittingReport}
                             >
-                                <Text className="text-white font-semibold">{isSubmittingReport ? 'Envoi...' : 'Envoyer'}</Text>
+                                <Text className="text-white font-semibold">{isSubmittingReport ? t('profile.sending') : t('profile.send')}</Text>
                             </TouchableOpacity>
                         </View>
                     </View>

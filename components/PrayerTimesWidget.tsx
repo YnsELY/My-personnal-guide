@@ -1,6 +1,9 @@
+import { useLanguage } from '@/context/LanguageContext';
+import { rowStyle, textStart } from '@/lib/rtl';
 import { getPrayerTimes } from '@/lib/api';
 import { CloudSun, MapPin, Moon, Sun, Sunrise, Sunset } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 
 const PRAYERS = [
@@ -13,6 +16,8 @@ const PRAYERS = [
 ];
 
 export const PrayerTimesWidget = () => {
+    const { t } = useTranslation('content');
+    const { isRTL } = useLanguage();
     const [city, setCity] = useState<'Mecca' | 'Medina'>('Mecca');
     const [times, setTimes] = useState<any>(null);
     const [nextPrayer, setNextPrayer] = useState<{ key: string, label: string } | null>(null);
@@ -103,22 +108,22 @@ export const PrayerTimesWidget = () => {
     return (
         <View className="mb-6 bg-white dark:bg-zinc-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-white/5">
             {/* Minimal Header */}
-            <View className="flex-row items-center justify-between mb-4">
-                <View className="flex-row items-center gap-2">
+            <View className="flex-row items-center justify-between mb-4" style={rowStyle(isRTL)}>
+                <View className="flex-row items-center gap-2" style={rowStyle(isRTL)}>
                     <View className="bg-[#b39164]/10 p-2 rounded-full">
                         <MapPin size={16} color="#b39164" />
                     </View>
-                    <Text className="text-gray-900 dark:text-white font-bold text-lg">
-                        {city === 'Mecca' ? 'La Mecque' : 'Médine'}
+                    <Text className="text-gray-900 dark:text-white font-bold text-lg" style={textStart(isRTL)}>
+                        {city === 'Mecca' ? t('prayerTimes.mecca') : t('prayerTimes.medina')}
                     </Text>
                 </View>
                 <TouchableOpacity onPress={toggleCity} className="bg-gray-50 dark:bg-zinc-700 px-3 py-1 rounded-full border border-gray-100 dark:border-zinc-600">
-                    <Text className="text-xs text-gray-500 dark:text-gray-300 font-medium">Changer</Text>
+                    <Text className="text-xs text-gray-500 dark:text-gray-300 font-medium" style={textStart(isRTL)}>{t('prayerTimes.change')}</Text>
                 </TouchableOpacity>
             </View>
 
             {/* Classic Grid/Row */}
-            <View className="flex-row justify-between items-center">
+            <View className="flex-row justify-between items-center" style={rowStyle(isRTL)}>
                 {PRAYERS.map((prayer) => {
                     const isNext = nextPrayer?.key === prayer.key;
                     const timeVal = times[prayer.key];

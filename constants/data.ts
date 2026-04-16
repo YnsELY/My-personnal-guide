@@ -6,34 +6,40 @@ export const CATEGORIES = [
     { id: '5', name: 'Hébergement', icon: 'home' }, // Changed 'hotel' to 'home' as generic or 'bed' if available
 ];
 
+const buildServiceOption = (label: string, price: number, guideNetSar: number) => ({
+    label,
+    price,
+    guideNetSar,
+});
+
 export const SERVICE_OPTIONS = [
     {
         category: 'Omra accompagnée (hors Ramadan)',
         options: [
-            { label: 'Omra seul ou en couple', price: 200 },
-            { label: 'Omra en famille (3 à 7 personnes)', price: 250 },
-            { label: 'Omra en groupe', price: 300 }
+            buildServiceOption('Omra seul ou en couple', 200, 530),
+            buildServiceOption('Omra en famille (3 à 7 personnes)', 250, 665),
+            buildServiceOption('Omra en groupe', 300, 800),
         ]
     },
     {
         category: 'Omra accompagnée Ramadan',
         options: [
-            { label: 'Omra seul ou en couple', price: 300 },
-            { label: 'Omra en famille (3 à 7 personnes)', price: 350 },
-            { label: 'Omra en groupe', price: 400 }
+            buildServiceOption('Omra seul ou en couple', 300, 800),
+            buildServiceOption('Omra en famille (3 à 7 personnes)', 350, 930),
+            buildServiceOption('Omra en groupe', 400, 1060),
         ]
     },
     {
         category: 'Omra Badal',
         options: [
-            { label: 'Standard', price: 150 },
-            { label: 'Ramadan', price: 250 }
+            buildServiceOption('Standard', 150, 400),
+            buildServiceOption('Ramadan', 250, 600),
         ]
     },
     {
         category: 'Visites guidées légiféré Médine ou Makkah',
         options: [
-            { label: 'Standard', price: 150 }
+            buildServiceOption('Standard', 150, 400),
         ]
     }
 ];

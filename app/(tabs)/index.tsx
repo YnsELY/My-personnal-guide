@@ -3,20 +3,25 @@ import { HadithWidget } from '@/components/HadithWidget';
 import { PrayerTimesWidget } from '@/components/PrayerTimesWidget';
 import { SlideToConfirmModal } from '@/components/SlideToConfirmModal';
 import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { useReservations } from '@/context/ReservationsContext';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { directionStyle, flipChevron, rowStyle, textStart } from '@/lib/rtl';
 import { getRecommendedGuides } from '@/lib/api';
 import { formatSAR, toSar } from '@/lib/pricing';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { ArrowUpRight, Check, ChevronRight, Clock, MapPin, MessageCircle, User, X } from 'lucide-react-native';
 import React, { useEffect, useRef } from 'react';
-import { Alert, Animated, Image, ImageBackground, ScrollView, StatusBar, Text, TouchableOpacity, View, useColorScheme } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { Alert, Animated, Image, ImageBackground, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const isDark = useColorScheme() === 'dark';
+  const { t } = useTranslation('home');
+  const { isRTL } = useLanguage();
   const { profile, user } = useAuth();
   const { getReservationsByRole, updateReservationStatus, confirmVisitStartAsGuide, confirmVisitEndAsGuide } = useReservations();
   const [guides, setGuides] = React.useState<any[]>([]);
@@ -36,45 +41,45 @@ export default function HomeScreen() {
   const serviceShowcaseCards = [
     {
       id: 'omra-badal',
-      title: 'Omra Badal',
-      subtitle: 'Par procuration',
-      description: 'Une adoration accomplie avec sérieux, transparence et suivi des étapes clés.',
+      title: t('serviceCard.omraBadal.title'),
+      subtitle: t('serviceCard.omraBadal.subtitle'),
+      description: t('serviceCard.omraBadal.description'),
       image: require('@/assets/images/mecca.jpg'),
-      badge: 'Service encadré',
-      cta: 'Voir le service',
+      badge: t('serviceCard.omraBadal.badge'),
+      cta: t('serviceCard.omraBadal.cta'),
       accent: ['#5a4529', '#b39164'] as const,
       onPress: () => router.push('/service/omra-badal'),
     },
     {
       id: 'visite-guidee',
-      title: 'Visites Guidées',
-      subtitle: 'Médine & Makkah',
-      description: 'Un parcours spirituel structuré pour visiter les lieux emblématiques avec un guide.',
+      title: t('serviceCard.visitGuidee.title'),
+      subtitle: t('serviceCard.visitGuidee.subtitle'),
+      description: t('serviceCard.visitGuidee.description'),
       image: require('@/assets/images/medina.jpeg'),
-      badge: 'Accompagnement premium',
-      cta: 'Découvrir',
+      badge: t('serviceCard.visitGuidee.badge'),
+      cta: t('serviceCard.visitGuidee.cta'),
       accent: ['#365b64', '#6aa9ba'] as const,
       onPress: () => router.push('/service/visite-guidee'),
     },
     {
       id: 'omra-accompagne',
-      title: 'Omra accompagné',
-      subtitle: 'Accompagnement sur place',
-      description: 'Un accompagnement complet et rassurant pour accomplir votre Omra dans les meilleures conditions.',
+      title: t('serviceCard.omraAccompagne.title'),
+      subtitle: t('serviceCard.omraAccompagne.subtitle'),
+      description: t('serviceCard.omraAccompagne.description'),
       image: require('@/assets/images/mecca.jpg'),
-      badge: 'Service encadré',
-      cta: 'Voir le service',
+      badge: t('serviceCard.omraAccompagne.badge'),
+      cta: t('serviceCard.omraAccompagne.cta'),
       accent: ['#5a4529', '#b39164'] as const,
       onPress: () => router.push('/service/omra-accompagne'),
     },
     {
       id: 'all-services',
-      title: 'Trouver un guide',
-      subtitle: 'Selon vos dates',
-      description: 'Choisissez votre date puis découvrez les services réellement disponibles.',
+      title: t('serviceCard.allServices.title'),
+      subtitle: t('serviceCard.allServices.subtitle'),
+      description: t('serviceCard.allServices.description'),
       image: require('@/assets/images/hero.jpg'),
-      badge: 'Disponibilités en direct',
-      cta: 'Commencer',
+      badge: t('serviceCard.allServices.badge'),
+      cta: t('serviceCard.allServices.cta'),
       accent: ['#2d3e5d', '#4f6d9c'] as const,
       onPress: () => router.push('/date-select'),
     },
@@ -129,7 +134,7 @@ export default function HomeScreen() {
       }
       setPendingAction(null);
     } catch (e) {
-      Alert.alert('Erreur', 'Une erreur est survenue. Veuillez réessayer.');
+      Alert.alert(t('common:error'), t('actionError'));
     } finally {
       setIsActionSubmitting(false);
     }
@@ -150,7 +155,7 @@ export default function HomeScreen() {
   }, [pulseAnim]);
 
   return (
-    <View className="flex-1 bg-gray-50 dark:bg-zinc-900">
+    <View className="flex-1 bg-gray-50 dark:bg-zinc-900" style={directionStyle(isRTL)}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
@@ -171,7 +176,7 @@ export default function HomeScreen() {
 
           {/* Content Overlay */}
           <SafeAreaView className="absolute inset-0 px-6 pt-2">
-            <View className="flex-row justify-between items-center mb-6">
+            <View className="flex-row justify-between items-center mb-6" style={rowStyle(isRTL)}>
               <TouchableOpacity onPress={() => router.back()}>
                 {/* <ChevronLeft color="white" size={28} /> */}
               </TouchableOpacity>
@@ -179,10 +184,10 @@ export default function HomeScreen() {
 
             <View className="mt-12">
               <Text className="text-white text-3xl font-serif font-medium mb-1">
-                {firstName ? `Bienvenue ${firstName}` : 'Bienvenue'}
+                {firstName ? t('welcomeUser', { name: firstName }) : t('welcome')}
               </Text>
-              <Text className="text-gray-200 text-sm w-3/4 leading-5 shadow-sm">
-                Bienvenue au lieu de la révélation et à l&apos;origine du message divin
+              <Text className="text-gray-200 text-sm w-3/4 leading-5 shadow-sm" style={textStart(isRTL)}>
+                {t('welcomeSubtitle')}
               </Text>
             </View>
           </SafeAreaView>
@@ -201,36 +206,37 @@ export default function HomeScreen() {
                   className="absolute inset-0 opacity-5"
                   resizeMode="repeat"
                 />
-                <View className="flex-row items-center justify-between">
-                  <View className="flex-row items-center">
+                <View className="flex-row items-center justify-between" style={rowStyle(isRTL)}>
+                  <View className="flex-row items-center" style={rowStyle(isRTL)}>
                     <View className="bg-[#b39164]/10 p-3 rounded-full mr-4">
                       <MapPin color="#b39164" size={24} />
                     </View>
                     <View>
-                      <Text className="text-gray-900 dark:text-white text-lg font-medium">Trouver un Guide</Text>
-                      <Text className="text-gray-500 dark:text-gray-400 text-xs mt-1">Réservez votre accompagnateur</Text>
+                      <Text className="text-gray-900 dark:text-white text-lg font-medium" style={textStart(isRTL)}>{t('findGuide')}</Text>
+                      <Text className="text-gray-500 dark:text-gray-400 text-xs mt-1" style={textStart(isRTL)}>{t('bookGuide')}</Text>
                     </View>
                   </View>
-                  <ChevronRight color="#9CA3AF" size={20} />
+                  <ChevronRight color="#9CA3AF" size={20} style={flipChevron(isRTL)} />
                 </View>
               </TouchableOpacity>
 
               {/* Secondary Card (Reservations) */}
               <TouchableOpacity
                 className="bg-white dark:bg-zinc-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-white/5 mb-4 flex-row items-center justify-between"
+                style={rowStyle(isRTL)}
                 onPress={() => router.push('/my-reservations')}
               >
-                <View className="flex-row items-center">
+                <View className="flex-row items-center" style={rowStyle(isRTL)}>
                   <View className="bg-primary/10 p-3 rounded-full mr-4">
                     {/* Icon approximating the 'clipboard' or 'ticket' */}
                     <View className="w-6 h-4 border-2 border-primary rounded-sm" />
                   </View>
                   <View>
-                    <Text className="text-gray-900 dark:text-white text-lg font-medium">Vos réservations</Text>
-                    <Text className="text-gray-500 dark:text-gray-400 text-xs mt-1">Voir les guides réservés</Text>
+                    <Text className="text-gray-900 dark:text-white text-lg font-medium" style={textStart(isRTL)}>{t('yourReservations')}</Text>
+                    <Text className="text-gray-500 dark:text-gray-400 text-xs mt-1" style={textStart(isRTL)}>{t('viewBookedGuides')}</Text>
                   </View>
                 </View>
-                <ChevronRight color="#9CA3AF" size={20} />
+                <ChevronRight color="#9CA3AF" size={20} style={flipChevron(isRTL)} />
               </TouchableOpacity>
             </>
           )}
@@ -248,13 +254,13 @@ export default function HomeScreen() {
                 onPress={() => router.push('/guide/create-service')}
                 className="bg-[#b39164] py-4 rounded-2xl items-center flex-row justify-center shadow-sm shadow-[#b39164]/30 active:bg-[#a08055]"
               >
-                <Text className="text-white font-bold text-base">+ Créer un service</Text>
+                <Text className="text-white font-bold text-base">{t('createService')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => router.push('/guide/my-services')}
                 className="bg-white dark:bg-zinc-800 py-4 rounded-2xl items-center flex-row justify-center border border-[#b39164]/40 active:bg-gray-50 dark:active:bg-zinc-700"
               >
-                <Text className="text-[#b39164] font-semibold text-base">Voir mes services</Text>
+                <Text className="text-[#b39164] font-semibold text-base">{t('viewMyServices')}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -263,9 +269,9 @@ export default function HomeScreen() {
           {profile?.role === 'pilgrim' && (
             <>
               {/* Services Section */}
-              <View className="flex-row items-end justify-between mb-4">
-                <Text className="text-gray-900 dark:text-white text-lg font-bold">Nos Services</Text>
-                <Text className="text-[#b39164] text-xs font-semibold uppercase tracking-wide">Sélection premium</Text>
+              <View className="flex-row items-end justify-between mb-4" style={rowStyle(isRTL)}>
+                <Text className="text-gray-900 dark:text-white text-lg font-bold" style={textStart(isRTL)}>{t('ourServices')}</Text>
+                <Text className="text-[#b39164] text-xs font-semibold uppercase tracking-wide">{t('premiumSelection')}</Text>
               </View>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-8" contentContainerStyle={{ gap: 16, paddingRight: 20 }}>
                 {serviceShowcaseCards.map((card) => (
@@ -303,15 +309,15 @@ export default function HomeScreen() {
               </ScrollView>
 
               {/* Recommended Section (Mini) */}
-              <Text className="text-gray-900 dark:text-white text-lg font-bold mb-4">Guides Recommandés</Text>
+              <Text className="text-gray-900 dark:text-white text-lg font-bold mb-4" style={textStart(isRTL)}>{t('recommendedGuides')}</Text>
               {isLoadingRecommendedGuides ? (
-                <Text className="text-gray-500 text-sm">Chargement des guides...</Text>
+                <Text className="text-gray-500 text-sm" style={textStart(isRTL)}>{t('loadingGuides')}</Text>
               ) : guides.length > 0 ? (
                 guides.slice(0, 5).map((guide) => (
                   <GuideCard key={guide.id} guide={guide} />
                 ))
               ) : (
-                <Text className="text-gray-500 text-sm">Aucun guide recommandé pour le moment.</Text>
+                <Text className="text-gray-500 text-sm" style={textStart(isRTL)}>{t('noRecommendedGuides')}</Text>
               )}
             </>
           )}
@@ -323,9 +329,9 @@ export default function HomeScreen() {
               {ongoingVisits.length > 0 && (
                 <>
                   <View className="flex-row items-center justify-between mb-4 mt-2">
-                    <Text className="text-gray-900 dark:text-white text-lg font-bold">Visites en cours</Text>
+                    <Text className="text-gray-900 dark:text-white text-lg font-bold">{t('ongoingVisits')}</Text>
                     <View className="bg-blue-500/10 px-2 py-0.5 rounded-full">
-                      <Text className="text-blue-500 text-xs font-semibold">{ongoingVisits.length} active{ongoingVisits.length > 1 ? 's' : ''}</Text>
+                      <Text className="text-blue-500 text-xs font-semibold">{t('activeCount', { count: ongoingVisits.length })}</Text>
                     </View>
                   </View>
                   <View className="gap-3 mb-8">
@@ -344,12 +350,12 @@ export default function HomeScreen() {
                             <Text className="text-gray-500 dark:text-gray-400 text-xs mt-0.5">{visit.serviceName} • {visit.date}</Text>
                             <View className="flex-row items-center mt-1">
                               <MapPin size={10} color="#9CA3AF" />
-                              <Text className="text-gray-400 text-[10px] ml-1">{visit.location || 'Lieu à définir'}</Text>
+                              <Text className="text-gray-400 text-[10px] ml-1">{visit.location || t('common:locationTbd')}</Text>
                             </View>
                           </View>
                           <View className={`px-2 py-0.5 rounded-full ${isWaitingEndConfirmation ? 'bg-amber-500/20' : 'bg-blue-500/20'}`}>
                             <Text className={`text-[10px] font-medium ${isWaitingEndConfirmation ? 'text-amber-600' : 'text-blue-600'}`}>
-                              {isWaitingEndConfirmation ? 'Fin en attente' : 'En cours'}
+                              {isWaitingEndConfirmation ? t('waitingEnd') : t('inProgress')}
                             </Text>
                           </View>
                         </View>
@@ -357,16 +363,16 @@ export default function HomeScreen() {
                         {isWaitingEndConfirmation ? (
                           <View className="bg-amber-100 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 py-2.5 rounded-xl items-center">
                             <Text className="text-amber-700 dark:text-amber-300 font-semibold text-xs text-center">
-                              En attente de confirmation de fin par le pèlerin
+                              {t('waitingPilgrimEndConfirmation')}
                             </Text>
                           </View>
                         ) : (
                           <TouchableOpacity
-                            onPress={() => openActionConfirmation('end', visit.id, `Terminer la visite de ${visit.pilgrimName}`)}
+                            onPress={() => openActionConfirmation('end', visit.id, visit.pilgrimName)}
                             className="bg-blue-500 py-2.5 rounded-xl items-center"
                             activeOpacity={0.8}
                           >
-                            <Text className="text-white font-semibold text-sm">Terminer la visite</Text>
+                            <Text className="text-white font-semibold text-sm">{t('endVisit')}</Text>
                           </TouchableOpacity>
                         )}
 
@@ -376,7 +382,7 @@ export default function HomeScreen() {
                             className="mt-2 bg-indigo-500/10 border border-indigo-500/20 py-2.5 rounded-xl items-center"
                             activeOpacity={0.8}
                           >
-                            <Text className="text-indigo-500 font-semibold text-sm">Déposer les preuves Omra Badal</Text>
+                            <Text className="text-indigo-500 font-semibold text-sm">{t('submitBadalProofs')}</Text>
                           </TouchableOpacity>
                         )}
                             </>
@@ -390,9 +396,9 @@ export default function HomeScreen() {
 
               {/* Upcoming Visits */}
               <View className="flex-row items-center justify-between mb-4 mt-2">
-                <Text className="text-gray-900 dark:text-white text-lg font-bold">Mes prochaines visites</Text>
+                <Text className="text-gray-900 dark:text-white text-lg font-bold">{t('myUpcomingVisits')}</Text>
                 <TouchableOpacity onPress={() => router.push('/guide-dashboard')}>
-                  <Text className="text-[#b39164] text-sm font-medium">Voir toutes mes visites</Text>
+                  <Text className="text-[#b39164] text-sm font-medium">{t('viewAllVisits')}</Text>
                 </TouchableOpacity>
               </View>
 
@@ -412,14 +418,14 @@ export default function HomeScreen() {
                         <Text className="text-gray-500 dark:text-gray-400 text-xs mt-0.5">{visit.serviceName} • {visit.date}</Text>
                         <View className="flex-row items-center mt-1">
                           <MapPin size={10} color="#9CA3AF" />
-                          <Text className="text-gray-400 text-[10px] ml-1">{visit.location || 'Lieu à définir'}</Text>
+                          <Text className="text-gray-400 text-[10px] ml-1">{visit.location || t('common:locationTbd')}</Text>
                         </View>
                       </View>
                       <View className="items-end">
                         <Text className="text-gray-900 dark:text-white font-bold">{visit.time}</Text>
                         <View className={`px-2 py-0.5 rounded-full mt-1 ${isWaitingStartConfirmation ? 'bg-amber-500/20' : 'bg-green-500/20'}`}>
                           <Text className={`text-[10px] font-medium ${isWaitingStartConfirmation ? 'text-amber-600' : 'text-green-600'}`}>
-                            {isWaitingStartConfirmation ? 'Début en attente' : 'Confirmé'}
+                            {isWaitingStartConfirmation ? t('waitingStart') : t('confirmed')}
                           </Text>
                         </View>
                       </View>
@@ -428,16 +434,16 @@ export default function HomeScreen() {
                     {isWaitingStartConfirmation ? (
                       <View className="bg-amber-100 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 py-2.5 rounded-xl items-center">
                         <Text className="text-amber-700 dark:text-amber-300 font-semibold text-xs text-center">
-                          En attente de confirmation de début par le pèlerin
+                          {t('waitingPilgrimStartConfirmation')}
                         </Text>
                       </View>
                     ) : (
                       <TouchableOpacity
-                        onPress={() => openActionConfirmation('start', visit.id, `Démarrer la visite de ${visit.pilgrimName}`)}
+                        onPress={() => openActionConfirmation('start', visit.id, visit.pilgrimName)}
                         className="bg-green-500 py-2.5 rounded-xl items-center"
                         activeOpacity={0.8}
                       >
-                        <Text className="text-white font-semibold text-sm">Démarrer la visite</Text>
+                        <Text className="text-white font-semibold text-sm">{t('startVisit')}</Text>
                       </TouchableOpacity>
                     )}
 
@@ -455,15 +461,15 @@ export default function HomeScreen() {
                     })()}
                   </View>
                 )) : (
-                  <Text className="text-gray-400 text-sm text-center py-4">Aucune visite à venir</Text>
+                  <Text className="text-gray-400 text-sm text-center py-4">{t('noUpcomingVisits')}</Text>
                 )}
               </View>
 
               {/* Guide Requests */}
               <View className="flex-row items-center justify-between mb-4">
-                <Text className="text-gray-900 dark:text-white text-lg font-bold">Mes demandes</Text>
+                <Text className="text-gray-900 dark:text-white text-lg font-bold">{t('myRequests')}</Text>
                 <TouchableOpacity onPress={() => router.push('/guide-dashboard')}>
-                  <Text className="text-[#b39164] text-sm font-medium">Voir toutes mes demandes</Text>
+                  <Text className="text-[#b39164] text-sm font-medium">{t('viewAllRequests')}</Text>
                 </TouchableOpacity>
               </View>
 
@@ -485,25 +491,25 @@ export default function HomeScreen() {
                     </View>
                     <View className="flex-row gap-2">
                       <TouchableOpacity
-                        onPress={() => openActionConfirmation('refuse', req.id, `Refuser la demande de ${req.pilgrimName}`)}
+                        onPress={() => openActionConfirmation('refuse', req.id, req.pilgrimName)}
                         className="flex-1 flex-row items-center justify-center border border-red-300 dark:border-red-500/40 py-2.5 rounded-xl gap-1.5"
                         activeOpacity={0.7}
                       >
                         <X size={14} color="#ef4444" />
-                        <Text className="text-red-500 font-semibold text-sm">Refuser</Text>
+                        <Text className="text-red-500 font-semibold text-sm">{t('refuse')}</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
-                        onPress={() => openActionConfirmation('accept', req.id, `Accepter la demande de ${req.pilgrimName}`)}
+                        onPress={() => openActionConfirmation('accept', req.id, req.pilgrimName)}
                         className="flex-1 flex-row items-center justify-center bg-[#b39164] py-2.5 rounded-xl gap-1.5"
                         activeOpacity={0.8}
                       >
                         <Check size={14} color="white" />
-                        <Text className="text-white font-semibold text-sm">Accepter</Text>
+                        <Text className="text-white font-semibold text-sm">{t('accept')}</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
                 )) : (
-                  <Text className="text-gray-400 text-sm text-center py-4">Aucune demande en attente</Text>
+                  <Text className="text-gray-400 text-sm text-center py-4">{t('noRequests')}</Text>
                 )}
               </View>
             </>
@@ -511,14 +517,14 @@ export default function HomeScreen() {
 
           {profile?.role === 'admin' && (
             <View className="mt-2">
-              <Text className="text-gray-900 dark:text-white text-lg font-bold mb-4">Administration</Text>
+              <Text className="text-gray-900 dark:text-white text-lg font-bold mb-4">{t('administration')}</Text>
               <TouchableOpacity
                 className="bg-white dark:bg-zinc-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-white/5 flex-row items-center justify-between"
                 onPress={() => router.push('/(tabs)/admin-dashboard' as any)}
               >
                 <View>
-                  <Text className="text-gray-900 dark:text-white text-base font-semibold">Ouvrir le dashboard admin</Text>
-                  <Text className="text-gray-500 dark:text-gray-400 text-xs mt-1">Validation guides, commandes, finance, paiements</Text>
+                  <Text className="text-gray-900 dark:text-white text-base font-semibold">{t('openAdminDashboard')}</Text>
+                  <Text className="text-gray-500 dark:text-gray-400 text-xs mt-1">{t('adminDashboardSubtitle')}</Text>
                 </View>
                 <ChevronRight color="#9CA3AF" size={20} />
               </TouchableOpacity>
@@ -533,13 +539,13 @@ export default function HomeScreen() {
       {pendingAction && (
         <SlideToConfirmModal
           visible={!!pendingAction}
-          title={pendingAction.type === 'accept' ? 'Accepter la demande' :
-                 pendingAction.type === 'refuse' ? 'Refuser la demande' :
-                 pendingAction.type === 'start' ? 'Démarrer la visite' : 'Terminer la visite'}
+          title={pendingAction.type === 'accept' ? t('slideAcceptTitle') :
+                 pendingAction.type === 'refuse' ? t('slideRefuseTitle') :
+                 pendingAction.type === 'start' ? t('slideStartTitle') : t('slideEndTitle')}
           message={pendingAction.label}
-          sliderLabel={pendingAction.type === 'accept' ? 'Glisser pour accepter' :
-                       pendingAction.type === 'refuse' ? 'Glisser pour refuser' :
-                       pendingAction.type === 'start' ? 'Glisser pour démarrer' : 'Glisser pour terminer'}
+          sliderLabel={pendingAction.type === 'accept' ? t('slideAccept') :
+                       pendingAction.type === 'refuse' ? t('slideRefuse') :
+                       pendingAction.type === 'start' ? t('slideStart') : t('slideEnd')}
           onConfirm={confirmPendingAction}
           onClose={closeActionConfirmation}
           isProcessing={isActionSubmitting}
@@ -551,7 +557,7 @@ export default function HomeScreen() {
 
         {/* Helper Text */}
         <View className="bg-white dark:bg-zinc-800 px-3 py-2 rounded-xl border border-gray-100 dark:border-white/10 shadow-sm mr-4">
-          <Text className="text-gray-900 dark:text-white font-medium text-xs">Besoin d&apos;aide ?</Text>
+          <Text className="text-gray-900 dark:text-white font-medium text-xs">{t('needHelp')}</Text>
         </View>
 
         <View className="items-center justify-center">

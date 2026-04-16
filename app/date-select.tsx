@@ -1,6 +1,9 @@
+import { useLanguage } from '@/context/LanguageContext';
+import { directionStyle, flipChevron, rowStyle, textStart } from '@/lib/rtl';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StatusBar, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -10,6 +13,8 @@ const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet'
 export default function DateSelectScreen() {
     const router = useRouter();
     const params = useLocalSearchParams();
+    const { t } = useTranslation('booking');
+    const { isRTL } = useLanguage();
 
     // Calendar State
     const [selectedDate, setSelectedDate] = useState<Date | null>(params.startDate ? new Date(parseInt(params.startDate as string)) : null);
@@ -123,25 +128,25 @@ export default function DateSelectScreen() {
     };
 
     return (
-        <View className="flex-1 bg-zinc-900">
+        <View className="flex-1 bg-zinc-900" style={directionStyle(isRTL)}>
             <StatusBar barStyle="light-content" />
             <SafeAreaView className="flex-1 p-6">
 
                 {/* Header */}
                 <TouchableOpacity onPress={() => router.back()} className="mb-6">
-                    <ChevronLeft color="white" size={28} />
+                    <ChevronLeft color="white" size={28} style={flipChevron(isRTL)} />
                 </TouchableOpacity>
 
-                <Text className="text-4xl text-white font-serif mb-8">Choisir une date</Text>
+                <Text className="text-4xl text-white font-serif mb-8" style={textStart(isRTL)}>{t('dateSelectTitle')}</Text>
 
                 {/* Month Navigation */}
-                <View className="flex-row justify-between items-center mb-6">
+                <View className="flex-row justify-between items-center mb-6" style={rowStyle(isRTL)}>
                     <TouchableOpacity onPress={() => setCurrentMonthOffset(prev => prev - 1)} disabled={currentMonthOffset <= 0}>
-                        <ChevronLeft color={currentMonthOffset <= 0 ? "#3f3f46" : "white"} size={20} />
+                        <ChevronLeft color={currentMonthOffset <= 0 ? "#3f3f46" : "white"} size={20} style={flipChevron(isRTL)} />
                     </TouchableOpacity>
-                    <Text className="text-white text-xl font-bold capitalize">{monthLabel}</Text>
+                    <Text className="text-white text-xl font-bold capitalize" style={textStart(isRTL)}>{monthLabel}</Text>
                     <TouchableOpacity onPress={() => setCurrentMonthOffset(prev => prev + 1)}>
-                        <ChevronRight color="white" size={20} />
+                        <ChevronRight color="white" size={20} style={flipChevron(isRTL)} />
                     </TouchableOpacity>
                 </View>
 
@@ -184,18 +189,18 @@ export default function DateSelectScreen() {
                 </View>
 
                 {/* Legend */}
-                <View className="flex-row justify-center gap-6 mb-auto">
-                    <View className="flex-row items-center">
+                <View className="flex-row justify-center gap-6 mb-auto" style={rowStyle(isRTL)}>
+                    <View className="flex-row items-center" style={rowStyle(isRTL)}>
                         <View className="w-2 h-2 rounded-full bg-green-500 mr-2" />
-                        <Text className="text-zinc-400 text-sm">Dispo. Élevée</Text>
+                        <Text className="text-zinc-400 text-sm" style={textStart(isRTL)}>{t('availabilityHigh')}</Text>
                     </View>
-                    <View className="flex-row items-center">
+                    <View className="flex-row items-center" style={rowStyle(isRTL)}>
                         <View className="w-2 h-2 rounded-full bg-yellow-500 mr-2" />
-                        <Text className="text-zinc-400 text-sm">Dispo. Limitée</Text>
+                        <Text className="text-zinc-400 text-sm" style={textStart(isRTL)}>{t('availabilityMedium')}</Text>
                     </View>
-                    <View className="flex-row items-center">
+                    <View className="flex-row items-center" style={rowStyle(isRTL)}>
                         <View className="w-2 h-2 rounded-full bg-red-500 mr-2" />
-                        <Text className="text-zinc-400 text-sm">Complet</Text>
+                        <Text className="text-zinc-400 text-sm" style={textStart(isRTL)}>{t('availabilityFull')}</Text>
                     </View>
                 </View>
 
@@ -205,7 +210,7 @@ export default function DateSelectScreen() {
                     onPress={handleConfirm}
                     disabled={!selectedDate}
                 >
-                    <Text className={`font-medium text-lg ${selectedDate ? 'text-white font-bold' : 'text-zinc-600'}`}>Confirmer</Text>
+                    <Text className={`font-medium text-lg ${selectedDate ? 'text-white font-bold' : 'text-zinc-600'}`}>{t('common:confirm')}</Text>
                 </TouchableOpacity>
 
             </SafeAreaView>

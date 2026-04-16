@@ -4,11 +4,13 @@ import { CATEGORIES } from '@/constants/data';
 import { useAuth } from '@/context/AuthContext';
 import { useReservations } from '@/context/ReservationsContext';
 import { cancelStripeCheckoutReservation, createReservation, getPilgrimWalletSummary, getReservedGuideTimeSlots, PILGRIM_CHARTER_VERSION, startStripeCheckoutForReservation } from '@/lib/api';
-import { computePilgrimTotalFromGuideNet, formatEUR, roundMoney } from '@/lib/pricing';
+import i18n from '@/lib/i18n';
+import { formatEUR, roundMoney } from '@/lib/pricing';
 import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 import { Calendar, MapPin, Plus, Trash2, User, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, Modal, Platform, ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import * as Linking from 'expo-linking';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,13 +22,16 @@ interface BookingModalProps {
     endDate?: number | null;
     guideName: string;
     guideId: string;
+    guideGender: 'male' | 'female';
     basePrice?: number;
     service: any; // Passed service object
 }
 
 const formatCurrency = (value: number) => formatEUR(value || 0);
+const getLocale = () => i18n.language === 'ar' ? 'ar-SA' : 'fr-FR';
 
-export default function BookingModal({ visible, onClose, startDate, endDate, guideName, guideId, basePrice = 200, service }: BookingModalProps) {
+export default function BookingModal({ visible, onClose, startDate, endDate, guideName, guideId, guideGender, basePrice = 200, service }: BookingModalProps) {
+    const { t } = useTranslation('booking');
     const router = useRouter();
     const { profile } = useAuth();
     const { refreshReservations } = useReservations();
@@ -41,7 +46,7 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
         }
     }, [service]);
 
-    const [pilgrims, setPilgrims] = useState<{ name: string, age: string }[]>([{ name: 'Moi-même', age: '' }]); // Default to self
+    const [pilgrims, setPilgrims] = useState<{ name: string, age: string }[]>([{ name: t('myself'), age: '' }]); // Default to self
     const [newPilgrimName, setNewPilgrimName] = useState('');
     const [newPilgrimAge, setNewPilgrimAge] = useState('');
     const [transportPickupType, setTransportPickupType] = useState<'haram' | 'hotel' | null>(null);
@@ -141,25 +146,21 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
     const parsedHotelDistanceKm = Number(normalizedHotelDistanceInput);
     const hotelDistanceIsValid = Number.isFinite(parsedHotelDistanceKm) && parsedHotelDistanceKm > 2;
     const transportExtraFeeAmount = transportPickupType === 'hotel' && hotelOver2KmByCar === true ? 10 : 0;
-    const explicitGuideNetBasePrice = Number(activeService?.guideNetBasePriceEur ?? activeService?.price_override);
-    const fallbackDisplayedPrice = Number(activeService?.price ?? basePrice ?? 200);
-    const serviceGuideNetPrice = Number.isFinite(explicitGuideNetBasePrice) && explicitGuideNetBasePrice > 0
-        ? explicitGuideNetBasePrice
-        : Number.isFinite(fallbackDisplayedPrice) && fallbackDisplayedPrice > 0
-            ? roundMoney(fallbackDisplayedPrice)
-            : 200;
-    const pricingPreview = computePilgrimTotalFromGuideNet({
-        serviceNetAmountEur: serviceGuideNetPrice,
-        transportExtraFeeEur: transportExtraFeeAmount,
-    });
-    const commissionableNetAmount = pricingPreview.commissionableNetAmountEur;
-    const totalPrice = pricingPreview.totalPriceEur;
+    const resolvedServiceName = String(activeService?.title || selectedService || 'Service');
+    const fallbackDisplayedPrice = Number(activeService?.price ?? activeService?.price_override ?? basePrice ?? 200);
+    const serviceBasePrice = Number.isFinite(fallbackDisplayedPrice) && fallbackDisplayedPrice > 0
+        ? roundMoney(fallbackDisplayedPrice)
+        : 200;
+    const commissionableNetAmount = serviceBasePrice;
+    const totalPrice = roundMoney(serviceBasePrice + transportExtraFeeAmount);
     const availableWalletBalance = Number(walletSummary?.availableBalance || 0);
     const walletAmountUsed = useWalletBalance ? Math.min(availableWalletBalance, totalPrice) : 0;
     const cardAmountPaid = Math.max(totalPrice - walletAmountUsed, 0);
     const isFemalePilgrim = profile?.role === 'pilgrim' && profile?.gender === 'female';
-    const hasMinPilgrimsForFemale = !isFemalePilgrim || pilgrims.length >= 2;
-    const shouldShowPilgrimsSection = selectedService !== 'Omra seule' || isFemalePilgrim;
+    const isMaleGuide = guideGender === 'male';
+    const requiresFemaleCompanionForMaleGuide = isFemalePilgrim && isMaleGuide;
+    const isFemaleSoloWithMaleGuideBlocked = requiresFemaleCompanionForMaleGuide && pilgrims.length < 2;
+    const shouldShowPilgrimsSection = selectedService !== 'Omra seule' || requiresFemaleCompanionForMaleGuide || pilgrims.length > 1;
     const isHotelFlowValid = transportPickupType !== 'hotel'
         || (
             hotelAddress.trim().length > 0
@@ -169,7 +170,7 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                 || (hotelOver2KmByCar === false && transportWarningAcknowledged)
             )
         );
-    const canOpenConfirmation = (isBadal || !!transportPickupType) && !!visitDate && !!visitTime && hasMinPilgrimsForFemale && (isBadal || isHotelFlowValid) && pilgrimCharterAccepted;
+    const canOpenConfirmation = (isBadal || !!transportPickupType) && !!visitDate && !!visitTime && !isFemaleSoloWithMaleGuideBlocked && (isBadal || isHotelFlowValid) && pilgrimCharterAccepted;
 
     const handleAddPilgrim = () => {
         if (newPilgrimName.trim().length > 0) {
@@ -188,44 +189,44 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
     const handleValidate = async () => {
         if (!isBadal) {
             if (!transportPickupType) {
-                Alert.alert("Transport manquant", "Veuillez sélectionner un mode de prise en charge.");
+                Alert.alert(t('modal.alertTransportMissing'), t('modal.alertTransportMissingMsg'));
                 return;
             }
             if (transportPickupType === 'hotel' && !hotelAddress.trim()) {
-                Alert.alert("Adresse requise", "Veuillez renseigner l'adresse de l'hôtel.");
+                Alert.alert(t('modal.alertAddressRequired'), t('modal.alertAddressRequiredMsg'));
                 return;
             }
             if (transportPickupType === 'hotel' && hotelOver2KmByCar === null) {
-                Alert.alert("Distance requise", "Veuillez préciser si l'hôtel est à plus de 2 km du haram.");
+                Alert.alert(t('modal.alertDistanceRequired'), t('modal.alertDistanceRequiredMsg'));
                 return;
             }
             if (transportPickupType === 'hotel' && hotelOver2KmByCar === true && !hotelDistanceIsValid) {
-                Alert.alert("Distance invalide", "Veuillez saisir une distance strictement supérieure à 2 km.");
+                Alert.alert(t('modal.alertDistanceInvalid'), t('modal.alertDistanceInvalidMsg'));
                 return;
             }
             if (transportPickupType === 'hotel' && hotelOver2KmByCar === false && !transportWarningAcknowledged) {
-                Alert.alert("Confirmation requise", "Veuillez confirmer l'avertissement concernant le supplément possible à l'arrivée.");
+                Alert.alert(t('modal.alertConfirmRequired'), t('modal.alertConfirmRequiredMsg'));
                 return;
             }
         }
         if (!visitDate) {
-            Alert.alert("Date manquante", "Veuillez sélectionner une date de visite.");
+            Alert.alert(t('modal.alertDateMissing'), t('modal.alertDateMissingMsg'));
             return;
         }
         if (!pilgrimCharterAccepted) {
-            Alert.alert("Charte requise", "Vous devez cocher \"J'ai lu et j'accepte la Charte du Pèlerin\" avant de réserver.");
+            Alert.alert(t('modal.alertCharterRequired'), t('modal.alertCharterRequiredMsg'));
             return;
         }
         if (!visitTime) {
-            Alert.alert("Heure manquante", "Veuillez sélectionner une heure de visite.");
+            Alert.alert(t('modal.alertTimeMissing'), t('modal.alertTimeMissingMsg'));
             return;
         }
         if (reservedTimeSlots.includes(visitTime)) {
-            Alert.alert("Créneau indisponible", "Ce créneau est déjà réservé. Veuillez choisir une autre heure.");
+            Alert.alert(t('modal.alertSlotTaken'), t('modal.alertSlotTakenMsg'));
             return;
         }
-        if (!hasMinPilgrimsForFemale) {
-            Alert.alert("Nombre de pèlerins insuffisant", "Pour un compte femme, ajoutez au moins un deuxième pèlerin.");
+        if (isFemaleSoloWithMaleGuideBlocked) {
+            Alert.alert(t('modal.alertBookingBlocked'), t('femaleSoloWithMaleGuide'));
             return;
         }
 
@@ -235,7 +236,7 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
             setReservedTimeSlots(latestReservedSlots);
             if (visitTime && latestReservedSlots.includes(visitTime)) {
                 setVisitTime(null);
-                Alert.alert("Créneau indisponible", "Ce créneau vient d'être réservé. Veuillez choisir une autre heure.");
+                Alert.alert(t('modal.alertSlotTaken'), t('modal.alertSlotJustTakenMsg'));
                 return;
             }
 
@@ -246,17 +247,17 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                 : null;
             const normalizedHotelAddress = transportPickupType === 'hotel' ? hotelAddress.trim() : null;
             const resolvedLocation = isBadal
-                ? 'Prestation à distance (Omra Badal)'
+                ? t('modal.locationBadal')
                 : transportPickupType === 'hotel'
-                    ? `Rendez-vous à l'hôtel - ${normalizedHotelAddress}`
-                    : 'Rendez-vous au haram';
+                    ? t('modal.locationHotel', { address: normalizedHotelAddress })
+                    : t('modal.locationHaram');
 
             if (cardAmountPaid > 0) {
                 const paymentStatusUrl = Linking.createURL('/payment-status');
                 const checkout = await startStripeCheckoutForReservation({
                     serviceId: String(activeService?.id || ''),
                     guideId,
-                    serviceName: selectedService,
+                    serviceName: resolvedServiceName,
                     startDate: visitDate,
                     endDate: visitDate,
                     totalPrice,
@@ -282,7 +283,7 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                         pendingCheckoutId: checkout.pendingCheckoutId,
                         reason: 'unable_to_open_checkout_url',
                     });
-                    throw new Error("Impossible d'ouvrir la page de paiement Stripe.");
+                    throw new Error(t('modal.alertPaymentError'));
                 }
 
                 onClose();
@@ -292,7 +293,7 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
 
             const createdReservation = await createReservation({
                 guideId,
-                serviceName: selectedService,
+                serviceName: resolvedServiceName,
                 date: visitDate,
                 startDate: visitDate,
                 endDate: visitDate,
@@ -320,7 +321,7 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                 pathname: '/booking-confirmation',
                 params: {
                     reservationId: createdReservation?.id,
-                    serviceName: selectedService,
+                    serviceName: resolvedServiceName,
                     date: visitDate,
                     time: visitTime,
                     price: totalPrice,
@@ -337,19 +338,23 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
             });
         } catch (error: any) {
             console.error(error);
-            const normalizedMessage = String(error?.message || '').toLowerCase();
+            const normalizedMessage = String(error?.message || '')
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '');
             if (
-                normalizedMessage.includes('deuxième pèlerin')
+                normalizedMessage.includes('une femme ne peut pas reserver seule avec un guide homme')
+                || normalizedMessage.includes('deuxième pèlerin')
                 || normalizedMessage.includes('deuxieme pelerin')
                 || normalizedMessage.includes('minimum 2')
             ) {
-                Alert.alert("Nombre de pèlerins insuffisant", "Pour un compte femme, ajoutez au moins un deuxième pèlerin.");
+                Alert.alert(t('modal.alertBookingBlocked'), t('femaleSoloWithMaleGuide'));
             } else if (normalizedMessage.includes('charte du pèlerin') || normalizedMessage.includes('charte du pelerin')) {
-                Alert.alert("Charte requise", "Vous devez accepter la Charte du Pèlerin avant de réserver.");
+                Alert.alert(t('modal.alertCharterRequired'), t('modal.alertCharterAcceptRequired'));
             } else if (normalizedMessage.includes('blocage')) {
-                Alert.alert("Action impossible", "Réservation impossible: un blocage existe entre vous et ce guide.");
+                Alert.alert(t('modal.alertBookingBlocked'), t('modal.alertBlockedMsg'));
             } else {
-                Alert.alert("Erreur", error.message || "Une erreur est survenue lors de la réservation.");
+                Alert.alert(t('common:error'), error.message || t('modal.alertGenericError'));
             }
         } finally {
             setLoading(false);
@@ -358,7 +363,7 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
 
     // Helper for display
     const formattedVisitDate = visitDate
-        ? new Date(visitDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+        ? new Date(visitDate).toLocaleDateString(getLocale(), { day: 'numeric', month: 'long', year: 'numeric' })
         : null;
 
     return (
@@ -379,7 +384,7 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                     <SafeAreaView edges={['bottom']} className="flex-1 p-6">
 
                         <View className="flex-row justify-between items-center mb-6">
-                            <Text className="text-2xl font-serif font-bold text-white">Réservation</Text>
+                            <Text className="text-2xl font-serif font-bold text-white">{t('modal.title')}</Text>
                             <TouchableOpacity onPress={onClose} className="bg-zinc-800 p-2 rounded-full">
                                 <X size={20} color="white" />
                             </TouchableOpacity>
@@ -388,19 +393,19 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                         <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
 
                             {/* Date Selection */}
-                            <Text className="text-white font-bold text-lg mb-4">Date de la visite</Text>
+                            <Text className="text-white font-bold text-lg mb-4">{t('modal.visitDate')}</Text>
                             <TouchableOpacity
                                 onPress={() => setShowCalendar(true)}
                                 className={`flex-row items-center bg-zinc-800 border ${visitDate ? 'border-[#b39164]' : 'border-white/5'} rounded-xl p-4 mb-8`}
                             >
                                 <Calendar color={visitDate ? "#b39164" : "#A1A1AA"} size={20} className="mr-3" />
                                 <Text className={`font-medium text-base ${visitDate ? 'text-[#b39164]' : 'text-zinc-400'}`}>
-                                    {formattedVisitDate ? `Le ${formattedVisitDate}` : 'Sélectionner une date précise'}
+                                    {formattedVisitDate ? t('modal.dateOn', { date: formattedVisitDate }) : t('modal.selectDate')}
                                 </Text>
                             </TouchableOpacity>
 
                             {/* Time Selection */}
-                            <Text className="text-white font-bold text-lg mb-4">Heure de la visite</Text>
+                            <Text className="text-white font-bold text-lg mb-4">{t('modal.visitTime')}</Text>
                             <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-8" contentContainerStyle={{ paddingRight: 20 }}>
                                 {Array.from({ length: 15 }, (_, i) => i + 8).map((hour) => {
                                     const time = `${hour < 10 ? '0' + hour : hour}:00`;
@@ -429,20 +434,20 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                                 })}
                             </ScrollView>
                             <Text className="text-zinc-500 text-xs mb-8 -mt-6">
-                                {reservedSlotsLoading ? 'Vérification des créneaux...' : 'Les créneaux déjà réservés sont automatiquement indisponibles.'}
+                                {reservedSlotsLoading ? t('modal.checkingSlots') : t('modal.slotsUnavailableHint')}
                             </Text>
 
 
                             {shouldShowPilgrimsSection && (
                                 <>
-                                    <Text className="text-white font-bold text-lg mb-4">Pèlerins ({pilgrims.length})</Text>
+                                    <Text className="text-white font-bold text-lg mb-4">{t('modal.pilgrims', { count: pilgrims.length })}</Text>
                                     <View className="bg-zinc-800 rounded-2xl p-4 mb-2 border border-white/5">
                                         <View className="flex-row items-center mb-4 gap-3">
                                             <View className="flex-1 flex-row gap-2">
                                                 <View className="flex-1 bg-zinc-900 rounded-xl px-4 py-3 flex-row items-center border border-white/5">
                                                     <User size={18} color="#71717A" />
                                                     <TextInput
-                                                        placeholder="Nom"
+                                                        placeholder={t('modal.pilgrimName')}
                                                         placeholderTextColor="#52525B"
                                                         className="flex-1 ml-3 text-white text-base"
                                                         value={newPilgrimName}
@@ -451,7 +456,7 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                                                 </View>
                                                 <View className="w-24 bg-zinc-900 rounded-xl px-4 py-3 border border-white/5 justify-center">
                                                     <TextInput
-                                                        placeholder="Age"
+                                                        placeholder={t('modal.pilgrimAge')}
                                                         placeholderTextColor="#52525B"
                                                         className="text-white text-base text-center"
                                                         value={newPilgrimAge}
@@ -474,7 +479,7 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                                                     <View className="flex-row items-center">
                                                         <User size={16} color="#A1A1AA" />
                                                         <Text className="text-zinc-300 ml-3 font-medium">
-                                                            {pilgrim.name} {pilgrim.age ? `(${pilgrim.age} ans)` : ''}
+                                                            {pilgrim.name} {pilgrim.age ? `(${t('modal.pilgrimAgeYears', { age: pilgrim.age })})` : ''}
                                                         </Text>
                                                     </View>
                                                     {index > 0 && (
@@ -486,10 +491,10 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                                             ))}
                                         </View>
                                     </View>
-                                    {isFemalePilgrim && !hasMinPilgrimsForFemale && (
+                                    {isFemaleSoloWithMaleGuideBlocked && (
                                         <View className="mb-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2">
                                             <Text className="text-amber-200 text-xs">
-                                                Pour réserver avec un compte femme, vous devez être au minimum 2 pèlerins.
+                                                {t('femaleSoloWithMaleGuide')}
                                             </Text>
                                         </View>
                                     )}
@@ -498,7 +503,7 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                             )}
 
                             {/* Transport Section — masqué pour Omra Badal (prestation à distance) */}
-                            {!isBadal && <Text className="text-white font-bold text-lg mb-4">Prise en charge</Text>}
+                            {!isBadal && <Text className="text-white font-bold text-lg mb-4">{t('modal.pickup')}</Text>}
                             {!isBadal && (
                                 <>
                                     <View className="flex-row flex-wrap gap-3 mb-4">
@@ -514,7 +519,7 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                                         >
                                             <MapPin size={16} color={transportPickupType === 'haram' ? '#b39164' : '#A1A1AA'} />
                                             <Text className={`ml-2 font-medium ${transportPickupType === 'haram' ? 'text-primary' : 'text-zinc-400'}`}>
-                                                Rendez-vous au haram
+                                                {t('modal.meetAtHaram')}
                                             </Text>
                                         </TouchableOpacity>
 
@@ -524,23 +529,23 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                                         >
                                             <MapPin size={16} color={transportPickupType === 'hotel' ? '#b39164' : '#A1A1AA'} />
                                             <Text className={`ml-2 font-medium ${transportPickupType === 'hotel' ? 'text-primary' : 'text-zinc-400'}`}>
-                                                Rendez-vous à l&apos;hôtel
+                                                {t('modal.meetAtHotel')}
                                             </Text>
                                         </TouchableOpacity>
                                     </View>
 
                                     {transportPickupType === 'hotel' && (
                                         <View className="bg-zinc-800 border border-white/5 rounded-2xl p-4 mb-8">
-                                            <Text className="text-white font-semibold mb-2">Adresse de l&apos;hôtel</Text>
+                                            <Text className="text-white font-semibold mb-2">{t('modal.hotelAddress')}</Text>
                                             <TextInput
                                                 value={hotelAddress}
                                                 onChangeText={setHotelAddress}
-                                                placeholder="Adresse complète de l'hôtel"
+                                                placeholder={t('modal.hotelAddressPlaceholder')}
                                                 placeholderTextColor="#71717A"
                                                 className="bg-zinc-900 border border-white/5 rounded-xl px-4 py-3 text-white mb-4"
                                             />
 
-                                            <Text className="text-white font-semibold mb-2">Cet hôtel est-il à plus de 2 km en voiture du haram ?</Text>
+                                            <Text className="text-white font-semibold mb-2">{t('modal.hotelOver2km')}</Text>
                                             <View className="flex-row gap-2 mb-3">
                                                 <TouchableOpacity
                                                     onPress={() => {
@@ -549,7 +554,7 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                                                     }}
                                                     className={`flex-1 py-2.5 rounded-xl border items-center ${hotelOver2KmByCar === false ? 'bg-primary/20 border-primary' : 'bg-zinc-900 border-white/5'}`}
                                                 >
-                                                    <Text className={`${hotelOver2KmByCar === false ? 'text-primary' : 'text-zinc-300'} font-medium`}>Non</Text>
+                                                    <Text className={`${hotelOver2KmByCar === false ? 'text-primary' : 'text-zinc-300'} font-medium`}>{t('common:no')}</Text>
                                                 </TouchableOpacity>
                                                 <TouchableOpacity
                                                     onPress={() => {
@@ -558,14 +563,14 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                                                     }}
                                                     className={`flex-1 py-2.5 rounded-xl border items-center ${hotelOver2KmByCar === true ? 'bg-primary/20 border-primary' : 'bg-zinc-900 border-white/5'}`}
                                                 >
-                                                    <Text className={`${hotelOver2KmByCar === true ? 'text-primary' : 'text-zinc-300'} font-medium`}>Oui</Text>
+                                                    <Text className={`${hotelOver2KmByCar === true ? 'text-primary' : 'text-zinc-300'} font-medium`}>{t('common:yes')}</Text>
                                                 </TouchableOpacity>
                                             </View>
 
                                             {hotelOver2KmByCar === false && (
                                                 <View className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
                                                     <Text className="text-amber-200 text-xs leading-5">
-                                                        Si l&apos;adresse envoyée au guide est en réalité à plus de 2 km, un supplément sera facturé à l&apos;arrivée du guide.
+                                                        {t('modal.hotelWarning')}
                                                     </Text>
                                                     <TouchableOpacity
                                                         onPress={() => setTransportWarningAcknowledged((prev) => !prev)}
@@ -574,14 +579,14 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                                                         <View className={`w-5 h-5 rounded-md border mr-2 items-center justify-center ${transportWarningAcknowledged ? 'bg-[#b39164] border-[#b39164]' : 'border-white/20 bg-zinc-900'}`}>
                                                             {transportWarningAcknowledged ? <Text className="text-white text-[10px]">✓</Text> : null}
                                                         </View>
-                                                        <Text className="text-zinc-200 text-xs">J&apos;ai compris cet avertissement</Text>
+                                                        <Text className="text-zinc-200 text-xs">{t('modal.hotelWarningAck')}</Text>
                                                     </TouchableOpacity>
                                                 </View>
                                             )}
 
                                             {hotelOver2KmByCar === true && (
                                                 <View>
-                                                    <Text className="text-white font-semibold mb-2">Distance (km)</Text>
+                                                    <Text className="text-white font-semibold mb-2">{t('modal.distanceKm')}</Text>
                                                     <TextInput
                                                         value={hotelDistanceKm}
                                                         onChangeText={setHotelDistanceKm}
@@ -590,7 +595,7 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                                                         keyboardType="decimal-pad"
                                                         className="bg-zinc-900 border border-white/5 rounded-xl px-4 py-3 text-white mb-2"
                                                     />
-                                                    <Text className="text-emerald-300 text-xs">Supplément transport fixe appliqué: +10 €</Text>
+                                                    <Text className="text-emerald-300 text-xs">{t('modal.transportSupplement')}</Text>
                                                 </View>
                                             )}
                                         </View>
@@ -604,8 +609,8 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                         <View className="pt-4 border-t border-white/5 mt-auto">
                             <View className="flex-row justify-between items-end mb-4 px-2">
                                 <View>
-                                    <Text className="text-zinc-400 text-lg">Total estimé</Text>
-                                    <Text className="text-zinc-500 text-xs">Détail en EUR</Text>
+                                    <Text className="text-zinc-400 text-lg">{t('modal.estimatedTotal')}</Text>
+                                    <Text className="text-zinc-500 text-xs">{t('modal.detailEur')}</Text>
                                 </View>
                                 <View className="items-end">
                                     <Text className="text-white font-bold text-3xl">{formatCurrency(totalPrice)}</Text>
@@ -615,7 +620,7 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                                 <View className="mb-4 rounded-xl border border-white/10 bg-zinc-800/70 px-4 py-3">
                                 {transportExtraFeeAmount > 0 && (
                                     <View className="flex-row justify-between items-center mt-1.5">
-                                        <Text className="text-zinc-400 text-xs">Transport</Text>
+                                        <Text className="text-zinc-400 text-xs">{t('modal.transport')}</Text>
                                         <Text className="text-zinc-200 text-xs font-medium">{formatCurrency(transportExtraFeeAmount)}</Text>
                                     </View>
                                 )}
@@ -624,9 +629,9 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                             <View className="mb-4 rounded-xl border border-white/10 bg-zinc-800/70 px-4 py-3">
                                 <View className="flex-row items-center justify-between">
                                     <View className="flex-1 pr-4">
-                                        <Text className="text-white font-semibold">Utiliser ma cagnotte</Text>
+                                        <Text className="text-white font-semibold">{t('modal.useWallet')}</Text>
                                         <Text className="text-zinc-400 text-xs mt-1">
-                                            Solde disponible: {walletLoading ? 'Chargement...' : formatCurrency(availableWalletBalance)}
+                                            {t('modal.walletBalance', { balance: walletLoading ? t('common:loading') : formatCurrency(availableWalletBalance) })}
                                         </Text>
                                     </View>
                                     <Switch
@@ -640,11 +645,11 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
 
                                 <View className="mt-3 border-t border-white/10 pt-3">
                                     <View className="flex-row justify-between items-center">
-                                        <Text className="text-zinc-400 text-xs">Cagnotte utilisée</Text>
+                                        <Text className="text-zinc-400 text-xs">{t('modal.walletUsed')}</Text>
                                         <Text className="text-zinc-200 text-xs font-medium">{formatCurrency(walletAmountUsed)}</Text>
                                     </View>
                                     <View className="flex-row justify-between items-center mt-1.5">
-                                        <Text className="text-zinc-400 text-xs">Reste à payer (carte)</Text>
+                                        <Text className="text-zinc-400 text-xs">{t('modal.remainingCard')}</Text>
                                         <Text className="text-zinc-200 text-xs font-medium">{formatCurrency(cardAmountPaid)}</Text>
                                     </View>
                                 </View>
@@ -654,14 +659,14 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                                 onPress={() => {
                                     if (loading) return;
                                     if (!isBadal && !transportPickupType) return;
-                                    if (!hasMinPilgrimsForFemale) {
-                                        Alert.alert("Nombre de pèlerins insuffisant", "Pour un compte femme, ajoutez au moins un deuxième pèlerin.");
+                                    if (isFemaleSoloWithMaleGuideBlocked) {
+                                        Alert.alert(t('modal.alertBookingBlocked'), t('femaleSoloWithMaleGuide'));
                                         return;
                                     }
-                                    if (!visitDate || !visitTime) { Alert.alert("Incomplet", "Veuillez sélectionner date et heure."); return; }
-                                    if (!isHotelFlowValid) { Alert.alert("Transport incomplet", "Veuillez compléter les informations de prise en charge."); return; }
+                                    if (!visitDate || !visitTime) { Alert.alert(t('modal.alertIncomplete'), t('modal.alertIncompleteMsg')); return; }
+                                    if (!isHotelFlowValid) { Alert.alert(t('modal.alertTransportIncomplete'), t('modal.alertTransportIncompleteMsg')); return; }
                                     if (!pilgrimCharterAccepted) {
-                                        Alert.alert("Charte requise", "Vous devez cocher \"J'ai lu et j'accepte la Charte du Pèlerin\" avant de réserver.");
+                                        Alert.alert(t('modal.alertCharterRequired'), t('modal.alertCharterRequiredMsg'));
                                         return;
                                     }
                                     handleValidate();
@@ -671,11 +676,11 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                                 {loading ? (
                                     <View className="flex-row items-center gap-3">
                                         <ActivityIndicator color="#ffffff" size="small" />
-                                        <Text className="text-white font-bold text-lg">Redirection vers le paiement...</Text>
+                                        <Text className="text-white font-bold text-lg">{t('modal.redirectingPayment')}</Text>
                                     </View>
                                 ) : (
                                     <Text className={`font-bold text-lg ${canOpenConfirmation ? 'text-white' : 'text-zinc-500'}`}>
-                                        Réserver
+                                        {t('modal.book')}
                                     </Text>
                                 )}
                             </TouchableOpacity>
@@ -688,11 +693,11 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                                         {pilgrimCharterAccepted ? <Text className="text-white text-[10px]">✓</Text> : null}
                                     </View>
                                     <Text className="text-zinc-200 text-xs flex-1">
-                                        J&apos;ai lu et j&apos;accepte la Charte du Pèlerin
+                                        {t('modal.charterAccept')}
                                     </Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity onPress={() => setShowCharterModal(true)} className="mt-2 self-start">
-                                    <Text className="text-[#b39164] text-xs font-semibold">Lire la charte</Text>
+                                    <Text className="text-[#b39164] text-xs font-semibold">{t('modal.readCharter')}</Text>
                                 </TouchableOpacity>
                             </View>
                         </View>
@@ -705,16 +710,16 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                 <View className="flex-1 bg-zinc-900">
                     <SafeAreaView className="flex-1">
                         <View className="flex-row justify-between items-center p-4 border-b border-white/10">
-                            <Text className="text-xl font-bold text-white">Charte du Pèlerin</Text>
+                            <Text className="text-xl font-bold text-white">{t('modal.charterTitle')}</Text>
                             <TouchableOpacity onPress={() => setShowCharterModal(false)} className="p-2">
-                                <Text className="text-zinc-400 font-bold">Annuler</Text>
+                                <Text className="text-zinc-400 font-bold">{t('common:cancel')}</Text>
                             </TouchableOpacity>
                         </View>
                         <ScrollView className="flex-1 p-6" contentContainerStyle={{ paddingBottom: 40 }}>
                             <Text className="text-zinc-300 leading-6 text-base">{CHARTER_TEXT}</Text>
                         </ScrollView>
                         <View className="p-4 border-t border-white/10 bg-zinc-800">
-                            <Text className="text-zinc-400 text-xs mb-4 text-center">Veuillez confirmer la lecture de la charte pour poursuivre la réservation.</Text>
+                            <Text className="text-zinc-400 text-xs mb-4 text-center">{t('modal.charterConfirmHint')}</Text>
                             <TouchableOpacity
                                 onPress={() => {
                                     setPilgrimCharterAccepted(true);
@@ -723,7 +728,7 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                                 disabled={loading}
                                 className="bg-[#b39164] py-4 rounded-xl items-center shadow-sm"
                             >
-                                <Text className="text-white font-bold text-lg">{loading ? 'Finalisation...' : "J'ai lu la charte"}</Text>
+                                <Text className="text-white font-bold text-lg">{loading ? t('modal.finalizing') : t('modal.charterRead')}</Text>
                             </TouchableOpacity>
                         </View>
                     </SafeAreaView>

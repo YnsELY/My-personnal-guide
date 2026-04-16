@@ -14,24 +14,12 @@ const normalize = (value?: string | null) =>
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '');
 
-const PRICE_ID_BY_SERVICE_CODE: Record<string, string> = {
-  OMRA_SOLO_HORS: 'price_1TAHzVL9j73enH7JJSyr6PEF',
-  OMRA_FAMILLE_HORS: 'price_1TAI2qL9j73enH7J2AQzHfu7',
-  OMRA_GROUPE_HORS: 'price_1TAI3ML9j73enH7JhgMwRul0',
-  OMRA_SOLO_RAMADAN: 'price_1TAI43L9j73enH7JAFqyFlEN',
-  OMRA_FAMILLE_RAMADAN: 'price_1TAI4XL9j73enH7JRlUmuaaZ',
-  OMRA_GROUPE_RAMADAN: 'price_1TAI56L9j73enH7Jn3kxcDx5',
-  BADAL_HORS: 'price_1TAI5yL9j73enH7JZD5OgaMX',
-  BADAL_RAMADAN: 'price_1TAI6GL9j73enH7J6ZX3VW4c',
-  VISITE_MEDINE: 'price_1TAI77L9j73enH7JRNbldbeV',
-  VISITE_MAKKAH: 'price_1TAI7jL9j73enH7JIDKwRF81',
-};
-
 const resolveServiceCode = (params: { title?: string; category?: string; location?: string }) => {
   const text = `${normalize(params.title)} ${normalize(params.category)}`.trim();
   const location = normalize(params.location);
 
   const isBadal = text.includes('badal');
+  const isPmr = text.includes('pmr') || text.includes('mobilite reduite') || text.includes('pousseur');
   const isRamadan = text.includes('ramadan');
   const isVisite = text.includes('visite');
   const isOmra = text.includes('omra');
@@ -40,6 +28,7 @@ const resolveServiceCode = (params: { title?: string; category?: string; locatio
   const isGroupe = text.includes('groupe');
 
   if (isBadal) return isRamadan ? 'BADAL_RAMADAN' : 'BADAL_HORS';
+  if (isPmr) return isRamadan ? 'PMR_RAMADAN' : 'PMR_HORS';
 
   if (isVisite) {
     if (location.includes('medine') || text.includes('medine')) return 'VISITE_MEDINE';
@@ -187,14 +176,6 @@ Deno.serve(async (req) => {
       category: serviceRow.category,
       location: serviceRow.location,
     });
-    const priceId = serviceCode ? PRICE_ID_BY_SERVICE_CODE[serviceCode] : null;
-
-    if (!serviceCode || !priceId) {
-      return new Response(JSON.stringify({ error: 'SERVICE_STRIPE_MAPPING_NOT_FOUND' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
 
     const { data: preparedRaw, error: prepareError } = await userClient.rpc('prepare_stripe_checkout_session', {
       p_service_id: serviceId,
@@ -230,6 +211,7 @@ Deno.serve(async (req) => {
     pendingCheckoutId = prepared?.pendingCheckoutId || prepared?.pending_checkout_id || null;
     const walletHoldAmount = Number(prepared?.walletHoldAmount || prepared?.wallet_hold_amount || 0);
     const cardAmount = Number(prepared?.cardAmount || prepared?.card_amount || 0);
+    const preparedTotalAmount = Number(prepared?.totalAmount || prepared?.total_amount || 0);
 
     if (!pendingCheckoutId || !Number.isFinite(cardAmount) || cardAmount <= 0) {
       return new Response(JSON.stringify({ error: 'Invalid prepared checkout payload.' }), {
@@ -254,14 +236,30 @@ Deno.serve(async (req) => {
       status: 'cancel',
     });
 
+    const transportAmount = Number(transportExtraFeeAmount || 0);
+    const serviceAmount = Math.max(preparedTotalAmount - transportAmount, 0);
+
+    if (!Number.isFinite(serviceAmount) || serviceAmount <= 0) {
+      return new Response(JSON.stringify({ error: 'Invalid service amount for checkout.' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const lineItems: any[] = [
       {
-        price: priceId,
+        price_data: {
+          currency: 'eur',
+          unit_amount: Math.round(serviceAmount * 100),
+          product_data: {
+            name: String(serviceName || serviceRow.title || serviceRow.category || 'Prestation guide'),
+            description: String(serviceRow.category || serviceRow.title || ''),
+          },
+        },
         quantity: 1,
       },
     ];
 
-    const transportAmount = Number(transportExtraFeeAmount || 0);
     if (transportAmount > 0) {
       lineItems.push({
         price_data: {

@@ -1,13 +1,19 @@
 import { deleteService, getCurrentUser, getGuideServices } from '@/lib/api';
-import { formatSAR, toSar } from '@/lib/pricing';
+import { resolveFixedGuideNetSarForService } from '@/lib/guideTariffs';
+import i18n from '@/lib/i18n';
+import { formatSAR } from '@/lib/pricing';
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import { ArrowRight, Calendar, Pencil, Plus, Trash2 } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, FlatList, Image, StatusBar, Text, TouchableOpacity, View } from 'react-native';
 import { getServiceImageForLocation } from '@/constants/serviceLocationImages';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+const getLocale = () => i18n.language === 'ar' ? 'ar-SA' : 'fr-FR';
+
 export default function MyServicesScreen() {
+    const { t } = useTranslation('guide');
     const router = useRouter();
     const [services, setServices] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -42,19 +48,19 @@ export default function MyServicesScreen() {
 
     const handleDelete = (id: string) => {
         Alert.alert(
-            "Supprimer le service",
-            "Êtes-vous sûr de vouloir supprimer ce service ? Cette action est irréversible.",
+            t('myServices.deleteService'),
+            t('myServices.deleteConfirm'),
             [
-                { text: "Annuler", style: "cancel" },
+                { text: t('common:cancel'), style: "cancel" },
                 {
-                    text: "Supprimer",
+                    text: t('common:delete'),
                     style: "destructive",
                     onPress: async () => {
                         try {
                             await deleteService(id);
                             loadServices(); // Refresh list
                         } catch {
-                            Alert.alert("Erreur", "Impossible de supprimer le service.");
+                            Alert.alert(t('common:error'), t('myServices.deleteError'));
                         }
                     }
                 }
@@ -64,15 +70,21 @@ export default function MyServicesScreen() {
 
     const formatDateRange = (start: string | null, end: string | null) => {
         if (!start && !end) return null;
-        const fmt = (d: string) => new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+        const fmt = (d: string) => new Date(d).toLocaleDateString(getLocale(), { day: '2-digit', month: '2-digit', year: '2-digit' });
         if (start && end) return `${fmt(start)} → ${fmt(end)}`;
-        if (start) return `Dès le ${fmt(start)}`;
+        if (start) return t('myServices.fromDate', { date: fmt(start) });
         return null;
     };
 
     const renderServiceItem = ({ item }: { item: any }) => {
         const imageSource = item.imageUrl ? { uri: item.imageUrl } : getServiceImageForLocation(item.location);
         const dateLabel = formatDateRange(item.availabilityStart, item.availabilityEnd);
+        const guideNetSar = resolveFixedGuideNetSarForService({
+            title: item.title,
+            category: item.category,
+            location: item.location,
+            serviceBasePriceEur: Number(item.price || 0),
+        });
 
         return (
             <View className="bg-white dark:bg-zinc-800 rounded-2xl shadow-sm border border-gray-100 dark:border-white/5 mb-4 overflow-hidden">
@@ -92,7 +104,9 @@ export default function MyServicesScreen() {
                 <View className="p-4">
                     <View className="flex-row justify-between items-start mb-1">
                         <Text className="text-gray-900 dark:text-white font-bold text-base flex-1 mr-2">{item.title}</Text>
-                        <Text className="text-[#b39164] font-bold">{formatSAR(toSar(Number(item.price || 0)))}</Text>
+                        <Text className="text-[#b39164] font-bold">
+                            {guideNetSar !== null ? formatSAR(guideNetSar) : '--'}
+                        </Text>
                     </View>
 
                     <Text className="text-gray-500 dark:text-gray-400 text-sm mb-3">{item.category}</Text>
@@ -119,7 +133,7 @@ export default function MyServicesScreen() {
     return (
         <View className="flex-1 bg-gray-50 dark:bg-zinc-900">
             <Stack.Screen options={{ headerShown: false }} />
-            <StatusBar barStyle="dark-content" />
+            <StatusBar barStyle="light-content" />
 
             <SafeAreaView className="flex-1 px-6">
                 <View className="flex-row items-center justify-between mb-6 mt-4">
@@ -127,7 +141,7 @@ export default function MyServicesScreen() {
                         <TouchableOpacity onPress={() => router.back()} className="p-2 bg-gray-100 dark:bg-zinc-800 rounded-full mr-4">
                             <ArrowRight className="rotate-180" size={20} color="#000" />
                         </TouchableOpacity>
-                        <Text className="text-xl font-bold dark:text-white">Mes Services</Text>
+                        <Text className="text-xl font-bold dark:text-white">{t('myServices.title')}</Text>
                     </View>
 
                     <TouchableOpacity
@@ -151,12 +165,12 @@ export default function MyServicesScreen() {
                         contentContainerStyle={{ paddingBottom: 20 }}
                         ListEmptyComponent={() => (
                             <View className="items-center justify-center py-10">
-                                <Text className="text-gray-400 text-center mb-4">Vous n&apos;avez pas encore créé de services.</Text>
+                                <Text className="text-gray-400 text-center mb-4">{t('myServices.noServices')}</Text>
                                 <TouchableOpacity
                                     onPress={() => router.push('/guide/create-service')}
                                     className="bg-[#b39164] px-6 py-3 rounded-xl"
                                 >
-                                    <Text className="text-white font-bold">Créer un service</Text>
+                                    <Text className="text-white font-bold">{t('myServices.createService')}</Text>
                                 </TouchableOpacity>
                             </View>
                         )}

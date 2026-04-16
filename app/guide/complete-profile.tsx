@@ -1,17 +1,18 @@
 import { createGuideProfile, getCurrentGuideProfile } from '@/lib/api';
+import i18n from '@/lib/i18n';
 import { Stack, useRouter } from 'expo-router';
 import { ArrowRight, BadgeCheck, Check, ChevronDown, Globe, MapPin, Phone, X } from 'lucide-react-native';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, Modal, ScrollView, StatusBar, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const LANGUAGES_LIST = [
-    "Français", "Arabe", "Anglais", "Urdu", "Indonésien", "Turc", "Haoussa", "Bengali"
-];
-
-const CITIES = ["La Mecque", "Médine", "Les deux"];
+const LANGUAGE_KEYS = ['french', 'arabic', 'english', 'urdu', 'indonesian', 'turkish', 'hausa', 'bengali'] as const;
+const CITY_KEYS = ['mecca', 'medina', 'both'] as const;
+const MONTH_KEYS = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'] as const;
 
 export default function CompleteProfileScreen() {
+    const { t } = useTranslation('guide');
     const router = useRouter();
     const [loading, setLoading] = useState(false);
 
@@ -63,7 +64,7 @@ export default function CompleteProfileScreen() {
 
     const handleSubmit = async () => {
         if (!bio || !location || selectedLanguages.length === 0 || !phoneNumber.trim()) {
-            Alert.alert("Erreur", "Veuillez remplir tous les champs");
+            Alert.alert(t('common:error'), t('completeProfile.fillAllFields'));
             return;
         }
 
@@ -76,13 +77,13 @@ export default function CompleteProfileScreen() {
                 phone_number: phoneNumber.trim(),
                 experience_since: experienceDate.toISOString()
             });
-            Alert.alert("Succès", "Profil mis à jour !", [
-                { text: "Retour", onPress: () => router.replace('/(tabs)/profile') }
+            Alert.alert(t('common:success'), t('completeProfile.profileUpdated'), [
+                { text: t('common:back'), onPress: () => router.replace('/(tabs)/profile') }
             ]);
         } catch (e: any) {
             // ... error handling
             console.error(e);
-            Alert.alert("Erreur", "Impossible de sauvegarder votre profil. " + e.message);
+            Alert.alert(t('common:error'), t('completeProfile.saveError') + e.message);
         } finally {
             setLoading(false);
         }
@@ -91,16 +92,13 @@ export default function CompleteProfileScreen() {
     // Simple Month/Year Picker Component
     const renderDatePicker = () => {
         const years = Array.from({ length: 55 }, (_, i) => new Date().getFullYear() - i);
-        const months = [
-            "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
-            "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
-        ];
+        const months = MONTH_KEYS.map(k => t(`completeProfile.months.${k}`));
 
         return (
             <Modal visible={showDateModal} transparent animationType="fade">
                 <View className="flex-1 bg-black/50 justify-center items-center">
                     <View className="bg-white dark:bg-zinc-800 w-[90%] rounded-2xl p-6 max-h-[80%]">
-                        <Text className="text-xl font-bold mb-4 dark:text-white">Depuis quand êtes-vous guide ?</Text>
+                        <Text className="text-xl font-bold mb-4 dark:text-white">{t('completeProfile.sinceWhenGuide')}</Text>
                         <ScrollView className="max-h-96">
                             {years.map(year => (
                                 <View key={year} className="mb-4">
@@ -126,7 +124,7 @@ export default function CompleteProfileScreen() {
                             ))}
                         </ScrollView>
                         <TouchableOpacity onPress={() => setShowDateModal(false)} className="mt-4 p-3 bg-gray-200 dark:bg-zinc-700 rounded-xl items-center">
-                            <Text className="dark:text-white font-bold">Annuler</Text>
+                            <Text className="dark:text-white font-bold">{t('common:cancel')}</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -134,9 +132,12 @@ export default function CompleteProfileScreen() {
         );
     };
 
+    const LANGUAGES_LIST = LANGUAGE_KEYS.map(k => t(`completeProfile.languages.${k}`));
+    const CITIES = CITY_KEYS.map(k => t(`completeProfile.cities.${k}`));
+
     return (
         <View className="flex-1 bg-white dark:bg-zinc-900">
-            <StatusBar barStyle="dark-content" />
+            <StatusBar barStyle="light-content" />
             <SafeAreaView className="flex-1 px-6">
 
                 <Stack.Screen options={{ headerShown: false }} />
@@ -145,12 +146,12 @@ export default function CompleteProfileScreen() {
                     <TouchableOpacity onPress={() => router.replace('/(tabs)/profile')} className="p-2 bg-gray-100 dark:bg-zinc-800 rounded-full mr-4">
                         <ArrowRight className="rotate-180" size={20} color="#000" />
                     </TouchableOpacity>
-                    <Text className="text-xl font-bold dark:text-white">Profil Guide</Text>
+                    <Text className="text-xl font-bold dark:text-white">{t('completeProfile.title')}</Text>
                 </View>
 
                 <View className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
                     <Text className="text-amber-200 text-xs">
-                        Compte strictement personnel: le prêt, le partage et la délégation du compte guide sont interdits.
+                        {t('completeProfile.personalAccountWarning')}
                     </Text>
                 </View>
 
@@ -159,7 +160,7 @@ export default function CompleteProfileScreen() {
 
                         {/* Phone */}
                         <View>
-                            <Text className="text-gray-500 mb-2 font-medium">Numéro de téléphone</Text>
+                            <Text className="text-gray-500 mb-2 font-medium">{t('completeProfile.phoneNumber')}</Text>
                             <View className="flex-row items-center bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3">
                                 <Phone size={20} color="#9CA3AF" />
                                 <TextInput
@@ -175,14 +176,14 @@ export default function CompleteProfileScreen() {
 
                         {/* City Selector */}
                         <View>
-                            <Text className="text-gray-500 mb-2 font-medium">Ville</Text>
+                            <Text className="text-gray-500 mb-2 font-medium">{t('completeProfile.city')}</Text>
                             <TouchableOpacity
                                 onPress={() => setShowCityModal(true)}
                                 className="flex-row items-center bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3"
                             >
                                 <MapPin size={20} color="#9CA3AF" />
                                 <Text className={`flex-1 ml-3 ${location ? 'text-gray-900 dark:text-white' : 'text-gray-400'}`}>
-                                    {location || "Sélectionner une ville"}
+                                    {location || t('completeProfile.selectCity')}
                                 </Text>
                                 <ChevronDown size={20} color="#9CA3AF" />
                             </TouchableOpacity>
@@ -190,7 +191,7 @@ export default function CompleteProfileScreen() {
 
                         {/* Language Selector */}
                         <View>
-                            <Text className="text-gray-500 mb-2 font-medium">Langues parlées</Text>
+                            <Text className="text-gray-500 mb-2 font-medium">{t('completeProfile.spokenLanguages')}</Text>
                             <TouchableOpacity
                                 onPress={() => setShowLangModal(true)}
                                 className="flex-row items-center bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 min-h-[50px]"
@@ -204,7 +205,7 @@ export default function CompleteProfileScreen() {
                                             </View>
                                         ))
                                     ) : (
-                                        <Text className="text-gray-400">Sélectionner les langues</Text>
+                                        <Text className="text-gray-400">{t('completeProfile.selectLanguages')}</Text>
                                     )}
                                 </View>
                                 <ChevronDown size={20} color="#9CA3AF" />
@@ -213,14 +214,14 @@ export default function CompleteProfileScreen() {
 
                         {/* Experience Date Selector */}
                         <View>
-                            <Text className="text-gray-500 mb-2 font-medium">Guide depuis</Text>
+                            <Text className="text-gray-500 mb-2 font-medium">{t('completeProfile.guideSince')}</Text>
                             <TouchableOpacity
                                 onPress={() => setShowDateModal(true)}
                                 className="flex-row items-center bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3"
                             >
                                 <BadgeCheck size={20} color="#9CA3AF" />
                                 <Text className="flex-1 ml-3 text-gray-900 dark:text-white">
-                                    {experienceDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+                                    {experienceDate.toLocaleDateString(i18n.language === 'ar' ? 'ar-SA' : 'fr-FR', { month: 'long', year: 'numeric' })}
                                 </Text>
                                 <ChevronDown size={20} color="#9CA3AF" />
                             </TouchableOpacity>
@@ -229,11 +230,11 @@ export default function CompleteProfileScreen() {
 
                         {/* Bio */}
                         <View>
-                            <Text className="text-gray-500 mb-2 font-medium">Biographie</Text>
+                            <Text className="text-gray-500 mb-2 font-medium">{t('completeProfile.biography')}</Text>
                             <View className="flex-row items-start bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 h-32">
                                 <TextInput
                                     className="flex-1 text-gray-900 dark:text-white text-base"
-                                    placeholder="Décrivez votre expérience..."
+                                    placeholder={t('completeProfile.bioPlaceholder')}
                                     placeholderTextColor="#9CA3AF"
                                     value={bio}
                                     onChangeText={setBio}
@@ -248,7 +249,7 @@ export default function CompleteProfileScreen() {
                             disabled={loading}
                             className="bg-[#b39164] py-4 rounded-xl items-center shadow-lg shadow-[#b39164]/20 mt-4 active:bg-[#a08055] flex-row justify-center gap-2"
                         >
-                            <Text className="text-white font-bold text-lg">{loading ? 'Enregistrement...' : 'Terminer'}</Text>
+                            <Text className="text-white font-bold text-lg">{loading ? t('completeProfile.saving') : t('completeProfile.finish')}</Text>
                             {!loading && <ArrowRight size={20} color="white" />}
                         </TouchableOpacity>
 
@@ -261,7 +262,7 @@ export default function CompleteProfileScreen() {
             <Modal visible={showCityModal} transparent animationType="fade">
                 <View className="flex-1 bg-black/50 justify-center items-center p-6">
                     <View className="bg-white dark:bg-zinc-800 w-full rounded-2xl p-4">
-                        <Text className="text-xl font-bold mb-4 dark:text-white">Choisir une ville</Text>
+                        <Text className="text-xl font-bold mb-4 dark:text-white">{t('completeProfile.chooseCity')}</Text>
                         {CITIES.map(city => (
                             <TouchableOpacity
                                 key={city}
@@ -273,7 +274,7 @@ export default function CompleteProfileScreen() {
                             </TouchableOpacity>
                         ))}
                         <TouchableOpacity onPress={() => setShowCityModal(false)} className="mt-4 p-3 bg-gray-200 dark:bg-zinc-700 rounded-xl items-center">
-                            <Text className="dark:text-white font-bold">Annuler</Text>
+                            <Text className="dark:text-white font-bold">{t('common:cancel')}</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -284,7 +285,7 @@ export default function CompleteProfileScreen() {
                 <View className="flex-1 bg-black/50 justify-end">
                     <View className="bg-white dark:bg-zinc-800 rounded-t-3xl p-6 h-[70%]">
                         <View className="flex-row justify-between items-center mb-6">
-                            <Text className="text-xl font-bold dark:text-white">Choisir les langues</Text>
+                            <Text className="text-xl font-bold dark:text-white">{t('completeProfile.chooseLanguages')}</Text>
                             <TouchableOpacity onPress={() => setShowLangModal(false)}>
                                 <X size={24} color="gray" />
                             </TouchableOpacity>
@@ -304,7 +305,7 @@ export default function CompleteProfileScreen() {
                             ))}
                         </ScrollView>
                         <TouchableOpacity onPress={() => setShowLangModal(false)} className="mt-4 bg-[#b39164] py-4 rounded-xl items-center">
-                            <Text className="text-white font-bold text-lg">Valider</Text>
+                            <Text className="text-white font-bold text-lg">{t('completeProfile.validate')}</Text>
                         </TouchableOpacity>
                     </View>
                 </View>

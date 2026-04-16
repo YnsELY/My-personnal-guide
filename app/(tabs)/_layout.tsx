@@ -1,16 +1,17 @@
 import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { CustomTabBar } from '@/components/CustomTabBar';
 import { supabase } from '@/lib/supabase';
 import { Redirect, Tabs, usePathname, useRouter } from 'expo-router';
 import React from 'react';
-import { ActivityIndicator, Text, View, useColorScheme } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { ActivityIndicator, Text, View } from 'react-native';
+import { textStart } from '@/lib/rtl';
 
 export default function TabLayout() {
   const router = useRouter();
   const pathname = usePathname();
-  // Use React Native's hook to detect theme
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { isRTL } = useLanguage();
   const { user, profile, isLoading, isGuideApproved } = useAuth();
   const effectiveRole = profile?.role || user?.user_metadata?.role;
   const [unreadCount, setUnreadCount] = React.useState(0);
@@ -67,11 +68,14 @@ export default function TabLayout() {
     };
   }, [user?.id, profile?.role, loadUnreadCount]);
 
+  const { t } = useTranslation();
+  const { t: tTabs } = useTranslation('tabs');
+
   if (isLoading) {
     return (
       <View className="flex-1 items-center justify-center bg-zinc-900">
         <ActivityIndicator color="#b39164" />
-        <Text className="text-zinc-400 mt-3">Chargement...</Text>
+        <Text className="text-zinc-400 mt-3" style={textStart(isRTL)}>{t('loading')}</Text>
       </View>
     );
   }
@@ -86,10 +90,10 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
       }}>
-      <Tabs.Screen name="index" options={{ title: 'Accueil' }} />
+      <Tabs.Screen name="index" options={{ title: tTabs('home') }} />
       <Tabs.Screen
         name="search"
-        options={{ title: 'Explorer' }}
+        options={{ title: tTabs('explore') }}
         listeners={() => ({
           tabPress: (e) => {
             e.preventDefault();
@@ -97,10 +101,10 @@ export default function TabLayout() {
           },
         })}
       />
-      <Tabs.Screen name="messages" options={{ title: 'Messages' }} />
-      <Tabs.Screen name="guide-dashboard" options={{ title: 'Gestion' }} />
-      <Tabs.Screen name="admin-dashboard" options={{ title: 'Admin' }} />
-      <Tabs.Screen name="profile" options={{ title: 'Profil' }} />
+      <Tabs.Screen name="messages" options={{ title: tTabs('messages') }} />
+      <Tabs.Screen name="guide-dashboard" options={{ title: tTabs('management') }} />
+      <Tabs.Screen name="admin-dashboard" options={{ title: tTabs('admin') }} />
+      <Tabs.Screen name="profile" options={{ title: tTabs('profileTab') }} />
     </Tabs>
   );
 }

@@ -1,16 +1,29 @@
 import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { textStart } from '@/lib/rtl';
 import { Briefcase, Home, LayoutDashboard, MessageCircle, Search, User } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Text, TouchableOpacity, View, useColorScheme } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { Animated, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const TAB_META: Record<string, { Icon: any; label: string }> = {
-    index: { Icon: Home, label: 'Accueil' },
-    search: { Icon: Search, label: 'Explorer' },
-    messages: { Icon: MessageCircle, label: 'Messages' },
-    'guide-dashboard': { Icon: Briefcase, label: 'Gestion' },
-    'admin-dashboard': { Icon: LayoutDashboard, label: 'Admin' },
-    profile: { Icon: User, label: 'Profil' },
+const TAB_ICONS: Record<string, any> = {
+    index: Home,
+    search: Search,
+    messages: MessageCircle,
+    'guide-dashboard': Briefcase,
+    'admin-dashboard': LayoutDashboard,
+    profile: User,
+};
+
+const TAB_LABEL_KEYS: Record<string, string> = {
+    index: 'home',
+    search: 'explore',
+    messages: 'messages',
+    'guide-dashboard': 'management',
+    'admin-dashboard': 'admin',
+    profile: 'profileTab',
 };
 
 const isRouteVisible = (name: string, role: string | undefined) => {
@@ -28,20 +41,23 @@ export function CustomTabBar({ state, navigation, unreadCount }: {
     unreadCount: number;
 }) {
     const { profile } = useAuth();
+    const { isRTL } = useLanguage();
+    const { t } = useTranslation('tabs');
     const insets = useSafeAreaInsets();
     const isDark = useColorScheme() === 'dark';
     const role = profile?.role;
 
     const visibleRoutes = state.routes.filter((r: any) => isRouteVisible(r.name, role));
+    const renderedRoutes = isRTL ? [...visibleRoutes].reverse() : visibleRoutes;
     const activeVisibleIndex = Math.max(
         0,
-        visibleRoutes.findIndex((r: any) => r.key === state.routes[state.index].key)
+        renderedRoutes.findIndex((r: any) => r.key === state.routes[state.index].key)
     );
 
     // Per-tab scale animation
     const scalesRef = useRef<Animated.Value[]>([]);
-    if (scalesRef.current.length !== visibleRoutes.length) {
-        scalesRef.current = visibleRoutes.map((_: any, i: number) =>
+    if (scalesRef.current.length !== renderedRoutes.length) {
+        scalesRef.current = renderedRoutes.map((_: any, i: number) =>
             new Animated.Value(i === activeVisibleIndex ? 1.08 : 0.92)
         );
     }
@@ -81,7 +97,7 @@ export function CustomTabBar({ state, navigation, unreadCount }: {
         >
             <View
                 onLayout={(e) => {
-                    const w = e.nativeEvent.layout.width / visibleRoutes.length;
+                    const w = e.nativeEvent.layout.width / renderedRoutes.length;
                     setTabWidth(w);
                 }}
                 style={{
@@ -121,14 +137,14 @@ export function CustomTabBar({ state, navigation, unreadCount }: {
                 )}
 
                 <View style={{ flexDirection: 'row', height: 64 }}>
-                    {visibleRoutes.map((route: any, index: number) => {
-                        const meta = TAB_META[route.name];
-                        if (!meta) return null;
+                    {renderedRoutes.map((route: any, index: number) => {
+                        const Icon = TAB_ICONS[route.name];
+                        const labelKey = TAB_LABEL_KEYS[route.name];
+                        if (!Icon || !labelKey) return null;
 
                         const isActive = index === activeVisibleIndex;
                         const scale = scalesRef.current[index] ?? new Animated.Value(1);
                         const iconColor = isActive ? '#b39164' : isDark ? '#52525b' : '#a1a1aa';
-                        const { Icon } = meta;
 
                         const onPress = () => {
                             const event = navigation.emit({
@@ -165,7 +181,8 @@ export function CustomTabBar({ state, navigation, unreadCount }: {
                                             style={{
                                                 position: 'absolute',
                                                 top: -5,
-                                                right: -7,
+                                                right: isRTL ? undefined : -7,
+                                                left: isRTL ? -7 : undefined,
                                                 minWidth: 16,
                                                 height: 16,
                                                 paddingHorizontal: 3,
@@ -197,9 +214,10 @@ export function CustomTabBar({ state, navigation, unreadCount }: {
                                         fontWeight: isActive ? '700' : '500',
                                         color: iconColor,
                                         letterSpacing: isActive ? 0.2 : 0,
+                                        ...textStart(isRTL),
                                     }}
                                 >
-                                    {meta.label}
+                                    {t(labelKey)}
                                 </Text>
                             </TouchableOpacity>
                         );

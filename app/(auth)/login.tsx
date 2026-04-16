@@ -1,13 +1,18 @@
 import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
+import { directionStyle, endSpacing, forceLTRText, rowStyle, textStart } from '@/lib/rtl';
 import { getCurrentProfile, getCurrentUser, getGuideApprovalInfo } from '@/lib/api';
 import { Link, useRouter } from 'expo-router';
 import { Lock, Mail } from 'lucide-react-native';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, Image, KeyboardAvoidingView, Platform, ScrollView, StatusBar, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function LoginScreen() {
     const router = useRouter();
     const { signIn } = useAuth();
+    const { t } = useTranslation('auth');
+    const { isRTL } = useLanguage();
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -15,7 +20,7 @@ export default function LoginScreen() {
 
     const handleLogin = async () => {
         if (!email || !password) {
-            Alert.alert("Erreur", "Veuillez remplir tous les champs");
+            Alert.alert(t('common:error'), t('fillAllFields'));
             return;
         }
         setLoading(true);
@@ -37,14 +42,14 @@ export default function LoginScreen() {
                 router.replace('/(tabs)');
             }
         } catch (e: any) {
-            Alert.alert("Erreur de connexion", e.message);
+            Alert.alert(t('common:error'), e.message);
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <View className="flex-1 bg-white dark:bg-zinc-900">
+        <View className="flex-1 bg-white dark:bg-zinc-900" style={directionStyle(isRTL)}>
             <StatusBar barStyle="light-content" />
 
             {/* Background / Header Image */}
@@ -54,9 +59,9 @@ export default function LoginScreen() {
                     className="w-full h-full opacity-30"
                 />
                 <View className="absolute inset-0 bg-gradient-to-b from-transparent to-white dark:to-zinc-900" />
-                <View className="absolute bottom-10 left-6">
-                    <Text className="text-white text-4xl font-bold font-serif">Bienvenue</Text>
-                    <Text className="text-gray-300 text-lg">Connectez-vous pour continuer</Text>
+                <View className="absolute bottom-10 left-6 right-6">
+                    <Text className="text-white text-4xl font-bold font-serif" style={textStart(isRTL)}>{t('login')}</Text>
+                    <Text className="text-gray-300 text-lg" style={textStart(isRTL)}>{t('loginSubtitle')}</Text>
                 </View>
             </View>
 
@@ -66,31 +71,34 @@ export default function LoginScreen() {
 
                         <View className="gap-5">
                             <View>
-                                <Text className="text-gray-500 mb-2 font-medium">Email</Text>
-                                <View className="flex-row items-center bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3">
+                                <Text className="text-gray-500 mb-2 font-medium" style={textStart(isRTL)}>{t('email')}</Text>
+                                <View className="bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3" style={rowStyle(isRTL)}>
                                     <Mail size={20} color="#9CA3AF" />
                                     <TextInput
-                                        className="flex-1 ml-3 text-gray-900 dark:text-white"
-                                        placeholder="exemple@email.com"
+                                        className="flex-1 text-gray-900 dark:text-white"
+                                        placeholder={t('emailPlaceholder')}
                                         placeholderTextColor="#9CA3AF"
                                         value={email}
                                         onChangeText={setEmail}
                                         autoCapitalize="none"
+                                        keyboardType="email-address"
+                                        style={[endSpacing(12, isRTL), forceLTRText()]}
                                     />
                                 </View>
                             </View>
 
                             <View>
-                                <Text className="text-gray-500 mb-2 font-medium">Mot de passe</Text>
-                                <View className="flex-row items-center bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3">
+                                <Text className="text-gray-500 mb-2 font-medium" style={textStart(isRTL)}>{t('password')}</Text>
+                                <View className="bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3" style={rowStyle(isRTL)}>
                                     <Lock size={20} color="#9CA3AF" />
                                     <TextInput
-                                        className="flex-1 ml-3 text-gray-900 dark:text-white"
-                                        placeholder="••••••••"
+                                        className="flex-1 text-gray-900 dark:text-white"
+                                        placeholder={t('passwordPlaceholder')}
                                         placeholderTextColor="#9CA3AF"
                                         value={password}
                                         onChangeText={setPassword}
                                         secureTextEntry
+                                        style={[endSpacing(12, isRTL), forceLTRText()]}
                                     />
                                 </View>
                             </View>
@@ -100,14 +108,14 @@ export default function LoginScreen() {
                                 disabled={loading}
                                 className="bg-[#b39164] py-4 rounded-xl items-center shadow-lg shadow-[#b39164]/20 mt-4 active:bg-[#a08055]"
                             >
-                                <Text className="text-white font-bold text-lg">{loading ? 'Connexion...' : 'Se connecter'}</Text>
+                                <Text className="text-white font-bold text-lg">{loading ? t('common:loading') : t('signIn')}</Text>
                             </TouchableOpacity>
 
-                            <View className="flex-row justify-center mt-4">
-                                <Text className="text-gray-500">Pas encore de compte ? </Text>
+                            <View className="mt-4" style={rowStyle(isRTL)}>
+                                <Text className="text-gray-500" style={textStart(isRTL)}>{t('noAccount')} </Text>
                                 <Link href="/(auth)/register" asChild>
                                     <TouchableOpacity>
-                                        <Text className="text-[#b39164] font-bold">S&apos;inscrire</Text>
+                                        <Text className="text-[#b39164] font-bold">{t('register')}</Text>
                                     </TouchableOpacity>
                                 </Link>
                             </View>

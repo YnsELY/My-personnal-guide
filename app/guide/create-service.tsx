@@ -2,10 +2,13 @@ import CalendarPicker from '@/components/CalendarPicker';
 import { CATEGORIES, SERVICE_OPTIONS } from '@/constants/data';
 import { getFixedServiceDescription } from '@/constants/serviceDescriptions';
 import { createService, updateService } from '@/lib/api';
-import { formatSAR, PLATFORM_COMMISSION_RATE, roundMoney, toSar } from '@/lib/pricing';
+import { resolveFixedGuideNetSarForService } from '@/lib/guideTariffs';
+import { formatSAR, roundMoney } from '@/lib/pricing';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import i18n from '@/lib/i18n';
 import { ArrowLeft, Calendar, ChevronDown, DollarSign, MapPin, Minus, Plus, Users } from 'lucide-react-native';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, KeyboardAvoidingView, Modal, Platform, ScrollView, StatusBar, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -18,11 +21,11 @@ const normalizeGuideLocation = (value?: string | null) => {
     return '';
 };
 
-const getGuideNetEurFromDisplayedPrice = (rawPrice: number) =>
-    roundMoney(Math.max(Number(rawPrice) || 0, 0) * (1 - PLATFORM_COMMISSION_RATE));
 
+const getLocale = () => i18n.language === 'ar' ? 'ar-SA' : 'fr-FR';
 
 export default function CreateServiceScreen() {
+    const { t } = useTranslation('guide');
     const router = useRouter();
 
     const { service } = useLocalSearchParams();
@@ -46,10 +49,18 @@ export default function CreateServiceScreen() {
     const [selectedServiceOption, setSelectedServiceOption] = useState<any | null>(null);
     const [isCategoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
     const [isOptionDropdownOpen, setOptionDropdownOpen] = useState(false);
+    const resolvedGuideNetSar = price
+        ? resolveFixedGuideNetSarForService({
+            title,
+            category,
+            location,
+            serviceBasePriceEur: Number(price),
+        })
+        : null;
 
     const handleCreateOrUpdate = async () => {
         if (!title || !price || !location || !startDate) {
-            Alert.alert("Erreur", "Veuillez remplir tous les champs (y compris la date)");
+            Alert.alert(t('common:error'), t('createService.fillAllFields'));
             return;
         }
 
@@ -64,12 +75,13 @@ export default function CreateServiceScreen() {
                 category,
                 location,
             }) || '';
+            const normalizedPrice = roundMoney(Number(price) || 0);
 
             const serviceData = {
                 title,
                 category,
                 description: fixedDescription,
-                price: parseInt(price),
+                price: normalizedPrice,
                 location,
                 meeting_points: [],
                 availability_start: startIso,
@@ -82,17 +94,17 @@ export default function CreateServiceScreen() {
                     ...serviceData,
                     price_override: serviceData.price // Map to correct DB column
                 });
-                Alert.alert("Succès", "Votre service a été modifié avec succès !", [
-                    { text: "OK", onPress: () => router.back() }
+                Alert.alert(t('common:success'), t('createService.serviceUpdated'), [
+                    { text: t('common:ok'), onPress: () => router.back() }
                 ]);
             } else {
                 await createService(serviceData);
-                Alert.alert("Succès", "Votre service a été créé avec succès !", [
-                    { text: "OK", onPress: () => router.back() }
+                Alert.alert(t('common:success'), t('createService.serviceCreated'), [
+                    { text: t('common:ok'), onPress: () => router.back() }
                 ]);
             }
         } catch (e: any) {
-            Alert.alert("Erreur", "Impossible d'enregistrer le service : " + e.message);
+            Alert.alert(t('common:error'), t('createService.saveError') + e.message);
         } finally {
             setLoading(false);
         }
@@ -107,7 +119,7 @@ export default function CreateServiceScreen() {
                     <TouchableOpacity onPress={() => router.back()} className="p-2 -ml-2">
                         <ArrowLeft size={24} color="white" />
                     </TouchableOpacity>
-                    <Text className="text-xl font-bold text-gray-900 dark:text-white">{isEditing ? 'Modifier Service' : 'Nouveau Service'}</Text>
+                    <Text className="text-xl font-bold text-gray-900 dark:text-white">{isEditing ? t('createService.editService') : t('createService.newService')}</Text>
                     <View className="w-10" />
                 </View>
                 <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
@@ -116,13 +128,13 @@ export default function CreateServiceScreen() {
                         <View className="gap-6 pb-20">
                             {/* Service Category Dropdown */}
                             <View className="z-50">
-                                <Text className="text-gray-500 mb-2 font-medium">Type de service</Text>
+                                <Text className="text-gray-500 mb-2 font-medium">{t('createService.serviceType')}</Text>
                                 <TouchableOpacity
                                     onPress={() => { setCategoryDropdownOpen(!isCategoryDropdownOpen); setOptionDropdownOpen(false); }}
                                     className="flex-row justify-between items-center bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3"
                                 >
                                     <Text className="text-gray-900 dark:text-white flex-1">
-                                        {selectedServiceCategory || "Sélectionner un type"}
+                                        {selectedServiceCategory || t('createService.selectType')}
                                     </Text>
                                     <ChevronDown size={20} color="#9CA3AF" />
                                 </TouchableOpacity>
@@ -155,13 +167,13 @@ export default function CreateServiceScreen() {
                             {/* Service Option Dropdown */}
                             {selectedServiceCategory && (
                                 <View className="z-40">
-                                    <Text className="text-gray-500 mb-2 font-medium">Option</Text>
+                                    <Text className="text-gray-500 mb-2 font-medium">{t('createService.option')}</Text>
                                     <TouchableOpacity
                                         onPress={() => setOptionDropdownOpen(!isOptionDropdownOpen)}
                                         className="flex-row justify-between items-center bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3"
                                     >
                                         <Text className="text-gray-900 dark:text-white flex-1">
-                                            {selectedServiceOption?.label || "Sélectionner une option"}
+                                            {selectedServiceOption?.label || t('createService.selectOption')}
                                         </Text>
                                         <ChevronDown size={20} color="#9CA3AF" />
                                     </TouchableOpacity>
@@ -181,7 +193,7 @@ export default function CreateServiceScreen() {
                                                 >
                                                     <Text className="text-gray-900 dark:text-white">{opt.label}</Text>
                                                     <Text className="text-gray-500 font-medium">
-                                                        {formatSAR(toSar(getGuideNetEurFromDisplayedPrice(opt.price)))}
+                                                        {formatSAR(Number(opt.guideNetSar || 0))}
                                                     </Text>
                                                 </TouchableOpacity>
                                             ))}
@@ -192,18 +204,18 @@ export default function CreateServiceScreen() {
 
                             {/* Price Display (Read-Only) */}
                             <View>
-                                <Text className="text-gray-500 mb-2 font-medium">Prix guide (net après commission)</Text>
+                                <Text className="text-gray-500 mb-2 font-medium">{t('createService.fixedGuidePay')}</Text>
                                 <View className="flex-row items-center bg-gray-100 dark:bg-zinc-800/50 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 opacity-80">
                                     <DollarSign size={20} color="#9CA3AF" />
                                     <Text className="flex-1 ml-3 text-gray-900 dark:text-white font-bold text-lg">
-                                        {price ? formatSAR(toSar(getGuideNetEurFromDisplayedPrice(Number(price)))) : '--'}
+                                        {resolvedGuideNetSar !== null ? formatSAR(resolvedGuideNetSar) : '--'}
                                     </Text>
                                 </View>
                             </View>
 
                             {/* Max Participants */}
                             <View>
-                                <Text className="text-gray-500 mb-2 font-medium">Nombre de personnes maximum</Text>
+                                <Text className="text-gray-500 mb-2 font-medium">{t('createService.maxParticipants')}</Text>
                                 <View className="flex-row items-center bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl p-2">
                                     <TouchableOpacity
                                         onPress={() => {
@@ -242,7 +254,7 @@ export default function CreateServiceScreen() {
 
                             {/* Location */}
                             <View>
-                                <Text className="text-gray-500 mb-2 font-medium">Lieu</Text>
+                                <Text className="text-gray-500 mb-2 font-medium">{t('createService.location')}</Text>
                                 <View className="flex-row gap-3">
                                     {LOCATION_OPTIONS.map((option) => {
                                         const isSelected = location === option;
@@ -267,20 +279,20 @@ export default function CreateServiceScreen() {
 
                             {/* Transport Rules */}
                             <View className="bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl p-4">
-                                <Text className="text-gray-900 dark:text-white font-semibold mb-2">Transport géré automatiquement</Text>
+                                <Text className="text-gray-900 dark:text-white font-semibold mb-2">{t('createService.transportAutoTitle')}</Text>
                                 <Text className="text-gray-500 dark:text-gray-300 text-xs leading-5">
-                                    Le pèlerin choisira automatiquement entre:
+                                    {t('createService.transportAutoDesc')}
                                 </Text>
-                                <Text className="text-gray-500 dark:text-gray-300 text-xs mt-1">- Rendez-vous au haram</Text>
-                                <Text className="text-gray-500 dark:text-gray-300 text-xs mt-1">- Rendez-vous à l&apos;hôtel</Text>
+                                <Text className="text-gray-500 dark:text-gray-300 text-xs mt-1">- {t('createService.transportMeetHaram')}</Text>
+                                <Text className="text-gray-500 dark:text-gray-300 text-xs mt-1">- {t('createService.transportMeetHotel')}</Text>
                                 <Text className="text-gray-500 dark:text-gray-300 text-xs mt-2 leading-5">
-                                    Si l&apos;hôtel est déclaré à plus de 2 km en voiture du haram, un supplément fixe de 40 SAR sera ajouté.
+                                    {t('createService.transportExtraFee')}
                                 </Text>
                             </View>
 
                             {/* Date Range */}
                             <View>
-                                <Text className="text-gray-500 mb-2 font-medium">Disponibilité</Text>
+                                <Text className="text-gray-500 mb-2 font-medium">{t('createService.availability')}</Text>
                                 <TouchableOpacity
                                     onPress={() => setShowCalendar(true)}
                                     className="flex-row items-center bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3"
@@ -288,8 +300,15 @@ export default function CreateServiceScreen() {
                                     <Calendar size={20} color="#9CA3AF" />
                                     <Text className="flex-1 ml-3 text-gray-900 dark:text-white">
                                         {startDate
-                                            ? `Du ${new Date(startDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} ${endDate ? 'au ' + new Date(endDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}`
-                                            : "Sélectionner une période"}
+                                            ? (endDate
+                                                ? t('createService.dateFromTo', {
+                                                    start: new Date(startDate).toLocaleDateString(getLocale(), { day: 'numeric', month: 'short' }),
+                                                    end: new Date(endDate).toLocaleDateString(getLocale(), { day: 'numeric', month: 'short', year: 'numeric' })
+                                                })
+                                                : t('createService.dateFrom', {
+                                                    start: new Date(startDate).toLocaleDateString(getLocale(), { day: 'numeric', month: 'short' })
+                                                }))
+                                            : t('createService.selectPeriod')}
                                     </Text>
                                 </TouchableOpacity>
                             </View>
@@ -316,7 +335,7 @@ export default function CreateServiceScreen() {
                                 disabled={loading}
                                 className="bg-[#b39164] py-4 rounded-xl items-center shadow-lg shadow-[#b39164]/20 mt-2 active:bg-[#a08055]"
                             >
-                                <Text className="text-white font-bold text-lg">{loading ? 'Enregistrement...' : (isEditing ? 'Modifier le service' : 'Publier le service')}</Text>
+                                <Text className="text-white font-bold text-lg">{loading ? t('createService.saving') : (isEditing ? t('createService.updateService') : t('createService.publishService'))}</Text>
                             </TouchableOpacity>
                         </View>
                     </ScrollView>

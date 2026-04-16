@@ -5,18 +5,13 @@ import { formatSAR, toSar } from '@/lib/pricing';
 import { Redirect, useRouter } from 'expo-router';
 import { Check, Clock, MapPin, User, X } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { Alert, ScrollView, StatusBar, Text, TouchableOpacity, View, useColorScheme } from 'react-native';
+import { Alert, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 type DashboardView = 'requests' | 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
 
-const GUIDE_DASHBOARD_FILTERS: { value: DashboardView; label: string }[] = [
-    { value: 'requests', label: 'En attente' },
-    { value: 'upcoming', label: 'À venir' },
-    { value: 'ongoing', label: 'En cours' },
-    { value: 'completed', label: 'Terminées' },
-    { value: 'cancelled', label: 'Annulées' },
-];
+const GUIDE_DASHBOARD_VIEWS: DashboardView[] = ['requests', 'upcoming', 'ongoing', 'completed', 'cancelled'];
 
 export default function GuideDashboardScreen() {
     const router = useRouter();
@@ -28,20 +23,26 @@ export default function GuideDashboardScreen() {
         updateReservationStatus,
         isLoading: dataLoading,
     } = useReservations();
-
-    const colorScheme = useColorScheme();
-    const isDark = colorScheme === 'dark';
+    const { t } = useTranslation('guide');
 
     const [activeView, setActiveView] = useState<DashboardView>('requests');
     const [pendingAction, setPendingAction] = useState<{ type: 'start' | 'end' | 'cancel'; reservation: any } | null>(null);
     const [isActionSubmitting, setIsActionSubmitting] = useState(false);
 
+    const filterLabels: Record<DashboardView, string> = {
+        requests: t('filters.requests'),
+        upcoming: t('filters.upcoming'),
+        ongoing: t('filters.ongoing'),
+        completed: t('filters.completed'),
+        cancelled: t('filters.cancelled'),
+    };
+
     const viewSubtitles: Record<DashboardView, string> = {
-        requests: 'Vos demandes en cours',
-        upcoming: 'Vos prochaines visites confirmees',
-        ongoing: 'Vos visites actuellement en cours',
-        completed: 'Vos prestations terminées',
-        cancelled: 'Historique des prestations annulées',
+        requests: t('subtitles.requests'),
+        upcoming: t('subtitles.upcoming'),
+        ongoing: t('subtitles.ongoing'),
+        completed: t('subtitles.completed'),
+        cancelled: t('subtitles.cancelled'),
     };
 
     const guideReservations = getReservationsByRole('guide', profile?.id || '1');
@@ -54,7 +55,7 @@ export default function GuideDashboardScreen() {
     if (authLoading || dataLoading) {
         return (
             <View className="flex-1 justify-center items-center bg-gray-50 dark:bg-zinc-900">
-                <Text className="text-gray-500">Chargement...</Text>
+                <Text className="text-gray-500">{t('common:loading')}</Text>
             </View>
         );
     }
@@ -65,19 +66,19 @@ export default function GuideDashboardScreen() {
 
     const handleAccept = (id: string, name: string) => {
         Alert.alert(
-            'Accepter la demande',
-            `Voulez-vous accepter la demande de ${name} ?`,
+            t('acceptRequest'),
+            t('acceptRequestConfirm', { name }),
             [
-                { text: 'Annuler', style: 'cancel' },
+                { text: t('common:cancel'), style: 'cancel' },
                 {
-                    text: 'Accepter',
+                    text: t('accept'),
                     onPress: async () => {
                         try {
                             await updateReservationStatus(id, 'confirmed');
-                            Alert.alert('Succes', `Demande de ${name} acceptee avec succes.`);
+                            Alert.alert(t('common:success'), t('acceptSuccess', { name }));
                         } catch (error) {
                             console.error('Failed to accept reservation request:', error);
-                            Alert.alert('Erreur', "Impossible d'accepter cette demande pour le moment.");
+                            Alert.alert(t('common:error'), t('acceptError'));
                         }
                     },
                 },
@@ -87,20 +88,20 @@ export default function GuideDashboardScreen() {
 
     const handleRefuse = (id: string, name: string) => {
         Alert.alert(
-            'Refuser la demande',
-            `Voulez-vous refuser la demande de ${name} ?`,
+            t('refuseRequest'),
+            t('refuseRequestConfirm', { name }),
             [
-                { text: 'Annuler', style: 'cancel' },
+                { text: t('common:cancel'), style: 'cancel' },
                 {
-                    text: 'Refuser',
+                    text: t('refuse'),
                     style: 'destructive',
                     onPress: async () => {
                         try {
                             await updateReservationStatus(id, 'cancelled');
-                            Alert.alert('Succes', `Demande de ${name} refusee.`);
+                            Alert.alert(t('common:success'), t('refuseSuccess', { name }));
                         } catch (error) {
                             console.error('Failed to decline reservation request:', error);
-                            Alert.alert('Erreur', 'Impossible de refuser cette demande pour le moment.');
+                            Alert.alert(t('common:error'), t('refuseError'));
                         }
                     },
                 },
@@ -125,26 +126,26 @@ export default function GuideDashboardScreen() {
             if (pendingAction.type === 'start') {
                 const result = await confirmVisitStartAsGuide(pendingAction.reservation.id);
                 if (result?.status === 'in_progress') {
-                    Alert.alert('Visite demarree', 'Le guide et le pelerin ont confirme le debut de la visite.');
+                    Alert.alert(t('visitStarted'), t('visitStartedBothConfirmed'));
                 } else {
-                    Alert.alert('Confirmation envoyee', 'Le pelerin doit maintenant confirmer le debut de la visite.');
+                    Alert.alert(t('confirmationSent'), t('pilgrimMustConfirmStart'));
                 }
             } else if (pendingAction.type === 'end') {
                 const result = await confirmVisitEndAsGuide(pendingAction.reservation.id);
                 if (result?.status === 'completed') {
-                    Alert.alert('Visite terminee', 'Le guide et le pelerin ont confirme la fin de la visite.');
+                    Alert.alert(t('visitEnded'), t('visitEndedBothConfirmed'));
                 } else {
-                    Alert.alert('Confirmation envoyee', 'Le pelerin doit maintenant confirmer la fin de la visite.');
+                    Alert.alert(t('confirmationSent'), t('pilgrimMustConfirmEnd'));
                 }
             } else {
                 await updateReservationStatus(pendingAction.reservation.id, 'cancelled');
-                Alert.alert('Service annulé', 'La prestation a été annulée avec succès.');
+                Alert.alert(t('serviceCancelled'), t('serviceCancelledSuccess'));
             }
 
             setPendingAction(null);
         } catch (error) {
             console.error('Failed to confirm visit action:', error);
-            Alert.alert('Erreur', 'Impossible de confirmer cette action pour le moment.');
+            Alert.alert(t('common:error'), t('actionError'));
         } finally {
             setIsActionSubmitting(false);
         }
@@ -152,7 +153,7 @@ export default function GuideDashboardScreen() {
 
     const transportSummary = (reservation: any) => {
         if (reservation.transportPickupType === 'haram') {
-            return 'Transport: Rendez-vous au haram';
+            return t('booking:transport.haram');
         }
 
         if (reservation.transportPickupType === 'hotel') {
@@ -163,10 +164,10 @@ export default function GuideDashboardScreen() {
                     ? ' (<= 2 km)'
                     : '';
             const feePart = Number(reservation.transportExtraFeeAmount || 0) > 0 ? ` +${formatSAR(toSar(Number(reservation.transportExtraFeeAmount || 0)))}` : '';
-            return `Transport: Rendez-vous à l’hôtel${hotelAddress}${distancePart}${feePart}`;
+            return `${t('booking:transport.hotel')}${hotelAddress}${distancePart}${feePart}`;
         }
 
-        return 'Transport: non renseigné';
+        return t('booking:transport.notSpecified');
     };
 
     const isBadalReservation = (reservation: any) => {
@@ -183,12 +184,12 @@ export default function GuideDashboardScreen() {
 
     return (
         <View className="flex-1 bg-gray-50 dark:bg-zinc-900">
-            <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+            <StatusBar barStyle="light-content" />
             <SafeAreaView className="flex-1" edges={['top']}>
                 <View className="px-6 pt-4 pb-4 border-b border-gray-100 dark:border-white/5 flex-row justify-between items-start">
                     <View>
                         <Text className="text-2xl font-serif font-medium text-gray-900 dark:text-white">
-                            Espace Guide
+                            {t('guideSpace')}
                         </Text>
                         <Text className="text-gray-500 dark:text-gray-400 text-sm mt-1">
                             {viewSubtitles[activeView]}
@@ -198,7 +199,7 @@ export default function GuideDashboardScreen() {
 
                 <View className="mx-6 mt-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5">
                     <Text className="text-amber-200 text-xs">
-                        Rappel conformité: votre compte guide est strictement personnel, sans prêt ni délégation.
+                        {t('complianceReminder')}
                     </Text>
                 </View>
 
@@ -209,12 +210,12 @@ export default function GuideDashboardScreen() {
                     style={{ maxHeight: 48 }}
                     contentContainerStyle={{ gap: 8, paddingRight: 24, alignItems: 'center' }}
                 >
-                    {GUIDE_DASHBOARD_FILTERS.map((filter) => {
-                        const isActive = activeView === filter.value;
+                    {GUIDE_DASHBOARD_VIEWS.map((view) => {
+                        const isActive = activeView === view;
                         return (
                             <TouchableOpacity
-                                key={filter.value}
-                                onPress={() => setActiveView(filter.value)}
+                                key={view}
+                                onPress={() => setActiveView(view)}
                                 className={`h-10 px-4 rounded-full border justify-center shrink-0 ${isActive
                                     ? 'bg-[#b39164] border-[#b39164]'
                                     : 'bg-transparent border-gray-300 dark:border-white/15'}`}
@@ -223,7 +224,7 @@ export default function GuideDashboardScreen() {
                                     numberOfLines={1}
                                     className={`text-xs font-semibold ${isActive ? 'text-white' : 'text-gray-600 dark:text-gray-300'}`}
                                 >
-                                    {filter.label}
+                                    {filterLabels[view]}
                                 </Text>
                             </TouchableOpacity>
                         );
@@ -236,7 +237,7 @@ export default function GuideDashboardScreen() {
                             <View className="gap-3 mb-8">
                                 {upcomingVisits.length === 0 ? (
                                     <View className="items-center justify-center py-8 bg-white dark:bg-zinc-800 rounded-xl border border-dashed border-gray-200 dark:border-zinc-700">
-                                        <Text className="text-gray-400 text-sm">Aucune visite prevue pour le moment.</Text>
+                                        <Text className="text-gray-400 text-sm">{t('noUpcomingVisits')}</Text>
                                     </View>
                                 ) : (
                                     upcomingVisits.map((visit) => (
@@ -255,7 +256,7 @@ export default function GuideDashboardScreen() {
                                                         <Text className="text-gray-500 dark:text-gray-400 text-xs mt-0.5">{visit.serviceName} - {visit.date}</Text>
                                                         <View className="flex-row items-center mt-1">
                                                             <MapPin size={10} color="#9CA3AF" />
-                                                            <Text className="text-gray-400 text-[10px] ml-1">{visit.location || 'Lieu a definir'}</Text>
+                                                            <Text className="text-gray-400 text-[10px] ml-1">{visit.location || t('common:locationTbd')}</Text>
                                                         </View>
                                                         <Text className="text-gray-400 text-[10px] mt-1" numberOfLines={2}>
                                                             {transportSummary(visit)}
@@ -266,7 +267,7 @@ export default function GuideDashboardScreen() {
                                                     <Text className="text-gray-900 dark:text-white font-bold">{visit.time}</Text>
                                                     <View className={`px-2 py-0.5 rounded-full mt-1 ${isWaitingStartConfirmation ? 'bg-amber-500/20' : 'bg-green-500/20'}`}>
                                                         <Text className={`text-[10px] font-medium ${isWaitingStartConfirmation ? 'text-amber-600' : 'text-green-600'}`}>
-                                                            {isWaitingStartConfirmation ? 'Debut en attente' : 'Confirmee'}
+                                                            {isWaitingStartConfirmation ? t('waitingStartConfirmation') : t('confirmedStatus')}
                                                         </Text>
                                                     </View>
                                                 </View>
@@ -276,7 +277,7 @@ export default function GuideDashboardScreen() {
                                                 {isWaitingStartConfirmation ? (
                                                     <View className="bg-amber-100 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 py-3 rounded-lg items-center">
                                                         <Text className="text-amber-700 dark:text-amber-300 font-semibold text-sm">
-                                                            En attente de confirmation de debut par le pelerin
+                                                            {t('waitingPilgrimStart')}
                                                         </Text>
                                                     </View>
                                                 ) : (
@@ -284,7 +285,7 @@ export default function GuideDashboardScreen() {
                                                         className="bg-[#b39164] py-3 rounded-lg items-center"
                                                         onPress={() => openActionConfirmation('start', visit)}
                                                     >
-                                                        <Text className="text-white font-semibold text-sm">Commencer la visite</Text>
+                                                        <Text className="text-white font-semibold text-sm">{t('startVisit')}</Text>
                                                     </TouchableOpacity>
                                                 )}
 
@@ -292,7 +293,7 @@ export default function GuideDashboardScreen() {
                                                     className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 py-3 rounded-lg items-center"
                                                     onPress={() => openActionConfirmation('cancel', visit)}
                                                 >
-                                                    <Text className="text-red-500 font-semibold text-sm">Annuler la prestation</Text>
+                                                    <Text className="text-red-500 font-semibold text-sm">{t('cancelService')}</Text>
                                                 </TouchableOpacity>
 
                                                 {isBadalReservation(visit) && (
@@ -300,7 +301,7 @@ export default function GuideDashboardScreen() {
                                                         className="bg-indigo-500/10 border border-indigo-500/20 py-3 rounded-lg items-center"
                                                         onPress={() => router.push(`/guide/proofs/${visit.id}` as any)}
                                                     >
-                                                        <Text className="text-indigo-500 font-semibold text-sm">Déposer les preuves Omra Badal</Text>
+                                                        <Text className="text-indigo-500 font-semibold text-sm">{t('submitBadalProofs')}</Text>
                                                     </TouchableOpacity>
                                                 )}
                                             </View>
@@ -319,7 +320,7 @@ export default function GuideDashboardScreen() {
                             <View className="gap-3 mb-8">
                                 {ongoingVisits.length === 0 ? (
                                     <View className="items-center justify-center py-8 bg-white dark:bg-zinc-800 rounded-xl border border-dashed border-gray-200 dark:border-zinc-700">
-                                        <Text className="text-gray-400 text-sm">Aucune visite en cours.</Text>
+                                        <Text className="text-gray-400 text-sm">{t('noOngoingVisits')}</Text>
                                     </View>
                                 ) : (
                                     ongoingVisits.map((visit) => (
@@ -338,7 +339,7 @@ export default function GuideDashboardScreen() {
                                                         <Text className="text-gray-500 dark:text-gray-400 text-xs mt-0.5">{visit.serviceName} - {visit.date}</Text>
                                                         <View className="flex-row items-center mt-1">
                                                             <MapPin size={10} color="#9CA3AF" />
-                                                            <Text className="text-gray-400 text-[10px] ml-1">{visit.location || 'Lieu a definir'}</Text>
+                                                            <Text className="text-gray-400 text-[10px] ml-1">{visit.location || t('common:locationTbd')}</Text>
                                                         </View>
                                                         <Text className="text-gray-400 text-[10px] mt-1" numberOfLines={2}>
                                                             {transportSummary(visit)}
@@ -349,7 +350,7 @@ export default function GuideDashboardScreen() {
                                                     <Text className="text-gray-900 dark:text-white font-bold">{visit.time}</Text>
                                                     <View className={`px-2 py-0.5 rounded-full mt-1 ${isWaitingEndConfirmation ? 'bg-amber-500/20' : 'bg-blue-500/20'}`}>
                                                         <Text className={`text-[10px] font-medium ${isWaitingEndConfirmation ? 'text-amber-600' : 'text-blue-600'}`}>
-                                                            {isWaitingEndConfirmation ? 'Fin en attente' : 'En cours'}
+                                                            {isWaitingEndConfirmation ? t('waitingEndConfirmation') : t('inProgressStatus')}
                                                         </Text>
                                                     </View>
                                                 </View>
@@ -358,7 +359,7 @@ export default function GuideDashboardScreen() {
                                             {isWaitingEndConfirmation ? (
                                                 <View className="mt-4 bg-amber-100 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 py-3 rounded-lg items-center">
                                                     <Text className="text-amber-700 dark:text-amber-300 font-semibold text-sm">
-                                                        En attente de confirmation de fin par le pelerin
+                                                        {t('waitingPilgrimEnd')}
                                                     </Text>
                                                 </View>
                                             ) : (
@@ -366,7 +367,7 @@ export default function GuideDashboardScreen() {
                                                     className="mt-4 bg-[#b39164] py-3 rounded-lg items-center"
                                                     onPress={() => openActionConfirmation('end', visit)}
                                                 >
-                                                    <Text className="text-white font-semibold text-sm">Terminer la visite</Text>
+                                                    <Text className="text-white font-semibold text-sm">{t('endVisit')}</Text>
                                                 </TouchableOpacity>
                                             )}
 
@@ -375,7 +376,7 @@ export default function GuideDashboardScreen() {
                                                     className="mt-2 bg-indigo-500/10 border border-indigo-500/20 py-3 rounded-lg items-center"
                                                     onPress={() => router.push(`/guide/proofs/${visit.id}` as any)}
                                                 >
-                                                    <Text className="text-indigo-500 font-semibold text-sm">Déposer les preuves Omra Badal</Text>
+                                                    <Text className="text-indigo-500 font-semibold text-sm">{t('submitBadalProofs')}</Text>
                                                 </TouchableOpacity>
                                             )}
                                                     </>
@@ -392,7 +393,7 @@ export default function GuideDashboardScreen() {
                         <>
                             {requests.length === 0 ? (
                                 <View className="items-center justify-center py-8 bg-white dark:bg-zinc-800 rounded-xl border border-dashed border-gray-200 dark:border-zinc-700">
-                                    <Text className="text-gray-400 text-sm">Aucune demande en attente</Text>
+                                    <Text className="text-gray-400 text-sm">{t('noRequests')}</Text>
                                 </View>
                             ) : (
                                 <View className="gap-3 mb-24">
@@ -425,7 +426,7 @@ export default function GuideDashboardScreen() {
                                                     onPress={() => handleRefuse(req.id, req.pilgrimName)}
                                                 >
                                                     <X size={16} color="#ef4444" className="mr-2" />
-                                                    <Text className="text-red-500 font-medium text-sm">Refuser</Text>
+                                                    <Text className="text-red-500 font-medium text-sm">{t('refuse')}</Text>
                                                 </TouchableOpacity>
 
                                                 <TouchableOpacity
@@ -433,7 +434,7 @@ export default function GuideDashboardScreen() {
                                                     onPress={() => handleAccept(req.id, req.pilgrimName)}
                                                 >
                                                     <Check size={16} color="#22c55e" className="mr-2" />
-                                                    <Text className="text-green-600 font-medium text-sm">Accepter</Text>
+                                                    <Text className="text-green-600 font-medium text-sm">{t('accept')}</Text>
                                                 </TouchableOpacity>
                                             </View>
                                         </View>
@@ -447,7 +448,7 @@ export default function GuideDashboardScreen() {
                         <>
                             {completedVisits.length === 0 ? (
                                 <View className="items-center justify-center py-8 bg-white dark:bg-zinc-800 rounded-xl border border-dashed border-gray-200 dark:border-zinc-700">
-                                    <Text className="text-gray-400 text-sm">Aucune prestation terminée.</Text>
+                                    <Text className="text-gray-400 text-sm">{t('noCompletedVisits')}</Text>
                                 </View>
                             ) : (
                                 <View className="gap-3 mb-24">
@@ -464,7 +465,7 @@ export default function GuideDashboardScreen() {
                                                         <Text className="text-gray-500 dark:text-gray-400 text-xs">{reservation.date} a {reservation.time}</Text>
                                                         <View className="flex-row items-center mt-1">
                                                             <MapPin size={10} color="#9CA3AF" />
-                                                            <Text className="text-gray-400 text-[10px] ml-1">{reservation.location || 'Lieu a definir'}</Text>
+                                                            <Text className="text-gray-400 text-[10px] ml-1">{reservation.location || t('common:locationTbd')}</Text>
                                                         </View>
                                                         <Text className="text-gray-400 dark:text-gray-500 text-[10px] mt-1" numberOfLines={2}>
                                                             {transportSummary(reservation)}
@@ -472,7 +473,7 @@ export default function GuideDashboardScreen() {
                                                     </View>
                                                 </View>
                                                 <View className="bg-blue-500/10 border border-blue-500/20 px-2 py-1 rounded-full ml-3">
-                                                    <Text className="text-blue-500 text-xs font-semibold">Terminée</Text>
+                                                    <Text className="text-blue-500 text-xs font-semibold">{t('completedStatus')}</Text>
                                                 </View>
                                             </View>
                                             {isBadalReservation(reservation) && (
@@ -480,7 +481,7 @@ export default function GuideDashboardScreen() {
                                                     className="mt-3 bg-indigo-500/10 border border-indigo-500/20 py-2.5 rounded-lg items-center"
                                                     onPress={() => router.push(`/guide/proofs/${reservation.id}` as any)}
                                                 >
-                                                    <Text className="text-indigo-500 font-semibold text-xs">Voir / mettre à jour les preuves Omra Badal</Text>
+                                                    <Text className="text-indigo-500 font-semibold text-xs">{t('viewUpdateBadalProofs')}</Text>
                                                 </TouchableOpacity>
                                             )}
                                         </View>
@@ -494,7 +495,7 @@ export default function GuideDashboardScreen() {
                         <>
                             {cancelledReservations.length === 0 ? (
                                 <View className="items-center justify-center py-8 bg-white dark:bg-zinc-800 rounded-xl border border-dashed border-gray-200 dark:border-zinc-700">
-                                    <Text className="text-gray-400 text-sm">Aucune prestation annulée.</Text>
+                                    <Text className="text-gray-400 text-sm">{t('noCancelledVisits')}</Text>
                                 </View>
                             ) : (
                                 <View className="gap-3 mb-24">
@@ -511,7 +512,7 @@ export default function GuideDashboardScreen() {
                                                         <Text className="text-gray-500 dark:text-gray-400 text-xs">{reservation.date} a {reservation.time}</Text>
                                                         <View className="flex-row items-center mt-1">
                                                             <MapPin size={10} color="#9CA3AF" />
-                                                            <Text className="text-gray-400 text-[10px] ml-1">{reservation.location || 'Lieu a definir'}</Text>
+                                                            <Text className="text-gray-400 text-[10px] ml-1">{reservation.location || t('common:locationTbd')}</Text>
                                                         </View>
                                                         <Text className="text-gray-400 dark:text-gray-500 text-[10px] mt-1" numberOfLines={2}>
                                                             {transportSummary(reservation)}
@@ -519,7 +520,7 @@ export default function GuideDashboardScreen() {
                                                     </View>
                                                 </View>
                                                 <View className="bg-red-500/10 border border-red-500/20 px-2 py-1 rounded-full ml-3">
-                                                    <Text className="text-red-500 text-xs font-semibold">Annulée</Text>
+                                                    <Text className="text-red-500 text-xs font-semibold">{t('cancelledStatus')}</Text>
                                                 </View>
                                             </View>
                                         </View>
@@ -535,24 +536,24 @@ export default function GuideDashboardScreen() {
                 visible={!!pendingAction}
                 title={
                     pendingAction?.type === 'start'
-                        ? 'Confirmation de debut'
+                        ? t('slideConfirmStart.title')
                         : pendingAction?.type === 'end'
-                            ? 'Confirmation de fin'
-                            : 'Confirmation d’annulation'
+                            ? t('slideConfirmEnd.title')
+                            : t('slideConfirmCancel.title')
                 }
                 message={
                     pendingAction?.type === 'start'
-                        ? 'Est-ce que vous etes sur de vouloir commencer la visite maintenant ?'
+                        ? t('slideConfirmStart.message')
                         : pendingAction?.type === 'end'
-                            ? 'Est-ce que vous etes sur de vouloir terminer la visite maintenant ?'
-                            : 'Est-ce que vous etes sur de vouloir annuler cette prestation ?'
+                            ? t('slideConfirmEnd.message')
+                            : t('slideConfirmCancel.message')
                 }
                 sliderLabel={
                     pendingAction?.type === 'start'
-                        ? 'Glissez pour confirmer le debut'
+                        ? t('slideConfirmStart.slider')
                         : pendingAction?.type === 'end'
-                            ? 'Glissez pour confirmer la fin'
-                            : 'Glissez pour confirmer l’annulation'
+                            ? t('slideConfirmEnd.slider')
+                            : t('slideConfirmCancel.slider')
                 }
                 isProcessing={isActionSubmitting}
                 onClose={closeActionConfirmation}

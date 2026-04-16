@@ -1051,7 +1051,7 @@ export const updateAdminReservationStatus = async (reservationId: string, status
 
         if (reservationError) throw reservationError;
 
-        const commissionRate = PLATFORM_COMMISSION_RATE;
+        const commissionRate = asNumber((reservation as any)?.commission_rate) || PLATFORM_COMMISSION_RATE;
         const rawCommissionable = (reservation as any)?.commissionable_net_amount;
         const finance = computeReservationFinance({
             totalPriceEur: asNumber(reservation?.total_price),

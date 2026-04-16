@@ -7,10 +7,12 @@ export type ServicePriceCode =
   | 'OMRA_GROUPE_RAMADAN'
   | 'BADAL_HORS'
   | 'BADAL_RAMADAN'
+  | 'PMR_HORS'
+  | 'PMR_RAMADAN'
   | 'VISITE_MAKKAH'
   | 'VISITE_MEDINE';
 
-export const PRICE_ID_BY_SERVICE_CODE: Record<ServicePriceCode, string> = {
+export const PRICE_ID_BY_SERVICE_CODE: Partial<Record<ServicePriceCode, string>> = {
   OMRA_SOLO_HORS: 'price_1TAHzVL9j73enH7JJSyr6PEF',
   OMRA_FAMILLE_HORS: 'price_1TAI2qL9j73enH7J2AQzHfu7',
   OMRA_GROUPE_HORS: 'price_1TAI3ML9j73enH7JhgMwRul0',
@@ -38,6 +40,7 @@ export const resolveServicePriceCode = (params: {
   const location = normalizeText(params.location);
 
   const isBadal = text.includes('badal');
+  const isPmr = text.includes('pmr') || text.includes('mobilite reduite') || text.includes('pousseur');
   const isRamadan = text.includes('ramadan');
   const isVisite = text.includes('visite');
   const isOmra = text.includes('omra');
@@ -47,6 +50,10 @@ export const resolveServicePriceCode = (params: {
 
   if (isBadal) {
     return isRamadan ? 'BADAL_RAMADAN' : 'BADAL_HORS';
+  }
+
+  if (isPmr) {
+    return isRamadan ? 'PMR_RAMADAN' : 'PMR_HORS';
   }
 
   if (isVisite) {
@@ -78,4 +85,3 @@ export const resolveStripePriceIdForService = (params: {
     priceId: PRICE_ID_BY_SERVICE_CODE[code],
   };
 };
-

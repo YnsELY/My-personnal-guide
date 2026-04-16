@@ -2,6 +2,8 @@ import { GUIDES } from '@/constants/data';
 import { getServiceImageForLocation } from '@/constants/serviceLocationImages';
 import { getFixedServiceDescription } from '@/constants/serviceDescriptions';
 import { type AvatarPresetId, resolveProfileAvatarSource, toAvatarPresetUrl } from '@/lib/avatar';
+import { resolveFixedGuideNetEurForService } from '@/lib/guideTariffs';
+import { sendBookingNotifications } from '@/lib/notifications';
 import {
     computeReservationFinance as computeReservationFinanceShared,
     PLATFORM_COMMISSION_RATE,
@@ -662,8 +664,13 @@ export const getServices = async () => {
     if (error) throw error;
 
     const services = data.map((s: any) => {
-        const guideNetBasePriceEur = toNumber(s.price_override);
-        const pilgrimDisplayPriceEur = guideNetBasePriceEur;
+        const pilgrimDisplayPriceEur = toNumber(s.price_override);
+        const guideNetBasePriceEur = resolveFixedGuideNetEurForService({
+            title: s.title,
+            category: s.category,
+            location: s.location,
+            serviceBasePriceEur: pilgrimDisplayPriceEur,
+        }) ?? pilgrimDisplayPriceEur;
 
         return {
         id: s.id,
@@ -702,8 +709,13 @@ export const getPublicGuideServices = async (guideId: string) => {
     if (error) throw error;
 
     return (data || []).map((s: any) => {
-        const guideNetBasePriceEur = toNumber(s.price_override);
-        const pilgrimDisplayPriceEur = guideNetBasePriceEur;
+        const pilgrimDisplayPriceEur = toNumber(s.price_override);
+        const guideNetBasePriceEur = resolveFixedGuideNetEurForService({
+            title: s.title,
+            category: s.category,
+            location: s.location,
+            serviceBasePriceEur: pilgrimDisplayPriceEur,
+        }) ?? pilgrimDisplayPriceEur;
 
         return {
             id: s.id,
@@ -738,18 +750,28 @@ export const getGuideServices = async (guideId: string) => {
 
     if (error) throw error;
 
-    return data.map((s: any) => ({
-        id: s.id,
-        title: s.title,
-        category: s.category,
-        price: s.price_override,
-        status: s.service_status || 'active',
-        meetingPoints: s.meeting_points || [],
-        location: s.location || null,
-        imageUrl: s.image_url || null,
-        availabilityStart: s.availability_start || null,
-        availabilityEnd: s.availability_end || null,
-    }));
+    return data.map((s: any) => {
+        const price = toNumber(s.price_override);
+        const guideNetBasePriceEur = resolveFixedGuideNetEurForService({
+            title: s.title,
+            category: s.category,
+            location: s.location,
+            serviceBasePriceEur: price,
+        }) ?? price;
+        return {
+            id: s.id,
+            title: s.title,
+            category: s.category,
+            price,
+            guideNetBasePriceEur,
+            status: s.service_status || 'active',
+            meetingPoints: s.meeting_points || [],
+            location: s.location || null,
+            imageUrl: s.image_url || null,
+            availabilityStart: s.availability_start || null,
+            availabilityEnd: s.availability_end || null,
+        };
+    });
 };
 
 export const getGuideById = async (id: string) => {
@@ -862,6 +884,20 @@ export const createReservation = async (reservationData: any, options?: { useWal
         .single();
 
     if (error) throw error;
+
+    // Send push notifications to the guide and all admins (fire-and-forget)
+    const pilgrimProfile = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', userId)
+        .single();
+    const pilgrimName = pilgrimProfile.data?.full_name || 'Un pèlerin';
+    sendBookingNotifications({
+        guideId: reservationData.guideId,
+        pilgrimName,
+        serviceName: reservationData.serviceName,
+    }).catch(() => undefined);
+
     return data;
 };
 
@@ -1031,7 +1067,7 @@ export const updateReservationStatus = async (id: string, status: string) => {
 
         if (reservationError) throw reservationError;
 
-        const commissionRate = PLATFORM_COMMISSION_RATE;
+        const commissionRate = toNumber((reservation as any)?.commission_rate) || PLATFORM_COMMISSION_RATE;
         const rawCommissionable = (reservation as any)?.commissionable_net_amount;
         const finance = computeReservationFinanceShared({
             totalPriceEur: toNumber(reservation?.total_price),
@@ -1526,8 +1562,13 @@ export const getServiceById = async (serviceId: string) => {
 
     if (error) throw error;
 
-    const guideNetBasePriceEur = toNumber(data.price_override);
-    const pilgrimDisplayPriceEur = guideNetBasePriceEur;
+    const pilgrimDisplayPriceEur = toNumber(data.price_override);
+    const guideNetBasePriceEur = resolveFixedGuideNetEurForService({
+        title: data.title,
+        category: data.category,
+        location: data.location,
+        serviceBasePriceEur: pilgrimDisplayPriceEur,
+    }) ?? pilgrimDisplayPriceEur;
 
     return {
         id: data.id,

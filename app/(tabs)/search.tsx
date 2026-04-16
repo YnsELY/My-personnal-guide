@@ -1,10 +1,13 @@
 import { FilterModal, FilterState } from '@/components/FilterModal';
 import { ServiceGridCard } from '@/components/ServiceGridCard';
 import { CATEGORIES } from '@/constants/data';
-import { getServices } from '@/lib/api'; // Changed import
+import { useLanguage } from '@/context/LanguageContext';
+import { directionStyle, endSpacing, rowStyle, textStart } from '@/lib/rtl';
+import { getCurrentProfile, getServices } from '@/lib/api'; // Changed import
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Accessibility, Calendar, Car, Heart, Map as MapIcon, Search as SearchIcon, SlidersHorizontal, Users, X } from 'lucide-react-native';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ScrollView, StatusBar, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -17,6 +20,8 @@ const iconMap: { [key: string]: any } = {
 };
 
 export default function SearchScreen() {
+  const { t } = useTranslation('booking');
+  const { language, isRTL } = useLanguage();
   const router = useRouter();
   const { startDate, endDate } = useLocalSearchParams();
   const selectedStartDate = Array.isArray(startDate) ? startDate[0] : startDate;
@@ -34,9 +39,15 @@ export default function SearchScreen() {
   });
 
   const [services, setServices] = useState<any[]>([]);
+  const [currentProfile, setCurrentProfile] = useState<any | null>(null);
 
   React.useEffect(() => {
-    getServices().then(setServices).catch(console.error);
+    Promise.all([getServices(), getCurrentProfile()])
+      .then(([serviceRows, profile]) => {
+        setServices(serviceRows);
+        setCurrentProfile(profile);
+      })
+      .catch(console.error);
   }, []);
 
   // Filter Logic
@@ -97,58 +108,81 @@ export default function SearchScreen() {
     return matchesSearch && matchesCategory && matchesCity && matchesLanguage && matchesPrice && matchesDate;
   });
 
+  const visibleServices = filteredServices
+    .filter((service) => {
+      if (currentProfile?.role === 'pilgrim' && currentProfile?.gender === 'male') {
+        return service.guideGender !== 'female';
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      if (currentProfile?.gender === 'female') {
+        const aFemaleGuide = a.guideGender === 'female';
+        const bFemaleGuide = b.guideGender === 'female';
+        if (aFemaleGuide && !bFemaleGuide) return -1;
+        if (!aFemaleGuide && bFemaleGuide) return 1;
+      }
+      return 0;
+    });
+
   // Date Formatting Helper
   const formatDateDisplay = () => {
     if (!startDate || !endDate) return null;
 
     const start = new Date(Number(startDate));
     const end = new Date(Number(endDate));
+    const locale = language === 'ar' ? 'ar-SA' : 'fr-FR';
 
     // Check if valid dates
     if (isNaN(start.getTime()) || isNaN(end.getTime())) {
       // Fallback for legacy simple numbers if necessary (or just return raw)
-      return `Du ${startDate} au ${endDate} janvier 2026`;
+      return t('dateRangeFromTo', { start: startDate, end: endDate });
     }
 
     if (startDate === endDate) {
-      return `Le ${start.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+      return t('dateRangeOn', { date: start.toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' }) });
     }
 
-    return `Du ${start.toLocaleDateString('fr-FR', { day: 'numeric' })} au ${end.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+    return t('dateRangeFromTo', {
+      start: start.toLocaleDateString(locale, { day: 'numeric' }),
+      end: end.toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' })
+    });
   };
 
   const formattedDateRange = formatDateDisplay();
 
   return (
-    <View className="flex-1 bg-gray-50 dark:bg-zinc-900">
+    <View className="flex-1 bg-gray-50 dark:bg-zinc-900" style={directionStyle(isRTL)}>
       <StatusBar barStyle="default" />
       <SafeAreaView className="flex-1" edges={['top']}>
         <View className="px-6 pb-2">
-          <Text className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Explorer</Text>
+          <Text className="text-2xl font-bold text-gray-900 dark:text-white mb-6" style={textStart(isRTL)}>{t('tabs:explore')}</Text>
 
           {/* Date Range Pill */}
           {formattedDateRange && (
             <TouchableOpacity
               className="flex-row items-center justify-center bg-[#b39164] py-2 px-4 rounded-full mb-6 self-center w-full"
+              style={rowStyle(isRTL)}
               onPress={() => router.push({ pathname: '/date-select', params: { startDate, endDate } })}
             >
               <Calendar color="white" size={18} className="mr-3" />
-              <Text className="text-white font-medium text-sm">
+              <Text className="text-white font-medium text-sm" style={textStart(isRTL)}>
                 {formattedDateRange}
               </Text>
             </TouchableOpacity>
           )}
 
           {/* Search Input */}
-          <View className="flex-row gap-3 mb-4">
-            <View className="flex-1 bg-white dark:bg-zinc-800 rounded-xl flex-row items-center px-4 py-3 border border-gray-200 dark:border-white/10 shadow-sm">
+          <View className="gap-3 mb-4" style={rowStyle(isRTL)}>
+            <View className="flex-1 bg-white dark:bg-zinc-800 rounded-xl flex-row items-center px-4 py-3 border border-gray-200 dark:border-white/10 shadow-sm" style={rowStyle(isRTL)}>
               <SearchIcon size={20} color="white" />
               <TextInput
-                className="flex-1 ml-3 text-gray-900 dark:text-white font-medium h-full"
-                placeholder="Nom, langue, ville..."
+                className="flex-1 text-gray-900 dark:text-white font-medium h-full"
+                placeholder={t('searchPlaceholder')}
                 placeholderTextColor="#9CA3AF"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
+                style={[endSpacing(12, isRTL), textStart(isRTL)]}
               />
               {searchQuery.length > 0 && (
                 <TouchableOpacity onPress={() => setSearchQuery('')}>
@@ -171,7 +205,7 @@ export default function SearchScreen() {
                 onPress={() => setSelectedCategory(null)}
                 className={`px-4 py-2 rounded-full border ${!selectedCategory ? 'bg-primary border-primary' : 'bg-white dark:bg-zinc-800 border-gray-200 dark:border-white/10'}`}
               >
-                <Text className={`font-medium ${!selectedCategory ? 'text-white' : 'text-gray-600 dark:text-gray-300'}`}>Tous</Text>
+                <Text className={`font-medium ${!selectedCategory ? 'text-white' : 'text-gray-600 dark:text-gray-300'}`}>{t('common:all')}</Text>
               </TouchableOpacity>
               {CATEGORIES.map((cat) => {
                 const IconComponent = iconMap[cat.icon];
@@ -180,8 +214,9 @@ export default function SearchScreen() {
                     key={cat.id}
                     onPress={() => setSelectedCategory(selectedCategory === cat.id ? null : cat.id)}
                     className={`px-4 py-2 rounded-full border flex-row items-center ${selectedCategory === cat.id ? 'bg-primary border-primary' : 'bg-white dark:bg-zinc-800 border-gray-200 dark:border-white/10'}`}
+                    style={rowStyle(isRTL)}
                   >
-                    {IconComponent && <IconComponent size={16} color={selectedCategory === cat.id ? 'white' : '#4B5563'} style={{ marginRight: 8 }} />}
+                    {IconComponent && <IconComponent size={16} color={selectedCategory === cat.id ? 'white' : '#4B5563'} style={endSpacing(8, isRTL)} />}
                     <Text className={`font-medium ${selectedCategory === cat.id ? 'text-white' : 'text-gray-600 dark:text-gray-300'}`}>{cat.name}</Text>
                   </TouchableOpacity>
                 )
@@ -192,14 +227,14 @@ export default function SearchScreen() {
 
         {/* Results */}
         <ScrollView className="flex-1 px-6" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100, paddingTop: 10 }}>
-          <View className="flex-row justify-between items-center mb-4">
-            <Text className="text-gray-900 dark:text-white font-bold text-lg">Résultats</Text>
-            <Text className="text-gray-500 dark:text-gray-400 text-sm">{filteredServices.length} services trouvés</Text>
+          <View className="flex-row justify-between items-center mb-4" style={rowStyle(isRTL)}>
+            <Text className="text-gray-900 dark:text-white font-bold text-lg" style={textStart(isRTL)}>{t('results')}</Text>
+            <Text className="text-gray-500 dark:text-gray-400 text-sm" style={textStart(isRTL)}>{t('servicesFound', { count: visibleServices.length })}</Text>
           </View>
 
           <View className="flex-row flex-wrap justify-between">
-            {filteredServices.length > 0 ? (
-              filteredServices.map((service) => (
+            {visibleServices.length > 0 ? (
+              visibleServices.map((service) => (
                 <ServiceGridCard
                   key={service.id}
                   service={{
@@ -212,7 +247,7 @@ export default function SearchScreen() {
             ) : (
               <View className="w-full items-center py-10 opacity-60">
                 <SearchIcon size={48} color="white" style={{ marginBottom: 16 }} />
-                <Text className="text-gray-500 text-center">Aucun service ne correspond à votre recherche.</Text>
+                <Text className="text-gray-500 text-center" style={textStart(isRTL)}>{t('noServicesMatch')}</Text>
               </View>
             )}
           </View>

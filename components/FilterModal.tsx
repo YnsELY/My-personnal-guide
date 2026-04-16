@@ -1,6 +1,7 @@
 import { BlurView } from 'expo-blur';
 import { X } from 'lucide-react-native';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Modal, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -18,11 +19,15 @@ interface FilterModalProps {
     initialFilters: FilterState;
 }
 
-const LANGUAGES = ['Français', 'Anglais', 'Arabe', 'Urdu', 'Indonésien'];
-const CITIES = ['La Mecque', 'Médine'];
+const LANGUAGE_KEYS = ['french', 'english', 'arabic', 'urdu', 'indonesian'] as const;
+const CITY_KEYS = ['laMecque', 'medine'] as const;
 
 export function FilterModal({ visible, onClose, onApply, initialFilters }: FilterModalProps) {
+    const { t } = useTranslation('booking');
     const [filters, setFilters] = useState<FilterState>(initialFilters);
+
+    const languages = LANGUAGE_KEYS.map(k => t(`filterLanguages.${k}`));
+    const cities = CITY_KEYS.map(k => t(k));
 
     const toggleLanguage = (lang: string) => {
         setFilters(prev => ({
@@ -55,7 +60,7 @@ export function FilterModal({ visible, onClose, onApply, initialFilters }: Filte
                     <SafeAreaView edges={['bottom']} className="flex-1 p-6">
 
                         <View className="flex-row justify-between items-center mb-6">
-                            <Text className="text-2xl font-serif font-bold text-white">Filtres</Text>
+                            <Text className="text-2xl font-serif font-bold text-white">{t('filters')}</Text>
                             <TouchableOpacity onPress={onClose} className="bg-zinc-800 p-2 rounded-full">
                                 <X size={20} color="white" />
                             </TouchableOpacity>
@@ -64,9 +69,9 @@ export function FilterModal({ visible, onClose, onApply, initialFilters }: Filte
                         <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
                             {/* City Section */}
                             <View className="mb-8">
-                                <Text className="text-white font-bold text-lg mb-4">Ville</Text>
+                                <Text className="text-white font-bold text-lg mb-4">{t('city')}</Text>
                                 <View className="flex-row gap-3 flex-wrap">
-                                    {CITIES.map(city => (
+                                    {cities.map(city => (
                                         <TouchableOpacity
                                             key={city}
                                             onPress={() => setFilters(prev => ({ ...prev, city: prev.city === city ? null : city }))}
@@ -80,9 +85,9 @@ export function FilterModal({ visible, onClose, onApply, initialFilters }: Filte
 
                             {/* Language Section */}
                             <View className="mb-8">
-                                <Text className="text-white font-bold text-lg mb-4">Langue parlée</Text>
+                                <Text className="text-white font-bold text-lg mb-4">{t('languages')}</Text>
                                 <View className="flex-row gap-3 flex-wrap">
-                                    {LANGUAGES.map(lang => (
+                                    {languages.map(lang => (
                                         <TouchableOpacity
                                             key={lang}
                                             onPress={() => toggleLanguage(lang)}
@@ -96,7 +101,7 @@ export function FilterModal({ visible, onClose, onApply, initialFilters }: Filte
 
                             {/* People Section */}
                             <View className="mb-8">
-                                <Text className="text-white font-bold text-lg mb-4">Nombre de personnes</Text>
+                                <Text className="text-white font-bold text-lg mb-4">{t('numberOfPeople')}</Text>
                                 <View className="flex-row gap-4 items-center bg-zinc-800 p-4 rounded-xl border border-white/5">
                                     <TouchableOpacity
                                         onPress={() => setFilters(prev => ({ ...prev, people: Math.max(1, prev.people - 1) }))}
@@ -104,7 +109,7 @@ export function FilterModal({ visible, onClose, onApply, initialFilters }: Filte
                                     >
                                         <Text className="text-xl font-bold text-white">-</Text>
                                     </TouchableOpacity>
-                                    <Text className="text-xl font-bold flex-1 text-center text-white">{filters.people} pers.</Text>
+                                    <Text className="text-xl font-bold flex-1 text-center text-white">{filters.people} {filters.people > 1 ? t('persons') : t('person')}</Text>
                                     <TouchableOpacity
                                         onPress={() => setFilters(prev => ({ ...prev, people: prev.people + 1 }))}
                                         className="bg-zinc-700 w-10 h-10 rounded-full items-center justify-center shadow-sm"
@@ -116,12 +121,12 @@ export function FilterModal({ visible, onClose, onApply, initialFilters }: Filte
 
                             {/* Price Section */}
                             <View className="mb-8">
-                                <Text className="text-white font-bold text-lg mb-4">Budget</Text>
+                                <Text className="text-white font-bold text-lg mb-4">{t('priceRange')}</Text>
                                 <View className="flex-row gap-3">
                                     {[
-                                        { id: 'budget', label: 'Éco' },
-                                        { id: 'standard', label: 'Standard' },
-                                        { id: 'premium', label: 'Premium' },
+                                        { id: 'budget', label: t('budget') },
+                                        { id: 'standard', label: t('standard') },
+                                        { id: 'premium', label: t('premium') },
                                     ].map((option) => (
                                         <TouchableOpacity
                                             key={option.id}
@@ -141,14 +146,14 @@ export function FilterModal({ visible, onClose, onApply, initialFilters }: Filte
                                 onPress={handleApply}
                                 className="bg-[#b39164] p-4 rounded-2xl items-center shadow-lg shadow-[#b39164]/20"
                             >
-                                <Text className="text-white font-bold text-lg">Appliquer les filtres</Text>
+                                <Text className="text-white font-bold text-lg">{t('applyFilters')}</Text>
                             </TouchableOpacity>
 
                             <TouchableOpacity
                                 onPress={() => setFilters({ languages: [], city: null, priceRange: null, people: 1 })}
                                 className="items-center mt-4"
                             >
-                                <Text className="text-zinc-500 font-medium">Réinitialiser</Text>
+                                <Text className="text-zinc-500 font-medium">{t('resetFilters')}</Text>
                             </TouchableOpacity>
                         </View>
                     </SafeAreaView>

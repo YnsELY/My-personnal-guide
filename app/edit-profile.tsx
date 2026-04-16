@@ -1,6 +1,7 @@
 import { useAuth } from '@/context/AuthContext';
 import { signIn as apiSignIn, updateCurrentEmail, updateCurrentPassword, updateCurrentProfile } from '@/lib/api';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { ChevronDown, ChevronLeft, Lock, Mail, User } from 'lucide-react-native';
 import { Stack } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -20,6 +21,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function EditProfileScreen() {
     const router = useRouter();
     const { user, profile, refreshProfile } = useAuth();
+    const { t } = useTranslation('profile');
 
     const [fullName, setFullName] = useState('');
     const [email, setEmail] = useState('');
@@ -54,12 +56,12 @@ export default function EditProfileScreen() {
 
     const handleSave = async () => {
         if (!fullName.trim()) {
-            Alert.alert('Erreur', 'Le nom complet est requis.');
+            Alert.alert(t('common:error'), t('nameRequired'));
             return;
         }
 
         if (!email.trim()) {
-            Alert.alert('Erreur', "L'email est requis.");
+            Alert.alert(t('common:error'), t('emailRequired'));
             return;
         }
 
@@ -68,26 +70,26 @@ export default function EditProfileScreen() {
             const m = parseInt(month);
             const y = parseInt(year);
             if (isNaN(d) || isNaN(m) || isNaN(y) || d < 1 || d > 31 || m < 1 || m > 12 || y < 1900 || y > new Date().getFullYear()) {
-                Alert.alert('Erreur', 'Date de naissance invalide.');
+                Alert.alert(t('common:error'), t('invalidDate'));
                 return;
             }
         }
 
         if (newPassword || oldPassword || confirmPassword) {
             if (!oldPassword) {
-                Alert.alert('Erreur', 'Veuillez saisir votre ancien mot de passe.');
+                Alert.alert(t('common:error'), t('oldPasswordRequired'));
                 return;
             }
             if (!newPassword) {
-                Alert.alert('Erreur', 'Veuillez saisir le nouveau mot de passe.');
+                Alert.alert(t('common:error'), t('newPasswordRequired'));
                 return;
             }
             if (newPassword.length < 6) {
-                Alert.alert('Erreur', 'Le nouveau mot de passe doit contenir au moins 6 caractères.');
+                Alert.alert(t('common:error'), t('passwordMinLength'));
                 return;
             }
             if (newPassword !== confirmPassword) {
-                Alert.alert('Erreur', 'Le nouveau mot de passe et sa confirmation ne correspondent pas.');
+                Alert.alert(t('common:error'), t('passwordMismatch'));
                 return;
             }
         }
@@ -117,18 +119,18 @@ export default function EditProfileScreen() {
                 try {
                     await apiSignIn(user!.email, oldPassword);
                 } catch {
-                    throw new Error('Ancien mot de passe incorrect.');
+                    throw new Error(t('oldPasswordIncorrect'));
                 }
                 await updateCurrentPassword(newPassword.trim());
             }
 
             await refreshProfile();
 
-            Alert.alert('Succès', 'Vos informations ont été mises à jour.', [
+            Alert.alert(t('common:success'), t('updateSuccess'), [
                 { text: 'OK', onPress: () => router.back() },
             ]);
         } catch (error: any) {
-            Alert.alert('Erreur', error?.message || 'Impossible de mettre à jour vos informations.');
+            Alert.alert(t('common:error'), error?.message || t('updateError'));
         } finally {
             setLoading(false);
         }
@@ -137,7 +139,7 @@ export default function EditProfileScreen() {
     return (
         <View className="flex-1 bg-gray-50 dark:bg-zinc-900">
             <Stack.Screen options={{ headerShown: false }} />
-            <StatusBar barStyle="dark-content" />
+            <StatusBar barStyle="light-content" />
             <SafeAreaView className="flex-1">
                 <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
 
@@ -146,19 +148,19 @@ export default function EditProfileScreen() {
                         <TouchableOpacity onPress={() => router.back()} className="mr-4 p-1">
                             <ChevronLeft size={24} color="#b39164" />
                         </TouchableOpacity>
-                        <Text className="text-gray-900 dark:text-white text-lg font-bold flex-1">Modifier mes informations</Text>
+                        <Text className="text-gray-900 dark:text-white text-lg font-bold flex-1">{t('editInfo')}</Text>
                     </View>
 
                     <ScrollView className="flex-1 px-5 pt-6" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
                         <View className="gap-5">
                             {/* Nom complet */}
                             <View>
-                                <Text className="text-gray-500 dark:text-gray-400 mb-2 font-medium">Nom complet</Text>
+                                <Text className="text-gray-500 dark:text-gray-400 mb-2 font-medium">{t('fullName')}</Text>
                                 <View className="flex-row items-center bg-white dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3">
                                     <User size={20} color="#9CA3AF" />
                                     <TextInput
                                         className="flex-1 ml-3 text-gray-900 dark:text-white"
-                                        placeholder="Votre nom"
+                                        placeholder={t('fullNamePlaceholder')}
                                         placeholderTextColor="#9CA3AF"
                                         value={fullName}
                                         onChangeText={setFullName}
@@ -168,7 +170,7 @@ export default function EditProfileScreen() {
 
                             {/* Email */}
                             <View>
-                                <Text className="text-gray-500 dark:text-gray-400 mb-2 font-medium">Email</Text>
+                                <Text className="text-gray-500 dark:text-gray-400 mb-2 font-medium">{t('email')}</Text>
                                 <View className="flex-row items-center bg-white dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3">
                                     <Mail size={20} color="#9CA3AF" />
                                     <TextInput
@@ -185,14 +187,14 @@ export default function EditProfileScreen() {
 
                             {/* Mot de passe */}
                             <View className="gap-3">
-                                <Text className="text-gray-500 dark:text-gray-400 font-medium">Changer le mot de passe</Text>
-                                <Text className="text-gray-400 dark:text-gray-500 text-xs -mt-2">Laissez vide pour ne pas le modifier</Text>
+                                <Text className="text-gray-500 dark:text-gray-400 font-medium">{t('changePassword')}</Text>
+                                <Text className="text-gray-400 dark:text-gray-500 text-xs -mt-2">{t('leaveEmptyPassword')}</Text>
 
                                 <View className="flex-row items-center bg-white dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3">
                                     <Lock size={20} color="#9CA3AF" />
                                     <TextInput
                                         className="flex-1 ml-3 text-gray-900 dark:text-white"
-                                        placeholder="Ancien mot de passe"
+                                        placeholder={t('oldPassword')}
                                         placeholderTextColor="#9CA3AF"
                                         value={oldPassword}
                                         onChangeText={setOldPassword}
@@ -204,7 +206,7 @@ export default function EditProfileScreen() {
                                     <Lock size={20} color="#9CA3AF" />
                                     <TextInput
                                         className="flex-1 ml-3 text-gray-900 dark:text-white"
-                                        placeholder="Nouveau mot de passe"
+                                        placeholder={t('newPassword')}
                                         placeholderTextColor="#9CA3AF"
                                         value={newPassword}
                                         onChangeText={setNewPassword}
@@ -216,7 +218,7 @@ export default function EditProfileScreen() {
                                     <Lock size={20} color="#9CA3AF" />
                                     <TextInput
                                         className="flex-1 ml-3 text-gray-900 dark:text-white"
-                                        placeholder="Confirmer le nouveau mot de passe"
+                                        placeholder={t('confirmPassword')}
                                         placeholderTextColor="#9CA3AF"
                                         value={confirmPassword}
                                         onChangeText={setConfirmPassword}
@@ -227,13 +229,13 @@ export default function EditProfileScreen() {
 
                             {/* Genre */}
                             <View className="z-50">
-                                <Text className="text-gray-500 dark:text-gray-400 mb-2 font-medium">Genre</Text>
+                                <Text className="text-gray-500 dark:text-gray-400 mb-2 font-medium">{t('gender')}</Text>
                                 <TouchableOpacity
                                     onPress={() => { setOpenGender(!openGender); setOpenLanguage(false); }}
                                     className="flex-row justify-between items-center bg-white dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3"
                                 >
                                     <Text className="text-gray-900 dark:text-white">
-                                        {gender === 'male' ? 'Homme' : 'Femme'}
+                                        {gender === 'male' ? t('common:male') : t('common:female')}
                                     </Text>
                                     <ChevronDown size={20} color="#9CA3AF" />
                                 </TouchableOpacity>
@@ -243,13 +245,13 @@ export default function EditProfileScreen() {
                                             onPress={() => { setGender('male'); setOpenGender(false); }}
                                             className="px-4 py-3 border-b border-gray-100 dark:border-white/5 active:bg-gray-50 dark:active:bg-zinc-700"
                                         >
-                                            <Text className="text-gray-900 dark:text-white">Homme</Text>
+                                            <Text className="text-gray-900 dark:text-white">{t('common:male')}</Text>
                                         </TouchableOpacity>
                                         <TouchableOpacity
                                             onPress={() => { setGender('female'); setOpenGender(false); }}
                                             className="px-4 py-3 active:bg-gray-50 dark:active:bg-zinc-700"
                                         >
-                                            <Text className="text-gray-900 dark:text-white">Femme</Text>
+                                            <Text className="text-gray-900 dark:text-white">{t('common:female')}</Text>
                                         </TouchableOpacity>
                                     </View>
                                 )}
@@ -257,7 +259,7 @@ export default function EditProfileScreen() {
 
                             {/* Date de naissance */}
                             <View>
-                                <Text className="text-gray-500 dark:text-gray-400 mb-2 font-medium">Date de naissance</Text>
+                                <Text className="text-gray-500 dark:text-gray-400 mb-2 font-medium">{t('dateOfBirth')}</Text>
                                 <View className="flex-row gap-2">
                                     <View className="flex-1 flex-row items-center bg-white dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3">
                                         <TextInput
@@ -297,7 +299,7 @@ export default function EditProfileScreen() {
 
                             {/* Langue */}
                             <View className="z-40">
-                                <Text className="text-gray-500 dark:text-gray-400 mb-2 font-medium">Langue préférée</Text>
+                                <Text className="text-gray-500 dark:text-gray-400 mb-2 font-medium">{t('preferredLanguage')}</Text>
                                 <TouchableOpacity
                                     onPress={() => { setOpenLanguage(!openLanguage); setOpenGender(false); }}
                                     className="flex-row justify-between items-center bg-white dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3"
@@ -305,7 +307,7 @@ export default function EditProfileScreen() {
                                     <View className="flex-row items-center gap-2">
                                         <Text className="text-lg">{language === 'fr' ? '🇫🇷' : '🇸🇦'}</Text>
                                         <Text className="text-gray-900 dark:text-white">
-                                            {language === 'fr' ? 'Français' : 'Arabe'}
+                                            {language === 'fr' ? t('common:french') : t('common:arabic')}
                                         </Text>
                                     </View>
                                     <ChevronDown size={20} color="#9CA3AF" />
@@ -317,14 +319,14 @@ export default function EditProfileScreen() {
                                             className="px-4 py-3 border-b border-gray-100 dark:border-white/5 active:bg-gray-50 dark:active:bg-zinc-700 flex-row items-center gap-2"
                                         >
                                             <Text className="text-lg">🇫🇷</Text>
-                                            <Text className="text-gray-900 dark:text-white">Français</Text>
+                                            <Text className="text-gray-900 dark:text-white">{t('common:french')}</Text>
                                         </TouchableOpacity>
                                         <TouchableOpacity
                                             onPress={() => { setLanguage('ar'); setOpenLanguage(false); }}
                                             className="px-4 py-3 active:bg-gray-50 dark:active:bg-zinc-700 flex-row items-center gap-2"
                                         >
                                             <Text className="text-lg">🇸🇦</Text>
-                                            <Text className="text-gray-900 dark:text-white">Arabe</Text>
+                                            <Text className="text-gray-900 dark:text-white">{t('common:arabic')}</Text>
                                         </TouchableOpacity>
                                     </View>
                                 )}
@@ -337,7 +339,7 @@ export default function EditProfileScreen() {
                                 className={`bg-[#b39164] py-4 rounded-xl items-center shadow-lg shadow-[#b39164]/20 mt-4 active:bg-[#a08055] ${loading ? 'opacity-70' : ''}`}
                             >
                                 <Text className="text-white font-bold text-lg">
-                                    {loading ? 'Enregistrement...' : 'Enregistrer les modifications'}
+                                    {loading ? t('saving') : t('saveChanges')}
                                 </Text>
                             </TouchableOpacity>
                         </View>

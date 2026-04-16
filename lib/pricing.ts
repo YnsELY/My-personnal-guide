@@ -13,11 +13,15 @@ const normalizeRate = (value: any) => Math.max(0, Math.min(1, toNumber(value)));
 
 export const toSar = (eurAmount: number) => roundMoney(normalizeMoney(eurAmount) * EUR_TO_SAR_RATE);
 
+import i18n from '@/lib/i18n';
+
+const getLocale = () => i18n.language === 'ar' ? 'ar-SA' : 'fr-FR';
+
 export const formatEUR = (value: number) =>
-    new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(normalizeMoney(value));
+    new Intl.NumberFormat(getLocale(), { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(normalizeMoney(value));
 
 export const formatSAR = (value: number) =>
-    new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'SAR', maximumFractionDigits: 2 }).format(normalizeMoney(value));
+    new Intl.NumberFormat(getLocale(), { style: 'currency', currency: 'SAR', maximumFractionDigits: 2 }).format(normalizeMoney(value));
 
 export const computeGrossFromCommissionableNet = (
     commissionableNetAmountEur: number,

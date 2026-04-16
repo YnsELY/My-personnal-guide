@@ -1,0 +1,96 @@
+{
+  "categories": {
+    "omraAccompagnee": "Omra accompagnée",
+    "omraBadal": "Omra Badal",
+    "visitesGuidees": "Visites guidées",
+    "transportVIP": "Transport VIP",
+    "hebergement": "Hébergement"
+  },
+  "serviceOptions": {
+    "omraAccompagneeHorsRamadan": "Omra accompagnée (hors Ramadan)",
+    "omraAccompagneeRamadan": "Omra accompagnée Ramadan",
+    "omraBadal": "Omra Badal",
+    "visitesGuideesLegiferees": "Visites guidées légiféré Médine ou Makkah",
+    "seulOuCouple": "Omra seul ou en couple",
+    "famille": "Omra en famille (3 à 7 personnes)",
+    "groupe": "Omra en groupe",
+    "standard": "Standard",
+    "ramadan": "Ramadan"
+  },
+  "services": {
+    "omraAccompagne": {
+      "title": "Omra accompagné",
+      "shortDescription": "Vivez votre Omra avec sérénité",
+      "description": "Accomplissez votre Omra aux côtés de guides qualifiés pour un accompagnement fiable et bienveillant.",
+      "mainText": "Accomplissez votre Omra en toute confiance aux côtés de nos guides qualifiés et reconnus pour leur sérieux, leur science et leur éthique.",
+      "details": "Présents à chaque étape, ils vous accompagnent avec bienveillance afin que vous viviez ce voyage sacré dans la sérénité, la conformité aux rites et la recherche sincère de l'agrément d'Allah."
+    },
+    "omraBadal": {
+      "title": "Omra Badal",
+      "titleArabic": "Omra par Procuration",
+      "shortDescription": "Une Miséricorde pour vos proches",
+      "description": "Accomplissez une Omra au nom d'un proche décédé ou malade, une œuvre pieuse d'une immense valeur spirituelle.",
+      "mainText": "Un voyage de foi vers les lieux les plus purs de la Terre, qui efface les péchés et purifie le cœur. De l'Ihram au Tawaf autour de la Kaaba, jusqu'au Sa'i entre Safa et Marwa.",
+      "details": "Félicitations à vous pour ce voyage de foi grandiose. Vous laissez derrière vous les soucis d'ici-bas pour atteindre La Mecque honorée, la terre bénie qu'Allah a magnifiée."
+    },
+    "visiteGuidee": {
+      "title": "Visites Guidées",
+      "titleArabic": "Visite de Médine",
+      "shortDescription": "Découvrez l'histoire sacrée",
+      "description": "Explorez les lieux saints de Médine et La Mecque avec des guides experts pour comprendre l'histoire prophétique.",
+      "mainText": "Visiter les sites historiques de La Mecque et Médine vous relie à la vie du Prophète ﷺ et de ses compagnons.",
+      "details": "Visitez la montagne de Uhud, la mosquée de Quba, et les sites historiques de la bataille du Fossé. Une immersion totale dans l'histoire de l'Islam."
+    }
+  },
+  "hadiths": [
+    {
+      "text": "Les actions ne valent que par leurs intentions, et chacun n'aura que ce qu'il a eu l'intention d'avoir.",
+      "source": "Bukhari & Muslim"
+    },
+    {
+      "text": "Le meilleur d'entre vous est celui qui apprend le Coran et l'enseigne.",
+      "source": "Bukhari"
+    },
+    {
+      "text": "Méfiez-vous de l'injustice, car l'injustice sera ténèbres le Jour de la Résurrection.",
+      "source": "Muslim"
+    },
+    {
+      "text": "La patience est une lumière.",
+      "source": "Muslim"
+    },
+    {
+      "text": "Celui qui ne remercie pas les gens ne remercie pas Allah.",
+      "source": "Tirmidhi"
+    },
+    {
+      "text": "Souris à ton frère est une aumône.",
+      "source": "Tirmidhi"
+    },
+    {
+      "text": "La richesse ne consiste pas en l'abondance des biens, mais la vraie richesse est celle de l'âme.",
+      "source": "Bukhari & Muslim"
+    }
+  ],
+  "hadithPrefix": "Le Prophète ﷺ a dit :",
+  "hadithToday": "Hadith du jour",
+  "omraHadith": "Le Prophète ﷺ a dit : \"La Omra efface les péchés commis entre elle et la précédente.\"",
+  "medinaHadith": "Une prière dans ma mosquée est meilleure que mille prières ailleurs, sauf la Mosquée Sacrée.",
+  "prayerTimes": {
+    "mecca": "La Mecque",
+    "medina": "Médine",
+    "change": "Changer"
+  },
+  "legal": {
+    "title": "Mentions légales",
+    "cgvu": "CGVU",
+    "cgvuSubtitle": "Conditions générales de vente et d'utilisation",
+    "cancellation": "Politique d'annulation",
+    "cancellationSubtitle": "Délais, frais et modalités de remboursement",
+    "privacy": "Politique de confidentialité",
+    "privacySubtitle": "Protection des données et droits RGPD",
+    "charter": "Charte du pèlerin",
+    "charterSubtitle": "Règles, engagements et droits du pèlerin",
+    "contactSupport": "Contacter le support : {{email}}"
+  }
+}

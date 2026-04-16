@@ -1,0 +1,9 @@
+{
+  "title": "Support",
+  "subtitle": "Assistance client",
+  "cardTitle": "Contacter le support",
+  "description": "Pour toute demande liée à votre compte, vos réservations ou votre sécurité, contactez-nous directement par email.",
+  "emailLabel": "Email SAV",
+  "openMail": "Ouvrir votre messagerie",
+  "contactFallback": "Contactez-nous à {{email}}"
+}
