@@ -251,24 +251,26 @@ export default function HomeScreen() {
               colors={['#7a6143', '#b39164', '#c8a87a']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              className="px-5 py-5"
+              style={{ paddingHorizontal: 20, paddingVertical: 22 }}
             >
               <View className="flex-row items-center justify-between">
                 <View className="flex-row items-center flex-1">
-                  <Text style={{ fontSize: 40, marginRight: 14 }}>🕋</Text>
+                  <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center', marginRight: 16 }}>
+                    <Text style={{ fontSize: 28 }}>🕋</Text>
+                  </View>
                   <View className="flex-1">
-                    <Text style={{ fontSize: 10, fontWeight: '700', letterSpacing: 2.5, color: 'rgba(255,255,255,0.65)', textTransform: 'uppercase', marginBottom: 3 }}>
+                    <Text style={{ fontSize: 10, fontWeight: '700', letterSpacing: 2.5, color: 'rgba(255,255,255,0.65)', textTransform: 'uppercase', marginBottom: 4 }}>
                       GUIDE COMPLET
                     </Text>
-                    <Text style={{ fontSize: 19, fontWeight: '800', color: '#fff', letterSpacing: -0.4, lineHeight: 23 }}>
+                    <Text style={{ fontSize: 19, fontWeight: '800', color: '#fff', letterSpacing: -0.4, lineHeight: 24 }}>
                       Accomplir la ʿOmra
                     </Text>
-                    <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', marginTop: 3 }}>
+                    <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', marginTop: 5, lineHeight: 17 }}>
                       Étapes, invocations & conseils
                     </Text>
                   </View>
                 </View>
-                <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center', marginLeft: 8 }}>
+                <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center', marginLeft: 12 }}>
                   <ChevronRight size={18} color="#fff" />
                 </View>
               </View>

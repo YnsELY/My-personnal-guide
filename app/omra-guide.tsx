@@ -244,7 +244,7 @@ function StepCard({ step }: { step: Step }) {
 
       {/* Card Body */}
       {expanded && (
-        <View className="px-5 py-5 bg-white dark:bg-zinc-900">
+        <View style={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 24, backgroundColor: '#fff' }}>
           {step.content.map((section, i) => (
             <ContentSection key={i} section={section} />
           ))}
@@ -257,8 +257,8 @@ function StepCard({ step }: { step: Step }) {
 function ContentSection({ section }: { section: Section }) {
   if (section.type === 'arabic') {
     return (
-      <View className="my-4 py-4 px-5 rounded-2xl" style={{ backgroundColor: '#fdf8f2', borderLeftWidth: 3, borderLeftColor: GOLD }}>
-        <Text style={{ fontSize: 24, lineHeight: 42, color: GOLD_DARK, fontWeight: '500', textAlign: 'right', writingDirection: 'rtl', fontFamily: 'System' }}>
+      <View style={{ marginVertical: 12, paddingVertical: 18, paddingHorizontal: 18, borderRadius: 16, backgroundColor: '#fdf8f2', borderLeftWidth: 3, borderLeftColor: GOLD }}>
+        <Text style={{ fontSize: 24, lineHeight: 44, color: GOLD_DARK, fontWeight: '500', textAlign: 'right', writingDirection: 'rtl' }}>
           {section.text}
         </Text>
       </View>
@@ -267,9 +267,9 @@ function ContentSection({ section }: { section: Section }) {
 
   if (section.type === 'transliteration') {
     return (
-      <View className="mb-1">
-        <Text className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: GOLD }}>Translittération</Text>
-        <Text style={{ fontSize: 14, fontStyle: 'italic', color: '#4a4a4a', lineHeight: 22 }}>
+      <View style={{ marginBottom: 6, paddingHorizontal: 4 }}>
+        <Text style={{ fontSize: 10, fontWeight: '700', letterSpacing: 1.5, color: GOLD, textTransform: 'uppercase', marginBottom: 5 }}>Translittération</Text>
+        <Text style={{ fontSize: 14, fontStyle: 'italic', color: '#4a4a4a', lineHeight: 23 }}>
           {section.text}
         </Text>
       </View>
@@ -278,9 +278,9 @@ function ContentSection({ section }: { section: Section }) {
 
   if (section.type === 'translation') {
     return (
-      <View className="mb-4 mt-1 py-3 px-4 rounded-xl" style={{ backgroundColor: '#f0f0f0' }}>
-        <Text className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: '#888' }}>Traduction</Text>
-        <Text style={{ fontSize: 14, color: '#333', lineHeight: 22, fontStyle: 'italic' }}>
+      <View style={{ marginBottom: 14, marginTop: 6, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 14, backgroundColor: '#f2f2f2' }}>
+        <Text style={{ fontSize: 10, fontWeight: '700', letterSpacing: 1.5, color: '#999', textTransform: 'uppercase', marginBottom: 6 }}>Traduction</Text>
+        <Text style={{ fontSize: 14, color: '#333', lineHeight: 23, fontStyle: 'italic' }}>
           {section.text}
         </Text>
       </View>
@@ -289,20 +289,20 @@ function ContentSection({ section }: { section: Section }) {
 
   if (section.type === 'note') {
     return (
-      <View className="flex-row my-3 py-3 px-4 rounded-xl" style={{ backgroundColor: '#fffbf0', borderWidth: 1, borderColor: '#f0e4c8' }}>
-        <Text style={{ fontSize: 15, marginRight: 8 }}>💡</Text>
-        <Text style={{ flex: 1, fontSize: 13, color: '#7a6143', lineHeight: 20 }}>{section.text}</Text>
+      <View style={{ flexDirection: 'row', marginVertical: 10, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 14, backgroundColor: '#fffbf0', borderWidth: 1, borderColor: '#f0e4c8' }}>
+        <Text style={{ fontSize: 15, marginRight: 10, marginTop: 1 }}>💡</Text>
+        <Text style={{ flex: 1, fontSize: 13, color: '#7a6143', lineHeight: 21 }}>{section.text}</Text>
       </View>
     );
   }
 
   if (section.type === 'list' && section.items) {
     return (
-      <View className="my-2">
+      <View style={{ marginVertical: 8, paddingHorizontal: 4 }}>
         {section.items.map((item, i) => (
-          <View key={i} className="flex-row items-start mb-2.5">
-            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: GOLD, marginTop: 7, marginRight: 10, flexShrink: 0 }} />
-            <Text style={{ flex: 1, fontSize: 14, color: '#333', lineHeight: 22 }}>{item}</Text>
+          <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 }}>
+            <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: GOLD, marginTop: 8, marginRight: 12, flexShrink: 0 }} />
+            <Text style={{ flex: 1, fontSize: 14, color: '#333', lineHeight: 23 }}>{item}</Text>
           </View>
         ))}
       </View>
@@ -310,7 +310,7 @@ function ContentSection({ section }: { section: Section }) {
   }
 
   return (
-    <Text style={{ fontSize: 14, color: '#555', lineHeight: 22, marginVertical: 4 }}>
+    <Text style={{ fontSize: 14, color: '#555', lineHeight: 23, marginVertical: 5, paddingHorizontal: 4 }}>
       {section.text}
     </Text>
   );
