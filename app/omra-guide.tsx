@@ -212,28 +212,26 @@ function StepCard({ step }: { step: Step }) {
         colors={expanded ? [GOLD, GOLD_DARK] : ['#fafaf9', '#f5f0ea']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
-        className="px-5 py-4"
+        style={{ paddingHorizontal: 18, paddingVertical: 16 }}
       >
-        <View className="flex-row items-center justify-between">
-          <View className="flex-row items-center flex-1">
-            <View className="mr-4 items-center justify-center" style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: expanded ? 'rgba(255,255,255,0.18)' : 'rgba(179,145,100,0.12)' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+            <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: expanded ? 'rgba(255,255,255,0.18)' : 'rgba(179,145,100,0.12)', alignItems: 'center', justifyContent: 'center', marginRight: 14, flexShrink: 0 }}>
               <Text style={{ fontSize: 22 }}>{step.icon}</Text>
             </View>
-            <View className="flex-1">
-              <View className="flex-row items-center mb-0.5">
-                <Text style={{ fontSize: 10, fontWeight: '700', letterSpacing: 2, color: expanded ? 'rgba(255,255,255,0.6)' : GOLD, textTransform: 'uppercase' }}>
-                  ÉTAPE {step.number}
-                </Text>
-              </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 10, fontWeight: '700', letterSpacing: 2, color: expanded ? 'rgba(255,255,255,0.6)' : GOLD, textTransform: 'uppercase', marginBottom: 3 }}>
+                ÉTAPE {step.number}
+              </Text>
               <Text style={{ fontSize: 17, fontWeight: '700', color: expanded ? '#fff' : '#1a1a1a', letterSpacing: -0.3 }}>
                 {step.title}
               </Text>
-              <Text style={{ fontSize: 12, color: expanded ? 'rgba(255,255,255,0.7)' : '#888', marginTop: 1 }}>
+              <Text style={{ fontSize: 12, color: expanded ? 'rgba(255,255,255,0.7)' : '#888', marginTop: 3 }}>
                 {step.subtitle}
               </Text>
             </View>
           </View>
-          <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: expanded ? 'rgba(255,255,255,0.2)' : 'rgba(179,145,100,0.12)', alignItems: 'center', justifyContent: 'center' }}>
+          <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: expanded ? 'rgba(255,255,255,0.2)' : 'rgba(179,145,100,0.12)', alignItems: 'center', justifyContent: 'center', marginLeft: 10, flexShrink: 0 }}>
             {expanded
               ? <ChevronUp size={16} color="#fff" />
               : <ChevronDown size={16} color={GOLD} />
@@ -318,18 +316,20 @@ function ContentSection({ section }: { section: Section }) {
 
 function SummaryCard({ data, color }: { data: typeof pillarsData; color: string }) {
   return (
-    <View className="mb-4 rounded-3xl overflow-hidden" style={{ borderWidth: 1, borderColor: `${color}22` }}>
-      <View className="px-5 pt-4 pb-2" style={{ backgroundColor: `${color}12` }}>
-        <Text style={{ fontSize: 16, fontWeight: '700', color: '#1a1a1a' }}>{data.title}</Text>
-        <Text style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{data.subtitle}</Text>
+    <View style={{ marginBottom: 16, borderRadius: 24, overflow: 'hidden' }}>
+      {/* Header */}
+      <View style={{ paddingHorizontal: 20, paddingTop: 18, paddingBottom: 14, backgroundColor: color }}>
+        <Text style={{ fontSize: 16, fontWeight: '700', color: '#fff' }}>{data.title}</Text>
+        <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 3 }}>{data.subtitle}</Text>
       </View>
-      <View className="bg-white dark:bg-zinc-900 px-5 py-4">
+      {/* Body */}
+      <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 18, backgroundColor: '#2a2318' }}>
         {data.items.map((item, i) => (
-          <View key={i} className="flex-row items-start mb-3">
-            <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: `${color}18`, alignItems: 'center', justifyContent: 'center', marginRight: 10, marginTop: 1, flexShrink: 0 }}>
-              <Text style={{ fontSize: 11, fontWeight: '700', color }}>{i + 1}</Text>
+          <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: i < data.items.length - 1 ? 14 : 0 }}>
+            <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: color, alignItems: 'center', justifyContent: 'center', marginRight: 12, marginTop: 1, flexShrink: 0 }}>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: '#fff' }}>{i + 1}</Text>
             </View>
-            <Text style={{ flex: 1, fontSize: 13.5, color: '#333', lineHeight: 21 }}>{item}</Text>
+            <Text style={{ flex: 1, fontSize: 13.5, color: '#fff', lineHeight: 22 }}>{item}</Text>
           </View>
         ))}
       </View>
