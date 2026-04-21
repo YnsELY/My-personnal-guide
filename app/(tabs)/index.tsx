@@ -11,7 +11,7 @@ import { getRecommendedGuides } from '@/lib/api';
 import { formatSAR, toSar } from '@/lib/pricing';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { ArrowUpRight, Check, ChevronRight, Clock, MapPin, MessageCircle, User, X } from 'lucide-react-native';
+import { ArrowUpRight, CalendarCheck, Check, ChevronRight, Clock, MapPin, MessageCircle, User, X } from 'lucide-react-native';
 import React, { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Animated, Image, ImageBackground, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
@@ -228,8 +228,7 @@ export default function HomeScreen() {
               >
                 <View className="flex-row items-center" style={rowStyle(isRTL)}>
                   <View className="bg-primary/10 p-3 rounded-full mr-4">
-                    {/* Icon approximating the 'clipboard' or 'ticket' */}
-                    <View className="w-6 h-4 border-2 border-primary rounded-sm" />
+                    <CalendarCheck color="#b39164" size={24} />
                   </View>
                   <View>
                     <Text className="text-gray-900 dark:text-white text-lg font-medium" style={textStart(isRTL)}>{t('yourReservations')}</Text>
@@ -240,6 +239,41 @@ export default function HomeScreen() {
               </TouchableOpacity>
             </>
           )}
+
+          {/* Omra Guide Banner */}
+          <TouchableOpacity
+            onPress={() => router.push('/omra-guide' as any)}
+            activeOpacity={0.92}
+            className="mb-4 rounded-3xl overflow-hidden"
+            style={{ shadowColor: '#7a6143', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.18, shadowRadius: 16, elevation: 5 }}
+          >
+            <LinearGradient
+              colors={['#7a6143', '#b39164', '#c8a87a']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              className="px-5 py-5"
+            >
+              <View className="flex-row items-center justify-between">
+                <View className="flex-row items-center flex-1">
+                  <Text style={{ fontSize: 40, marginRight: 14 }}>🕋</Text>
+                  <View className="flex-1">
+                    <Text style={{ fontSize: 10, fontWeight: '700', letterSpacing: 2.5, color: 'rgba(255,255,255,0.65)', textTransform: 'uppercase', marginBottom: 3 }}>
+                      GUIDE COMPLET
+                    </Text>
+                    <Text style={{ fontSize: 19, fontWeight: '800', color: '#fff', letterSpacing: -0.4, lineHeight: 23 }}>
+                      Accomplir la ʿOmra
+                    </Text>
+                    <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', marginTop: 3 }}>
+                      Étapes, invocations & conseils
+                    </Text>
+                  </View>
+                </View>
+                <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center', marginLeft: 8 }}>
+                  <ChevronRight size={18} color="#fff" />
+                </View>
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
 
           {/* Prayer Times Section */}
           <PrayerTimesWidget />
