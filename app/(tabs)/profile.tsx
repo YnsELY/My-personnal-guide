@@ -144,7 +144,7 @@ export default function ProfileScreen() {
     };
 
     const openSupportMail = async () => {
-        const email = 'support@nefsy.app';
+        const email = 'contact@nefsy.fr';
         const url = `mailto:${email}`;
         const canOpen = await Linking.canOpenURL(url);
         if (!canOpen) {

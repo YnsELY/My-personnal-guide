@@ -15,7 +15,7 @@ interface AuthContextType {
     guideApprovalStatus: GuideApprovalStatus;
     isGuideApproved: boolean;
     signIn: (email: string, pass: string) => Promise<void>;
-    signUp: (email: string, pass: string, name: string, role: SignUpRole, gender: 'male' | 'female', dob: string, language: 'fr' | 'ar') => Promise<void>;
+    signUp: (email: string, pass: string, name: string, role: SignUpRole, gender: 'male' | 'female', dob: string, language: 'fr' | 'ar' | 'en') => Promise<void>;
     updateProfileAvatar: (presetId: AvatarPresetId) => Promise<void>;
     refreshProfile: () => Promise<void>;
     signOut: () => Promise<void>;
@@ -115,7 +115,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         await refreshUser({ throwOnSuspended: true });
     };
 
-    const signUp = async (email: string, pass: string, name: string, role: SignUpRole, gender: 'male' | 'female', dob: string, language: 'fr' | 'ar') => {
+    const signUp = async (email: string, pass: string, name: string, role: SignUpRole, gender: 'male' | 'female', dob: string, language: 'fr' | 'ar' | 'en') => {
         await apiSignUp(email, pass, name, role, gender, dob, language);
         await refreshUser();
     };

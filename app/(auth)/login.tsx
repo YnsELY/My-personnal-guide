@@ -72,7 +72,7 @@ export default function LoginScreen() {
                         <View className="gap-5">
                             <View>
                                 <Text className="text-gray-500 mb-2 font-medium" style={textStart(isRTL)}>{t('email')}</Text>
-                                <View className="bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3" style={rowStyle(isRTL)}>
+                                <View className="bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 items-center gap-3" style={rowStyle(isRTL)}>
                                     <Mail size={20} color="#9CA3AF" />
                                     <TextInput
                                         className="flex-1 text-gray-900 dark:text-white"
@@ -89,7 +89,7 @@ export default function LoginScreen() {
 
                             <View>
                                 <Text className="text-gray-500 mb-2 font-medium" style={textStart(isRTL)}>{t('password')}</Text>
-                                <View className="bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3" style={rowStyle(isRTL)}>
+                                <View className="bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 items-center gap-3" style={rowStyle(isRTL)}>
                                     <Lock size={20} color="#9CA3AF" />
                                     <TextInput
                                         className="flex-1 text-gray-900 dark:text-white"

@@ -289,13 +289,13 @@ export default function HomeScreen() {
                   </View>
                   <View className="flex-1">
                     <Text style={{ fontSize: 10, fontWeight: '700', letterSpacing: 2.5, color: 'rgba(255,255,255,0.65)', textTransform: 'uppercase', marginBottom: 4 }}>
-                      GUIDE COMPLET
+                      {t('guideOmraTag')}
                     </Text>
                     <Text style={{ fontSize: 19, fontWeight: '800', color: '#fff', letterSpacing: -0.4, lineHeight: 24 }}>
-                      Accomplir la ʿOmra
+                      {t('guideOmraTitle')}
                     </Text>
                     <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', marginTop: 5, lineHeight: 17 }}>
-                      Étapes, invocations & conseils
+                      {t('guideOmraDesc')}
                     </Text>
                   </View>
                 </View>

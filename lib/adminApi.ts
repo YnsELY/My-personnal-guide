@@ -1,7 +1,8 @@
-import { getCurrentProfile, getCurrentUser, getUserDisplayName } from '@/lib/api';
+import { getCurrentProfile, getCurrentUser } from '@/lib/api';
 import { computeReservationFinance, PLATFORM_COMMISSION_RATE } from '@/lib/pricing';
 import { supabase } from '@/lib/supabase';
 import {
+    getUserDisplayName,
     notifyGuideApplicationApproved,
     notifyGuideApplicationRejected,
     notifyReservationCancelledByAdmin,

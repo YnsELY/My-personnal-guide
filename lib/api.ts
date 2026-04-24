@@ -42,7 +42,7 @@ export const signUp = async (
     role: 'guide' | 'pilgrim',
     gender: 'male' | 'female',
     dob: string,
-    language: 'fr' | 'ar'
+    language: 'fr' | 'ar' | 'en'
 ) => {
     const { data, error } = await supabase.auth.signUp({
         email,
@@ -116,7 +116,7 @@ export const updateCurrentProfile = async (fields: {
     full_name?: string;
     gender?: 'male' | 'female';
     date_of_birth?: string;
-    language?: 'fr' | 'ar';
+    language?: 'fr' | 'ar' | 'en';
 }) => {
     const user = await getCurrentUser();
     if (!user) throw new Error("Non connecté.");

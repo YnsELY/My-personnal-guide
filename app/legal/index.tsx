@@ -9,7 +9,7 @@ import { StatusBar, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Linking from 'expo-linking';
 
-const SUPPORT_EMAIL = 'support@nefsy.app';
+const SUPPORT_EMAIL = 'contact@nefsy.fr';
 
 export default function LegalIndexScreen() {
     const { t } = useTranslation('content');

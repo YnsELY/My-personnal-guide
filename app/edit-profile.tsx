@@ -34,7 +34,7 @@ export default function EditProfileScreen() {
     const [day, setDay] = useState('');
     const [month, setMonth] = useState('');
     const [year, setYear] = useState('');
-    const [language, setLanguage] = useState<'fr' | 'ar'>('fr');
+    const [language, setLanguage] = useState<'fr' | 'ar' | 'en'>('fr');
     const [openLanguage, setOpenLanguage] = useState(false);
     const [loading, setLoading] = useState(false);
 

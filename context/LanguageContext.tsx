@@ -69,6 +69,32 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = useState<AppLanguage>('fr');
   const [isReady, setIsReady] = useState(false);
 
+  const applyLanguage = useCallback(async (
+    lang: AppLanguage,
+    options?: { persist?: boolean; allowReload?: boolean }
+  ) => {
+    const persist = options?.persist ?? true;
+    const allowReload = options?.allowReload ?? true;
+    const shouldBeRTL = lang === 'ar';
+    const needsDirectionReload = I18nManager.isRTL !== shouldBeRTL;
+
+    await i18n.changeLanguage(lang);
+    setLanguageState(lang);
+
+    if (persist) {
+      await persistentStorage.setItemAsync(STORAGE_KEY, lang);
+    }
+
+    if (needsDirectionReload) {
+      I18nManager.allowRTL(shouldBeRTL);
+      I18nManager.forceRTL(shouldBeRTL);
+
+      if (allowReload) {
+        await reloadForDirectionChange();
+      }
+    }
+  }, []);
+
   // Bootstrap: resolve language from cache → profile → device → fallback
   useEffect(() => {
     (async () => {
@@ -106,31 +132,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     })();
   }, [applyLanguage]);
 
-  const applyLanguage = useCallback(async (
-    lang: AppLanguage,
-    options?: { persist?: boolean; allowReload?: boolean }
-  ) => {
-    const persist = options?.persist ?? true;
-    const allowReload = options?.allowReload ?? true;
-    const shouldBeRTL = lang === 'ar';
-    const needsDirectionReload = I18nManager.isRTL !== shouldBeRTL;
 
-    await i18n.changeLanguage(lang);
-    setLanguageState(lang);
-
-    if (persist) {
-      await persistentStorage.setItemAsync(STORAGE_KEY, lang);
-    }
-
-    if (needsDirectionReload) {
-      I18nManager.allowRTL(shouldBeRTL);
-      I18nManager.forceRTL(shouldBeRTL);
-
-      if (allowReload) {
-        await reloadForDirectionChange();
-      }
-    }
-  }, []);
 
   const setLanguage = useCallback(async (lang: AppLanguage) => {
     await applyLanguage(lang, { persist: true, allowReload: true });
