@@ -40,44 +40,66 @@ export default function HomeScreen() {
 
   const serviceShowcaseCards = [
     {
-      id: 'omra-badal',
-      title: t('serviceCard.omraBadal.title'),
-      subtitle: t('serviceCard.omraBadal.subtitle'),
-      description: t('serviceCard.omraBadal.description'),
-      image: require('@/assets/images/mecca.jpg'),
-      badge: t('serviceCard.omraBadal.badge'),
-      cta: t('serviceCard.omraBadal.cta'),
-      accent: ['#5a4529', '#b39164'] as const,
-      onPress: () => router.push('/service/omra-badal'),
-    },
-    {
-      id: 'visite-guidee',
-      title: t('serviceCard.visitGuidee.title'),
-      subtitle: t('serviceCard.visitGuidee.subtitle'),
-      description: t('serviceCard.visitGuidee.description'),
-      image: require('@/assets/images/medina.jpeg'),
-      badge: t('serviceCard.visitGuidee.badge'),
-      cta: t('serviceCard.visitGuidee.cta'),
-      accent: ['#365b64', '#6aa9ba'] as const,
-      onPress: () => router.push('/service/visite-guidee'),
-    },
-    {
       id: 'omra-accompagne',
       title: t('serviceCard.omraAccompagne.title'),
       subtitle: t('serviceCard.omraAccompagne.subtitle'),
       description: t('serviceCard.omraAccompagne.description'),
-      image: require('@/assets/images/mecca.jpg'),
+      image: require('@/assets/images/services/Design sans titre-3.webp'),
       badge: t('serviceCard.omraAccompagne.badge'),
       cta: t('serviceCard.omraAccompagne.cta'),
       accent: ['#5a4529', '#b39164'] as const,
       onPress: () => router.push('/service/omra-accompagne'),
     },
     {
+      id: 'visite-guidee-makkah',
+      title: t('serviceCard.visitGuideeMakkah.title'),
+      subtitle: t('serviceCard.visitGuideeMakkah.subtitle'),
+      description: t('serviceCard.visitGuideeMakkah.description'),
+      image: require('@/assets/images/services/7-copie copie.webp'),
+      badge: t('serviceCard.visitGuideeMakkah.badge'),
+      cta: t('serviceCard.visitGuideeMakkah.cta'),
+      accent: ['#5a4529', '#b39164'] as const,
+      onPress: () => router.push('/service/visite-guidee-makkah'),
+    },
+    {
+      id: 'visite-guidee-medine',
+      title: t('serviceCard.visitGuideeMedine.title'),
+      subtitle: t('serviceCard.visitGuideeMedine.subtitle'),
+      description: t('serviceCard.visitGuideeMedine.description'),
+      image: require('@/assets/images/services/2-copie copie.webp'),
+      badge: t('serviceCard.visitGuideeMedine.badge'),
+      cta: t('serviceCard.visitGuideeMedine.cta'),
+      accent: ['#365b64', '#6aa9ba'] as const,
+      onPress: () => router.push('/service/visite-guidee'),
+    },
+    {
+      id: 'omra-badal',
+      title: t('serviceCard.omraBadal.title'),
+      subtitle: t('serviceCard.omraBadal.subtitle'),
+      description: t('serviceCard.omraBadal.description'),
+      image: require('@/assets/images/services/9.webp'),
+      badge: t('serviceCard.omraBadal.badge'),
+      cta: t('serviceCard.omraBadal.cta'),
+      accent: ['#5a4529', '#b39164'] as const,
+      onPress: () => router.push('/service/omra-badal'),
+    },
+    {
+      id: 'deuxieme-omra',
+      title: t('serviceCard.deuxiemeOmra.title'),
+      subtitle: t('serviceCard.deuxiemeOmra.subtitle'),
+      description: t('serviceCard.deuxiemeOmra.description'),
+      image: require('@/assets/images/services/6-copie-2 copie.webp'),
+      badge: t('serviceCard.deuxiemeOmra.badge'),
+      cta: t('serviceCard.deuxiemeOmra.cta'),
+      accent: ['#5a4529', '#b39164'] as const,
+      onPress: () => router.push('/service/deuxieme-omra'),
+    },
+    {
       id: 'all-services',
       title: t('serviceCard.allServices.title'),
       subtitle: t('serviceCard.allServices.subtitle'),
       description: t('serviceCard.allServices.description'),
-      image: require('@/assets/images/hero.jpg'),
+      image: require('@/assets/images/services/4 copie 3.webp'),
       badge: t('serviceCard.allServices.badge'),
       cta: t('serviceCard.allServices.cta'),
       accent: ['#2d3e5d', '#4f6d9c'] as const,
@@ -160,9 +182,9 @@ export default function HomeScreen() {
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* Full Screen Header Background */}
-        <View className="h-80 relative">
+        <View className="h-[480px] relative">
           <Image
-            source={require('@/assets/images/hero.jpg')}
+            source={require('@/assets/images/services/5-copie copie.webp')}
             className="w-full h-full object-cover"
           />
           {/* Subtle dark overlay for text readability */}
@@ -176,20 +198,27 @@ export default function HomeScreen() {
 
           {/* Content Overlay */}
           <SafeAreaView className="absolute inset-0 px-6 pt-2">
-            <View className="flex-row justify-between items-center mb-6" style={rowStyle(isRTL)}>
+            <View className="flex-row justify-between items-center mb-3" style={rowStyle(isRTL)}>
               <TouchableOpacity onPress={() => router.back()}>
                 {/* <ChevronLeft color="white" size={28} /> */}
               </TouchableOpacity>
             </View>
 
-            <View className="mt-12">
-              <Text className="text-white text-3xl font-serif font-medium mb-1">
+            <View className="mt-20">
+              <Text className="text-white text-3xl font-serif font-medium mb-1" style={{ textShadowColor: 'rgba(0,0,0,0.6)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 }}>
                 {firstName ? t('welcomeUser', { name: firstName }) : t('welcome')}
               </Text>
-              <Text className="text-gray-200 text-sm w-3/4 leading-5 shadow-sm" style={textStart(isRTL)}>
+              <Text className="text-white/80 text-sm w-3/4 leading-5" style={{ textShadowColor: 'rgba(0,0,0,0.7)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 5 }} >
                 {t('welcomeSubtitle')}
               </Text>
             </View>
+
+            {(profile?.role === 'pilgrim' || profile?.role === 'guide') && (
+              <View className="mt-11">
+                <PrayerTimesWidget glass />
+              </View>
+            )}
+
           </SafeAreaView>
         </View>
 
@@ -198,7 +227,7 @@ export default function HomeScreen() {
             <>
               {/* Primary Action Card (Permis in design -> Find Guide here) */}
               <TouchableOpacity
-                className="bg-white dark:bg-zinc-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-white/5 mb-4 overflow-hidden relative"
+                className="bg-white dark:bg-zinc-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-white/5 mt-2 mb-4 overflow-hidden relative"
                 onPress={() => router.push('/date-select')}
               >
                 <ImageBackground
@@ -277,8 +306,8 @@ export default function HomeScreen() {
             </LinearGradient>
           </TouchableOpacity>
 
-          {/* Prayer Times Section */}
-          <PrayerTimesWidget />
+          {/* Prayer Times Section — admin uniquement (pèlerin l'a dans le héro) */}
+          {profile?.role === 'admin' && <PrayerTimesWidget />}
 
           {/* Hadith Section */}
           <HadithWidget />
@@ -305,10 +334,7 @@ export default function HomeScreen() {
           {profile?.role === 'pilgrim' && (
             <>
               {/* Services Section */}
-              <View className="flex-row items-end justify-between mb-4" style={rowStyle(isRTL)}>
-                <Text className="text-gray-900 dark:text-white text-lg font-bold" style={textStart(isRTL)}>{t('ourServices')}</Text>
-                <Text className="text-[#b39164] text-xs font-semibold uppercase tracking-wide">{t('premiumSelection')}</Text>
-              </View>
+              <Text className="text-gray-900 dark:text-white text-lg font-bold mb-4" style={textStart(isRTL)}>{t('ourServices')}</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-8" contentContainerStyle={{ gap: 16, paddingRight: 20 }}>
                 {serviceShowcaseCards.map((card) => (
                   <TouchableOpacity
@@ -326,12 +352,14 @@ export default function HomeScreen() {
                       />
                     </View>
 
-                    <View className="px-5 pt-4 pb-5">
-                      <Text className="text-gray-900 dark:text-white text-2xl font-serif font-semibold">{card.title}</Text>
-                      <Text className="text-[#b39164] text-xs font-semibold uppercase tracking-widest mt-1">{card.subtitle}</Text>
-                      <Text className="text-gray-600 dark:text-zinc-300 text-sm leading-6 mt-3" numberOfLines={3}>
-                        {card.description}
-                      </Text>
+                    <View className="px-5 pt-4 pb-5" style={{ flex: 1, justifyContent: 'space-between' }}>
+                      <View>
+                        <Text className="text-gray-900 dark:text-white text-2xl font-serif font-semibold">{card.title}</Text>
+                        <Text className="text-[#b39164] text-xs font-semibold uppercase tracking-widest mt-1">{card.subtitle}</Text>
+                        <Text className="text-gray-600 dark:text-zinc-300 text-sm leading-6 mt-3" numberOfLines={3} style={{ minHeight: 72 }}>
+                          {card.description}
+                        </Text>
+                      </View>
 
                       <View className="flex-row items-center justify-between mt-4 rounded-2xl border px-4 py-3 border-gray-200 dark:border-white/15 bg-gray-50 dark:bg-zinc-700/30">
                         <Text className="text-sm font-semibold text-gray-900 dark:text-white">

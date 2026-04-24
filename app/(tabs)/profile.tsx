@@ -37,6 +37,7 @@ export default function ProfileScreen() {
     const [pilgrimWalletSummary, setPilgrimWalletSummary] = React.useState<Awaited<ReturnType<typeof getPilgrimWalletSummary>> | null>(null);
     const [pilgrimWalletLoading, setPilgrimWalletLoading] = React.useState(false);
     const [pilgrimWalletError, setPilgrimWalletError] = React.useState<string | null>(null);
+    const [showLanguagePicker, setShowLanguagePicker] = React.useState(false);
     const [showDeleteModal, setShowDeleteModal] = React.useState(false);
     const [deleteConfirmText, setDeleteConfirmText] = React.useState('');
     const [isDeletingAccount, setIsDeletingAccount] = React.useState(false);
@@ -86,10 +87,13 @@ export default function ProfileScreen() {
         }, [loadGuideWalletSummary, loadPilgrimWalletSummary])
     );
 
+    const canCustomizeAvatar = profile?.role === 'guide' || profile?.role === 'admin';
+    const isPilgrimProfile = profile?.role === 'pilgrim';
     const currentAvatarPresetId = getAvatarPresetIdFromUrl(profile?.avatar_url) || DEFAULT_AVATAR_PRESET_ID;
     const profileAvatarSource = resolveProfileAvatarSource(profile?.avatar_url);
 
     const handleSelectAvatar = async (presetId: AvatarPresetId) => {
+        if (!canCustomizeAvatar) return;
         if (isAvatarUpdating) return;
         try {
             setIsAvatarUpdating(true);
@@ -189,23 +193,31 @@ export default function ProfileScreen() {
                     {/* Profile Header */}
                     <View className="items-center mt-4 mb-6">
                         <View className="relative">
-                            <Image
-                                source={profileAvatarSource}
-                                className="w-28 h-28 rounded-full border-4 border-white dark:border-zinc-900"
-                            />
-                            <TouchableOpacity
-                                onPress={() => setIsAvatarPickerOpen((prev) => !prev)}
-                                className="absolute bottom-1 right-1 bg-primary p-2 rounded-full border border-white dark:border-zinc-900"
-                            >
-                                <Camera size={14} color="white" />
-                            </TouchableOpacity>
+                            {isPilgrimProfile ? (
+                                <View className="w-28 h-28 rounded-full border-4 border-white dark:border-zinc-900 bg-zinc-700 items-center justify-center">
+                                    <User size={46} color="#d4d4d8" />
+                                </View>
+                            ) : (
+                                <Image
+                                    source={profileAvatarSource}
+                                    className="w-28 h-28 rounded-full border-4 border-white dark:border-zinc-900"
+                                />
+                            )}
+                            {canCustomizeAvatar ? (
+                                <TouchableOpacity
+                                    onPress={() => setIsAvatarPickerOpen((prev) => !prev)}
+                                    className="absolute bottom-1 right-1 bg-primary p-2 rounded-full border border-white dark:border-zinc-900"
+                                >
+                                    <Camera size={14} color="white" />
+                                </TouchableOpacity>
+                            ) : null}
                         </View>
                         <Text className="text-2xl font-bold text-white mt-3 mb-1" style={textStart(isRTL)}>{profile?.full_name || t('user')}</Text>
                         <Text className="text-gray-300 text-sm" style={forceLTRText()}>{user.email}</Text>
-                        {isAvatarPickerOpen && (
+                        {canCustomizeAvatar && isAvatarPickerOpen && (
                             <View className="mt-4 bg-white dark:bg-zinc-800 rounded-2xl border border-gray-200 dark:border-white/10 p-3 w-[92%]">
                                 <Text className="text-gray-500 dark:text-gray-300 text-xs mb-3" style={textStart(isRTL)}>{t('chooseAvatar')}</Text>
-                                <View className="flex-row items-center justify-between" style={rowStyle(isRTL)}>
+                                <View className="flex-row flex-wrap items-center gap-2" style={rowStyle(isRTL)}>
                                     {AVATAR_PRESET_OPTIONS.map((avatar) => {
                                         const isSelected = currentAvatarPresetId === avatar.id;
                                         return (
@@ -375,25 +387,44 @@ export default function ProfileScreen() {
                             <Separator />
                             <MenuItem icon={CircleHelp} label={t('contactSupport')} onPress={openSupportMail} />
                             <Separator />
-                            <MenuItem
-                                icon={Globe2}
-                                label={t('appLanguage')}
-                                rightElement={
-                                    <TouchableOpacity
-                                        onPress={async () => {
-                                            const newLang = language === 'fr' ? 'ar' : 'fr';
-                                            await setLanguage(newLang);
-                                        }}
-                                        className="flex-row items-center gap-2 bg-gray-100 dark:bg-zinc-700 px-3 py-1.5 rounded-full"
-                                        style={rowStyle(isRTL)}
-                                    >
-                                        <Text className="text-sm">{language === 'fr' ? '\u{1F1EB}\u{1F1F7}' : '\u{1F1F8}\u{1F1E6}'}</Text>
-                                        <Text className="text-gray-900 dark:text-white text-sm font-medium">
-                                            {language === 'fr' ? t('common:french') : t('common:arabic')}
-                                        </Text>
-                                    </TouchableOpacity>
-                                }
-                            />
+                            <View className="relative">
+                                <MenuItem
+                                    icon={Globe2}
+                                    label={t('appLanguage')}
+                                    rightElement={
+                                        <TouchableOpacity
+                                            onPress={() => setShowLanguagePicker(!showLanguagePicker)}
+                                            className="flex-row items-center gap-2 bg-gray-100 dark:bg-zinc-700 px-3 py-1.5 rounded-full"
+                                            style={rowStyle(isRTL)}
+                                        >
+                                            <Text className="text-sm">
+                                                {language === 'ar' ? '🇸🇦' : language === 'en' ? '🇬🇧' : '🇫🇷'}
+                                            </Text>
+                                            <Text className="text-gray-900 dark:text-white text-sm font-medium">
+                                                {language === 'ar' ? t('common:arabic') : language === 'en' ? t('common:english') : t('common:french')}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    }
+                                />
+                                {showLanguagePicker && (
+                                    <View className="absolute top-full right-0 mt-1 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl shadow-lg z-50 overflow-hidden" style={{ minWidth: 160 }}>
+                                        {[
+                                            { code: 'fr' as const, flag: '🇫🇷', label: t('common:french') },
+                                            { code: 'ar' as const, flag: '🇸🇦', label: t('common:arabic') },
+                                            { code: 'en' as const, flag: '🇬🇧', label: t('common:english') },
+                                        ].map((opt, idx, arr) => (
+                                            <TouchableOpacity
+                                                key={opt.code}
+                                                onPress={async () => { setShowLanguagePicker(false); await setLanguage(opt.code); }}
+                                                className={`px-4 py-3 flex-row items-center gap-3 active:bg-gray-50 dark:active:bg-zinc-700 ${idx < arr.length - 1 ? 'border-b border-gray-100 dark:border-white/5' : ''} ${language === opt.code ? 'bg-primary/10' : ''}`}
+                                            >
+                                                <Text className="text-base">{opt.flag}</Text>
+                                                <Text className={`font-medium ${language === opt.code ? 'text-primary' : 'text-gray-900 dark:text-white'}`}>{opt.label}</Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+                                )}
+                            </View>
                         </View>
 
                         <Text className="text-gray-500 dark:text-gray-400 font-bold mb-3 mt-8 ml-1" style={textStart(isRTL)}>{t('sectionDeletion')}</Text>

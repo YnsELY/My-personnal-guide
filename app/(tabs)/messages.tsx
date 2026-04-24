@@ -1,10 +1,11 @@
 import { getConversations, markConversationAsRead } from '@/lib/api';
 import { useLanguage } from '@/context/LanguageContext';
-import { directionStyle, endSpacing, forceLTRText, rowStyle, textStart } from '@/lib/rtl';
+import { directionStyle, endSpacing, forceLTRText, rowStyle, startSpacing, textStart } from '@/lib/rtl';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, FlatList, Image, StatusBar, Text, TouchableOpacity, View } from 'react-native';
+import { User } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function MessagesScreen() {
@@ -73,10 +74,16 @@ export default function MessagesScreen() {
                                 }}
                             >
                                 <View className="relative">
-                                    <Image
-                                        source={item.avatar}
-                                        className="w-14 h-14 rounded-full bg-gray-200 dark:bg-gray-700"
-                                    />
+                                    {item.role === 'pilgrim' ? (
+                                        <View className="w-14 h-14 rounded-full bg-zinc-700 items-center justify-center">
+                                            <User size={26} color="#d4d4d8" />
+                                        </View>
+                                    ) : (
+                                        <Image
+                                            source={item.avatar}
+                                            className="w-14 h-14 rounded-full bg-gray-200 dark:bg-gray-700"
+                                        />
+                                    )}
                                     {item.unread > 0 && (
                                         <View className="absolute -top-1 min-w-[18px] h-[18px] px-1 bg-primary rounded-full border border-white dark:border-zinc-900 items-center justify-center" style={isRTL ? { left: -1 } : { right: -1 }}>
                                             <Text className="text-white text-[10px] font-bold">
@@ -86,7 +93,7 @@ export default function MessagesScreen() {
                                     )}
                                 </View>
 
-                                <View className="flex-1" style={endSpacing(16, isRTL)}>
+                                <View className="flex-1" style={{ ...startSpacing(16, isRTL), ...endSpacing(8, isRTL) }}>
                                     <View className="flex-row justify-between mb-1" style={rowStyle(isRTL)}>
                                         <Text className="font-bold text-gray-900 dark:text-white text-lg" style={textStart(isRTL)}>{item.user}</Text>
                                         <Text className="text-gray-500 text-xs" style={forceLTRText()}>{item.time}</Text>

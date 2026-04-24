@@ -5,14 +5,22 @@ import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Animated, Text, View } from 'react-native';
 
+type HadithEntry = {
+    title?: string;
+    arabic: string;
+    translation?: string;
+    source: string;
+};
+
 export const HadithWidget = () => {
     const { t } = useTranslation('content');
     const { isRTL } = useLanguage();
     const [index, setIndex] = useState(0);
     const [fadeAnim] = useState(new Animated.Value(1));
-    const hadiths = t('hadiths', { returnObjects: true }) as { text: string; source: string }[];
+    const hadiths = t('hadiths', { returnObjects: true }) as HadithEntry[];
 
     useEffect(() => {
+        if (!hadiths?.length) return;
         const interval = setInterval(() => {
             // Fade out
             Animated.timing(fadeAnim, {
@@ -35,6 +43,7 @@ export const HadithWidget = () => {
     }, [fadeAnim, hadiths.length]);
 
     const hadith = hadiths[index] || hadiths[0];
+    if (!hadith) return null;
 
     return (
         <View className="mb-6">
@@ -46,17 +55,30 @@ export const HadithWidget = () => {
 
                 {/* Header with small icon */}
                 <View className="flex-row items-center mb-3">
-                    <Quote size={16} color="#b39164" fill="#b39164" className="mr-2" style={{ transform: [{ rotate: '180deg' }] }} />
+                    <Quote size={16} color="#b39164" fill="#b39164" style={{ transform: [{ rotate: '180deg' }], marginRight: 10 }} />
                     <Text className="text-[#b39164] font-bold text-xs uppercase tracking-wider" style={textStart(isRTL)}>{t('hadithToday')}</Text>
                 </View>
 
                 {/* Animated Text */}
                 <Animated.View style={{ opacity: fadeAnim }}>
+                    {hadith.title ? (
+                        <Text className="text-gray-900 dark:text-white font-bold text-base leading-6 mb-3" style={textStart(isRTL)}>
+                            {hadith.title}
+                        </Text>
+                    ) : null}
                     <Text className="text-gray-800 dark:text-gray-100 font-serif text-base italic leading-6 mb-3" style={textStart(isRTL)}>
-                        &ldquo;{hadith.text}&rdquo;
+                        {hadith.arabic}
+                    </Text>
+                    {hadith.translation ? (
+                        <Text className="text-gray-700 dark:text-gray-200 text-sm leading-6 mb-3" style={textStart(isRTL)}>
+                            {hadith.translation}
+                        </Text>
+                    ) : null}
+                    <Text className="text-gray-500 dark:text-gray-400 text-xs leading-5 mb-2" style={textStart(isRTL)}>
+                        {t('authenticSource', { defaultValue: 'Source authentique' })}
                     </Text>
                     <Text className="text-gray-500 dark:text-gray-400 text-xs text-right font-medium" style={textEnd(isRTL)}>
-                        — {hadith.source}
+                        {hadith.source}
                     </Text>
                 </Animated.View>
             </View>

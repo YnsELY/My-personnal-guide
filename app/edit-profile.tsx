@@ -23,7 +23,8 @@ export default function EditProfileScreen() {
     const { user, profile, refreshProfile } = useAuth();
     const { t } = useTranslation('profile');
 
-    const [fullName, setFullName] = useState('');
+    const [lastName, setLastName] = useState('');
+    const [firstName, setFirstName] = useState('');
     const [email, setEmail] = useState('');
     const [oldPassword, setOldPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
@@ -39,7 +40,9 @@ export default function EditProfileScreen() {
 
     useEffect(() => {
         if (!profile || !user) return;
-        setFullName(profile.full_name || '');
+        const parts = (profile.full_name || '').trim().split(/\s+/);
+        setFirstName(parts[0] || '');
+        setLastName(parts.slice(1).join(' ') || '');
         setEmail(user.email || '');
         setGender(profile.gender || 'male');
         setLanguage(profile.language || 'fr');
@@ -55,7 +58,7 @@ export default function EditProfileScreen() {
     }, [profile, user]);
 
     const handleSave = async () => {
-        if (!fullName.trim()) {
+        if (!firstName.trim() || !lastName.trim()) {
             Alert.alert(t('common:error'), t('nameRequired'));
             return;
         }
@@ -105,7 +108,7 @@ export default function EditProfileScreen() {
             }
 
             await updateCurrentProfile({
-                full_name: fullName.trim(),
+                full_name: `${firstName.trim()} ${lastName.trim()}`,
                 gender,
                 language,
                 ...dobFields,
@@ -153,17 +156,34 @@ export default function EditProfileScreen() {
 
                     <ScrollView className="flex-1 px-5 pt-6" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
                         <View className="gap-5">
-                            {/* Nom complet */}
+                            {/* Nom */}
                             <View>
-                                <Text className="text-gray-500 dark:text-gray-400 mb-2 font-medium">{t('fullName')}</Text>
+                                <Text className="text-gray-500 dark:text-gray-400 mb-2 font-medium">Nom</Text>
                                 <View className="flex-row items-center bg-white dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3">
                                     <User size={20} color="#9CA3AF" />
                                     <TextInput
                                         className="flex-1 ml-3 text-gray-900 dark:text-white"
-                                        placeholder={t('fullNamePlaceholder')}
+                                        placeholder="Nom de famille"
                                         placeholderTextColor="#9CA3AF"
-                                        value={fullName}
-                                        onChangeText={setFullName}
+                                        value={lastName}
+                                        onChangeText={setLastName}
+                                        autoCapitalize="words"
+                                    />
+                                </View>
+                            </View>
+
+                            {/* Prénom */}
+                            <View>
+                                <Text className="text-gray-500 dark:text-gray-400 mb-2 font-medium">Prénom</Text>
+                                <View className="flex-row items-center bg-white dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3">
+                                    <User size={20} color="#9CA3AF" />
+                                    <TextInput
+                                        className="flex-1 ml-3 text-gray-900 dark:text-white"
+                                        placeholder="Prénom"
+                                        placeholderTextColor="#9CA3AF"
+                                        value={firstName}
+                                        onChangeText={setFirstName}
+                                        autoCapitalize="words"
                                     />
                                 </View>
                             </View>
@@ -305,9 +325,9 @@ export default function EditProfileScreen() {
                                     className="flex-row justify-between items-center bg-white dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3"
                                 >
                                     <View className="flex-row items-center gap-2">
-                                        <Text className="text-lg">{language === 'fr' ? '🇫🇷' : '🇸🇦'}</Text>
+                                        <Text className="text-lg">{language === 'ar' ? '🇸🇦' : language === 'en' ? '🇬🇧' : '🇫🇷'}</Text>
                                         <Text className="text-gray-900 dark:text-white">
-                                            {language === 'fr' ? t('common:french') : t('common:arabic')}
+                                            {language === 'ar' ? t('common:arabic') : language === 'en' ? t('common:english') : t('common:french')}
                                         </Text>
                                     </View>
                                     <ChevronDown size={20} color="#9CA3AF" />
@@ -323,10 +343,17 @@ export default function EditProfileScreen() {
                                         </TouchableOpacity>
                                         <TouchableOpacity
                                             onPress={() => { setLanguage('ar'); setOpenLanguage(false); }}
-                                            className="px-4 py-3 active:bg-gray-50 dark:active:bg-zinc-700 flex-row items-center gap-2"
+                                            className="px-4 py-3 border-b border-gray-100 dark:border-white/5 active:bg-gray-50 dark:active:bg-zinc-700 flex-row items-center gap-2"
                                         >
                                             <Text className="text-lg">🇸🇦</Text>
                                             <Text className="text-gray-900 dark:text-white">{t('common:arabic')}</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            onPress={() => { setLanguage('en'); setOpenLanguage(false); }}
+                                            className="px-4 py-3 active:bg-gray-50 dark:active:bg-zinc-700 flex-row items-center gap-2"
+                                        >
+                                            <Text className="text-lg">🇬🇧</Text>
+                                            <Text className="text-gray-900 dark:text-white">{t('common:english')}</Text>
                                         </TouchableOpacity>
                                     </View>
                                 )}

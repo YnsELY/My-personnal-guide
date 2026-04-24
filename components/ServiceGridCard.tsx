@@ -5,6 +5,15 @@ import { Image, Text, TouchableOpacity, View } from 'react-native';
 import { resolveProfileAvatarSource } from '@/lib/avatar';
 import { formatEUR } from '@/lib/pricing';
 
+const getServiceCategoryLabel = (category: string) => {
+    const c = (category || '').toLowerCase();
+    if (c.includes('badal')) return 'Omra Badal';
+    if ((c.includes('2') || c.includes('deuxi')) && c.includes('omra')) return '2ème Omra';
+    if (c.includes('visite')) return 'Visite guidée';
+    if (c.includes('omra')) return 'Omra';
+    return category;
+};
+
 interface ServiceGridCardProps {
     service: any; // Using any for simplicity or define interface
 }
@@ -47,7 +56,7 @@ export function ServiceGridCard({ service }: ServiceGridCardProps) {
                 {/* Content */}
                 <View className="p-3">
                     {/* Category */}
-                    <Text className="text-[#b39164] text-xs font-bold uppercase mb-1">{service.category}</Text>
+                    <Text className="text-[#b39164] text-xs font-bold uppercase mb-1">{getServiceCategoryLabel(service.category)}</Text>
 
                     {/* Title */}
                     <Text className="text-gray-900 dark:text-white font-bold text-sm mb-1" numberOfLines={2}>

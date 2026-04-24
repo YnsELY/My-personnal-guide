@@ -11,7 +11,7 @@ import {
     type ReportCategory,
 } from '@/lib/api';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Flag, Send, ShieldBan, ShieldCheck } from 'lucide-react-native';
+import { ArrowLeft, Flag, Send, ShieldBan, ShieldCheck, User as UserIcon } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
@@ -206,7 +206,13 @@ export default function ChatScreen() {
                     <TouchableOpacity onPress={() => router.back()} className="mr-3">
                         <ArrowLeft size={24} className="text-gray-900 dark:text-white" />
                     </TouchableOpacity>
-                    <Image source={user.image} className="w-10 h-10 rounded-full mr-3 bg-gray-200" />
+                    {user.userRole === 'pilgrim' ? (
+                        <View className="w-10 h-10 rounded-full mr-3 bg-zinc-700 items-center justify-center">
+                            <UserIcon size={20} color="#d4d4d8" />
+                        </View>
+                    ) : (
+                        <Image source={user.image} className="w-10 h-10 rounded-full mr-3 bg-gray-200" />
+                    )}
                     <View className="flex-1">
                         <Text className="text-gray-900 dark:text-white font-bold text-base">{user.name}</Text>
                         <Text className="text-green-500 text-xs">En ligne</Text>

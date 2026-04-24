@@ -13,6 +13,8 @@ interface CalendarPickerProps {
     mode?: 'single' | 'range';
     variant?: 'default' | 'service';
     title?: string;
+    minDate?: number | null;
+    maxDate?: number | null;
 }
 
 export default function CalendarPicker({
@@ -23,10 +25,22 @@ export default function CalendarPicker({
     mode = 'single',
     variant = 'default',
     title = 'Choisir une date',
+    minDate,
+    maxDate,
 }: CalendarPickerProps) {
     const [startDate, setStartDate] = useState<number | null>(initialStart || null);
     const [endDate, setEndDate] = useState<number | null>(initialEnd || null);
-    const [currentMonthOffset, setCurrentMonthOffset] = useState(0);
+
+    const initialMonthOffset = React.useMemo(() => {
+        if (!minDate) return 0;
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        const min = new Date(minDate);
+        const offset = (min.getFullYear() - now.getFullYear()) * 12 + (min.getMonth() - now.getMonth());
+        return Math.max(0, offset);
+    }, [minDate]);
+
+    const [currentMonthOffset, setCurrentMonthOffset] = useState(initialMonthOffset);
 
     const { calendarData, monthLabel } = useMemo(() => {
         const now = new Date();
@@ -67,7 +81,15 @@ export default function CalendarPicker({
         };
     }, [currentMonthOffset]);
 
+    const isDateDisabled = (timestamp: number) => {
+        if (minDate && timestamp < minDate) return true;
+        if (maxDate && timestamp > maxDate) return true;
+        return false;
+    };
+
     const handleDatePress = (timestamp: number) => {
+        if (isDateDisabled(timestamp)) return;
+
         if (mode === 'single') {
             setStartDate(timestamp);
             setEndDate(null);
@@ -109,25 +131,27 @@ export default function CalendarPicker({
                     const { day, timestamp } = item;
                     const isSelected = isDateSelected(timestamp);
                     const inRange = isDateInRange(timestamp);
+                    const disabled = isDateDisabled(timestamp);
 
                     return (
                         <TouchableOpacity
                             key={timestamp}
                             onPress={() => handleDatePress(timestamp)}
+                            disabled={disabled}
                             className="w-[14.28%] h-14 items-center justify-start pt-1 relative"
                         >
-                            {inRange && (
+                            {!disabled && inRange && (
                                 <View className="absolute top-1 bottom-3 left-0 right-0 bg-[#b39164]/20" />
                             )}
-                            {startDate === timestamp && endDate && (
+                            {!disabled && startDate === timestamp && endDate && (
                                 <View className="absolute top-1 bottom-3 left-[50%] right-0 bg-[#b39164]/20" />
                             )}
-                            {endDate === timestamp && startDate && (
+                            {!disabled && endDate === timestamp && startDate && (
                                 <View className="absolute top-1 bottom-3 left-0 right-[50%] bg-[#b39164]/20" />
                             )}
 
                             <View className={`w-10 h-10 items-center justify-center rounded-full ${isSelected ? 'bg-[#b39164] border border-[#b39164]' : ''} z-10`}>
-                                <Text className="font-medium text-lg text-white">{day}</Text>
+                                <Text className={`font-medium text-lg ${disabled ? 'text-zinc-600' : 'text-white'}`}>{day}</Text>
                             </View>
                         </TouchableOpacity>
                     );

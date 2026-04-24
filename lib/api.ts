@@ -1,9 +1,28 @@
 import { GUIDES } from '@/constants/data';
-import { getServiceImageForLocation } from '@/constants/serviceLocationImages';
+import { resolveServiceImageSource } from '@/constants/serviceLocationImages';
 import { getFixedServiceDescription } from '@/constants/serviceDescriptions';
 import { type AvatarPresetId, resolveProfileAvatarSource, toAvatarPresetUrl } from '@/lib/avatar';
 import { resolveFixedGuideNetEurForService } from '@/lib/guideTariffs';
-import { sendBookingNotifications } from '@/lib/notifications';
+import {
+    sendBookingNotifications,
+    notifyPilgrimReservationConfirmed,
+    notifyPilgrimReservationRefused,
+    notifyPilgrimGuideConfirmedStart,
+    notifyVisitStarted,
+    notifyPilgrimGuideConfirmedEnd,
+    notifyVisitCompleted,
+    notifyGuidePilgrimConfirmedStart,
+    notifyGuidePilgrimConfirmedEnd,
+    notifyReservationCancelledByPilgrim,
+    notifyNewMessage,
+    notifyGuideNewReview,
+    notifyAdminNewReport,
+    notifyAdminNewGuideApplication,
+    notifyAdminGuideInterviewAccepted,
+    notifyAdminGuideInterviewCounterProposed,
+    notifyPilgrimWalletCredited,
+    getUserDisplayName,
+} from '@/lib/notifications';
 import {
     computeReservationFinance as computeReservationFinanceShared,
     PLATFORM_COMMISSION_RATE,
@@ -76,17 +95,21 @@ export const getCurrentProfile = async () => {
 };
 
 export const updateCurrentProfileAvatar = async (presetId: AvatarPresetId) => {
+    const user = await getCurrentUser();
+    if (!user) throw new Error("Vous devez être connecté.");
+
     const avatarUrl = toAvatarPresetUrl(presetId);
-    const { data, error } = await supabase.rpc('update_my_profile_avatar', {
-        p_avatar_url: avatarUrl,
-    });
+    const { data, error } = await supabase
+        .from('profiles')
+        .update({ avatar_url: avatarUrl })
+        .eq('id', user.id)
+        .select('id, avatar_url')
+        .single();
 
     if (error) throw error;
+    if (!data?.id) throw new Error("Profil introuvable.");
 
-    const payload = Array.isArray(data) ? data[0] : data;
-    if (!payload?.id) throw new Error("Profil introuvable.");
-
-    return payload;
+    return data;
 };
 
 export const updateCurrentProfile = async (fields: {
@@ -422,6 +445,7 @@ export const createGuideProfile = async (guideData: {
         .single();
 
     if (error) throw error;
+    try { const n = await getUserDisplayName(userId); notifyAdminNewGuideApplication(n).catch(() => {}); } catch {}
     return data;
 };
 
@@ -557,6 +581,7 @@ export const acceptGuideInterviewProposal = async (interviewId: string) => {
         .single();
 
     if (error) throw error;
+    try { const n = await getUserDisplayName(userId); notifyAdminGuideInterviewAccepted(n, data.scheduled_at).catch(() => {}); } catch {}
     return data;
 };
 
@@ -585,6 +610,7 @@ export const counterProposeGuideInterview = async (payload: {
         .single();
 
     if (error) throw error;
+    try { const n = await getUserDisplayName(userId); notifyAdminGuideInterviewCounterProposed(n, payload.scheduledAt).catch(() => {}); } catch {}
     return data;
 };
 
@@ -691,7 +717,7 @@ export const getServices = async () => {
         startDate: s.availability_start,
         endDate: s.availability_end,
         meetingPoints: s.meeting_points || [], // Add this
-        image: getServiceImageForLocation(s.location)
+        image: resolveServiceImageSource(s.image_url, s.location)
     };
     });
 
@@ -736,7 +762,7 @@ export const getPublicGuideServices = async (guideId: string) => {
             startDate: s.availability_start,
             endDate: s.availability_end,
             meetingPoints: s.meeting_points || [],
-            image: getServiceImageForLocation(s.location),
+            image: resolveServiceImageSource(s.image_url, s.location),
         };
     });
 };
@@ -791,6 +817,7 @@ export const getGuideById = async (id: string) => {
         id: data.id,
         name: data.full_name || 'Guide',
         role: g?.specialty || 'Guide',
+        userRole: data.role || null,
         rating: g?.rating || 0,
         reviews: g?.reviews_count || 0,
         price: g?.price_per_day ? `${g.price_per_day} ${toCurrencyLabel(g?.currency || 'EUR')}` : 'Sur devis',
@@ -1097,6 +1124,27 @@ export const updateReservationStatus = async (id: string, status: string) => {
         .single();
 
     if (error) throw error;
+
+    // Notifications selon le nouveau statut
+    try {
+        if (status === 'confirmed') {
+            const guideName = await getUserDisplayName(data.guide_id);
+            notifyPilgrimReservationConfirmed(data.user_id, guideName, data.service_name).catch(() => {});
+        } else if (status === 'cancelled') {
+            notifyPilgrimReservationRefused(data.user_id, data.service_name).catch(() => {});
+        } else if (status === 'completed') {
+            const guideName = await getUserDisplayName(data.guide_id);
+            notifyVisitCompleted({
+                pilgrimId: data.user_id,
+                guideId: data.guide_id,
+                guideName,
+                serviceName: data.service_name,
+                guideNetAmount: Number(data.guide_net_amount ?? 0),
+                reservationId: data.id,
+            }).catch(() => {});
+        }
+    } catch {}
+
     return data;
 };
 
@@ -1112,6 +1160,28 @@ export const cancelReservationAsPilgrim = async (reservationId: string) => {
 
     const payload = Array.isArray(data) ? data[0] : data;
     if (!payload) throw new Error("Reservation introuvable ou non eligible a l'annulation.");
+
+    // Notif guide + admins (G-6, A-5) + pèlerin si crédit (P-9)
+    try {
+        const resId = payload.reservationId || payload.reservation_id;
+        if (resId) {
+            const { data: res } = await supabase.from('reservations')
+                .select('guide_id, service_name, user_id').eq('id', resId).maybeSingle();
+            if (res) {
+                const pilgrimName = await getUserDisplayName(userId);
+                notifyReservationCancelledByPilgrim({
+                    guideId: res.guide_id,
+                    pilgrimName,
+                    serviceName: res.service_name,
+                    reservationId: resId,
+                }).catch(() => {});
+                const credited = roundMoney(toNumber(payload.creditedAmount ?? payload.credited_amount));
+                if (credited > 0) {
+                    notifyPilgrimWalletCredited(res.user_id, credited).catch(() => {});
+                }
+            }
+        }
+    } catch {}
 
     const creditedAmount = roundMoney(toNumber(payload.creditedAmount ?? payload.credited_amount));
     const retainedAmount = roundMoney(toNumber(payload.retainedAmount ?? payload.retained_amount));
@@ -1214,7 +1284,15 @@ export const confirmVisitStartAsGuide = async (reservationId: string) => {
     if (error) throw error;
     if (!data) throw new Error("RÃƒÂ©servation introuvable ou non ÃƒÂ©ligible au dÃƒÂ©marrage.");
 
-    return await syncReservationStartState(reservationId);
+    const result = await syncReservationStartState(reservationId);
+    try {
+        const guideName = await getUserDisplayName(data.guide_id);
+        notifyPilgrimGuideConfirmedStart(data.user_id, guideName).catch(() => {}); // P-3
+        if ((result as any)?.status === 'in_progress') {
+            notifyVisitStarted(data.user_id, data.guide_id, data.service_name).catch(() => {}); // P-4+G-3
+        }
+    } catch {}
+    return result;
 };
 
 export const confirmVisitStartAsPilgrim = async (reservationId: string) => {
@@ -1238,7 +1316,15 @@ export const confirmVisitStartAsPilgrim = async (reservationId: string) => {
     if (error) throw error;
     if (!data) throw new Error("Le guide doit d'abord confirmer le dÃƒÂ©but de la visite.");
 
-    return await syncReservationStartState(reservationId);
+    const result = await syncReservationStartState(reservationId);
+    try {
+        const pilgrimName = await getUserDisplayName(data.user_id);
+        notifyGuidePilgrimConfirmedStart(data.guide_id, pilgrimName, data.service_name).catch(() => {}); // G-2
+        if ((result as any)?.status === 'in_progress') {
+            notifyVisitStarted(data.user_id, data.guide_id, data.service_name).catch(() => {}); // P-4+G-3
+        }
+    } catch {}
+    return result;
 };
 
 export const confirmVisitEndAsGuide = async (reservationId: string) => {
@@ -1261,7 +1347,12 @@ export const confirmVisitEndAsGuide = async (reservationId: string) => {
     if (error) throw error;
     if (!data) throw new Error("RÃƒÂ©servation introuvable ou non ÃƒÂ©ligible ÃƒÂ  la clÃƒÂ´ture.");
 
-    return await syncReservationCompletionState(reservationId);
+    const resultEnd = await syncReservationCompletionState(reservationId);
+    try {
+        const guideName = await getUserDisplayName(data.guide_id);
+        notifyPilgrimGuideConfirmedEnd(data.user_id, guideName).catch(() => {}); // P-5
+    } catch {}
+    return resultEnd;
 };
 
 export const confirmVisitEndAsPilgrim = async (reservationId: string) => {
@@ -1285,7 +1376,12 @@ export const confirmVisitEndAsPilgrim = async (reservationId: string) => {
     if (error) throw error;
     if (!data) throw new Error("Le guide doit d'abord confirmer la fin de la visite.");
 
-    return await syncReservationCompletionState(reservationId);
+    const resultEndP = await syncReservationCompletionState(reservationId);
+    try {
+        const pilgrimName = await getUserDisplayName(data.user_id);
+        notifyGuidePilgrimConfirmedEnd(data.guide_id, pilgrimName).catch(() => {}); // G-4
+    } catch {}
+    return resultEndP;
 };
 
 export const getReservations = async () => {
@@ -1453,6 +1549,11 @@ export const createReviewForCompletedReservation = async (payload: {
     if (error) throw error;
     const review = Array.isArray(data) ? data[0] : data;
     if (!review) throw new Error("Impossible d'enregistrer votre avis.");
+    try {
+        const [pilgrimName] = await Promise.all([getUserDisplayName(userId)]);
+        const { data: res } = await supabase.from('reservations').select('guide_id, service_name').eq('id', payload.reservationId).maybeSingle();
+        if (res) notifyGuideNewReview(res.guide_id, pilgrimName, payload.rating, res.service_name).catch(() => {});
+    } catch {}
     return review;
 };
 
@@ -1481,6 +1582,7 @@ export const createService = async (serviceData: {
     availability_end: string;
     max_participants?: number;
     meeting_points?: { name: string; supplement: number }[];
+    image_url?: string;
 }) => {
     const userId = await ensureUser();
     if (!userId) throw new Error("Vous devez ÃƒÂªtre connectÃƒÂ©.");
@@ -1506,7 +1608,7 @@ export const createService = async (serviceData: {
             location: serviceData.location,
             availability_start: serviceData.availability_start,
             availability_end: serviceData.availability_end,
-            image_url: null,
+            image_url: serviceData.image_url || null,
             max_participants: serviceData.max_participants,
             meeting_points: serviceData.meeting_points,
             service_status: 'active'
@@ -1589,7 +1691,7 @@ export const getServiceById = async (serviceId: string) => {
         startDate: data.availability_start,
         endDate: data.availability_end,
         meetingPoints: data.meeting_points || [],
-        image: getServiceImageForLocation(data.location)
+        image: resolveServiceImageSource(data.image_url, data.location)
     };
 };
 
@@ -1637,6 +1739,10 @@ export const reportUser = async (payload: {
         throw new Error("Impossible d'envoyer ce signalement.");
     }
 
+    try {
+        const [rName, tName] = await Promise.all([getUserDisplayName(userId), getUserDisplayName(payload.targetUserId)]);
+        notifyAdminNewReport(rName, tName, payload.category || 'other').catch(() => {});
+    } catch {}
     return {
         reportId: result.reportId || result.report_id,
     };
@@ -1867,6 +1973,7 @@ export const sendMessage = async (receiverId: string, content: string) => {
     if (error) throw error;
     const message = Array.isArray(data) ? data[0] : data;
     if (!message) throw new Error("Impossible d'envoyer le message.");
+    try { const senderName = await getUserDisplayName(userId); notifyNewMessage(receiverId, senderName).catch(() => {}); } catch {}
     return message;
 };
 
@@ -1892,8 +1999,8 @@ export const getConversations = async () => {
         .from('messages')
         .select(`
             *,
-            sender:profiles!messages_sender_id_fkey(id, full_name, avatar_url),
-            receiver:profiles!messages_receiver_id_fkey(id, full_name, avatar_url)
+            sender:profiles!messages_sender_id_fkey(id, full_name, avatar_url, role),
+            receiver:profiles!messages_receiver_id_fkey(id, full_name, avatar_url, role)
         `)
         .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
         .order('created_at', { ascending: false });
@@ -1916,6 +2023,7 @@ export const getConversations = async () => {
                 id: otherId,
                 user: otherUser.full_name || 'Utilisateur',
                 avatar: resolveProfileAvatarSource(otherUser.avatar_url),
+                role: otherUser.role || null,
                 message: msg.content,
                 time: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 unread: 0,

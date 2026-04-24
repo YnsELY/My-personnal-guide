@@ -21,6 +21,11 @@ const REPORT_CATEGORY_KEYS: { value: ReportCategory; key: string }[] = [
 
 const getLocale = () => i18n.language === 'ar' ? 'ar-SA' : 'fr-FR';
 
+const formatLocation = (location?: string | null) => {
+    if (!location) return '';
+    return /les\s+deux/i.test(location) ? 'La Mecque et Médine' : location;
+};
+
 export default function GuideDetails() {
     const { t } = useTranslation('guide');
     const { id, startDate, endDate, servicePrice, serviceGuideNetPrice, serviceLocation, serviceTitle, serviceId } = useLocalSearchParams();
@@ -306,7 +311,7 @@ export default function GuideDetails() {
                         {selectedServiceTitleParam && <Text className="text-lg font-medium text-[#b39164] uppercase tracking-wide mb-1">{selectedServiceTitleParam}</Text>}
                         {/* Guide Name */}
                         <Text className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{guide.name}</Text>
-                        <Text className="text-gray-500 dark:text-gray-400 text-lg">{guide.role} • {selectedServiceLocationParam || guide.location}</Text>
+                        <Text className="text-gray-500 dark:text-gray-400 text-lg">{guide.role} • {formatLocation(selectedServiceLocationParam || guide.location)}</Text>
                         {!isServicesListMode && !!activeService?.description && (
                             <Text className="text-gray-500 dark:text-gray-400 text-sm leading-6 mt-3">
                                 {activeService.description}
@@ -368,7 +373,7 @@ export default function GuideDetails() {
                                         <View className="flex-row items-center justify-between border-t border-gray-100 dark:border-white/5 pt-3">
                                             <View className="flex-1 mr-3">
                                                 <Text className="text-gray-500 dark:text-gray-400 text-xs">
-                                                    {serviceItem.location || t('profile.locationTbd')}
+                                                    {formatLocation(serviceItem.location) || t('profile.locationTbd')}
                                                 </Text>
                                                 <Text className="text-gray-400 text-[11px] mt-1">
                                                     {formatServiceDateRange(serviceItem.startDate, serviceItem.endDate)}
@@ -401,7 +406,7 @@ export default function GuideDetails() {
                         </View>
 
                         <View className="items-center flex-1">
-                            <Text className="text-xl font-bold text-gray-900 dark:text-white">{selectedServiceLocationParam || guide.location}</Text>
+                            <Text className="text-xl font-bold text-gray-900 dark:text-white">{formatLocation(selectedServiceLocationParam || guide.location)}</Text>
                             <Text className="text-gray-500 text-xs mt-1">{t('profile.place')}</Text>
                         </View>
                     </View>

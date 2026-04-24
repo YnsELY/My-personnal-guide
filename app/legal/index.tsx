@@ -1,8 +1,9 @@
 import { Stack, useRouter } from 'expo-router';
-import { ArrowLeft, Ban, BookOpen, FileText, Mail, Shield } from 'lucide-react-native';
+import { ArrowLeft, Ban, BookOpen, FileText, Mail, Scroll, Shield, ShieldCheck } from 'lucide-react-native';
 import React from 'react';
+import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
-import { directionStyle, endSpacing, flipChevron, rowStyle, textStart } from '@/lib/rtl';
+import { directionStyle, endSpacing, flipChevron, rowStyle, startSpacing, textStart } from '@/lib/rtl';
 import { useTranslation } from 'react-i18next';
 import { StatusBar, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -13,7 +14,9 @@ const SUPPORT_EMAIL = 'support@nefsy.app';
 export default function LegalIndexScreen() {
     const { t } = useTranslation('content');
     const { isRTL } = useLanguage();
+    const { profile } = useAuth();
     const router = useRouter();
+    const isGuide = profile?.role === 'guide';
 
     const openSupportMail = async () => {
         const url = `mailto:${SUPPORT_EMAIL}`;
@@ -42,7 +45,7 @@ export default function LegalIndexScreen() {
                         style={rowStyle(isRTL)}
                     >
                         <FileText size={18} color="#b39164" />
-                        <View className="flex-1" style={endSpacing(12, isRTL)}>
+                        <View className="flex-1" style={startSpacing(12, isRTL)}>
                             <Text className="text-gray-900 dark:text-white font-semibold" style={textStart(isRTL)}>{t('legal.cgvu')}</Text>
                             <Text className="text-gray-500 text-xs mt-1" style={textStart(isRTL)}>{t('legal.cgvuSubtitle')}</Text>
                         </View>
@@ -54,7 +57,7 @@ export default function LegalIndexScreen() {
                         style={rowStyle(isRTL)}
                     >
                         <Ban size={18} color="#b39164" />
-                        <View className="flex-1" style={endSpacing(12, isRTL)}>
+                        <View className="flex-1" style={startSpacing(12, isRTL)}>
                             <Text className="text-gray-900 dark:text-white font-semibold" style={textStart(isRTL)}>{t('legal.cancellation')}</Text>
                             <Text className="text-gray-500 text-xs mt-1" style={textStart(isRTL)}>{t('legal.cancellationSubtitle')}</Text>
                         </View>
@@ -66,23 +69,51 @@ export default function LegalIndexScreen() {
                         style={rowStyle(isRTL)}
                     >
                         <Shield size={18} color="#b39164" />
-                        <View className="flex-1" style={endSpacing(12, isRTL)}>
+                        <View className="flex-1" style={startSpacing(12, isRTL)}>
                             <Text className="text-gray-900 dark:text-white font-semibold" style={textStart(isRTL)}>{t('legal.privacy')}</Text>
                             <Text className="text-gray-500 text-xs mt-1" style={textStart(isRTL)}>{t('legal.privacySubtitle')}</Text>
                         </View>
                     </TouchableOpacity>
 
-                    <TouchableOpacity
-                        onPress={() => router.push('/legal/charter' as any)}
-                        className="bg-white dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-2xl p-4 flex-row items-center"
-                        style={rowStyle(isRTL)}
-                    >
-                        <BookOpen size={18} color="#b39164" />
-                        <View className="flex-1" style={endSpacing(12, isRTL)}>
-                            <Text className="text-gray-900 dark:text-white font-semibold" style={textStart(isRTL)}>{t('legal.charter')}</Text>
-                            <Text className="text-gray-500 text-xs mt-1" style={textStart(isRTL)}>{t('legal.charterSubtitle')}</Text>
-                        </View>
-                    </TouchableOpacity>
+                    {isGuide ? (
+                        <>
+                            <TouchableOpacity
+                                onPress={() => router.push('/legal/charter?type=code-of-conduct' as any)}
+                                className="bg-white dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-2xl p-4 flex-row items-center"
+                                style={rowStyle(isRTL)}
+                            >
+                                <ShieldCheck size={18} color="#b39164" />
+                                <View className="flex-1" style={startSpacing(12, isRTL)}>
+                                    <Text className="text-gray-900 dark:text-white font-semibold" style={textStart(isRTL)}>{t('legal.guideCodeOfConduct')}</Text>
+                                    <Text className="text-gray-500 text-xs mt-1" style={textStart(isRTL)}>{t('legal.guideCodeOfConductSubtitle')}</Text>
+                                </View>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                onPress={() => router.push('/legal/charter?type=religious-regulation' as any)}
+                                className="bg-white dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-2xl p-4 flex-row items-center"
+                                style={rowStyle(isRTL)}
+                            >
+                                <Scroll size={18} color="#b39164" />
+                                <View className="flex-1" style={startSpacing(12, isRTL)}>
+                                    <Text className="text-gray-900 dark:text-white font-semibold" style={textStart(isRTL)}>{t('legal.guideRegulation')}</Text>
+                                    <Text className="text-gray-500 text-xs mt-1" style={textStart(isRTL)}>{t('legal.guideRegulationSubtitle')}</Text>
+                                </View>
+                            </TouchableOpacity>
+                        </>
+                    ) : (
+                        <TouchableOpacity
+                            onPress={() => router.push('/legal/charter' as any)}
+                            className="bg-white dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-2xl p-4 flex-row items-center"
+                            style={rowStyle(isRTL)}
+                        >
+                            <BookOpen size={18} color="#b39164" />
+                            <View className="flex-1" style={startSpacing(12, isRTL)}>
+                                <Text className="text-gray-900 dark:text-white font-semibold" style={textStart(isRTL)}>{t('legal.charter')}</Text>
+                                <Text className="text-gray-500 text-xs mt-1" style={textStart(isRTL)}>{t('legal.charterSubtitle')}</Text>
+                            </View>
+                        </TouchableOpacity>
+                    )}
 
                     <TouchableOpacity
                         onPress={openSupportMail}

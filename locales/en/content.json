@@ -1,0 +1,296 @@
+{
+  "categories": {
+    "omraAccompagnee": "Accompanied Omra",
+    "omraBadal": "Omra Badal",
+    "visitesGuidees": "Guided tours",
+    "transportVIP": "VIP transport",
+    "hebergement": "Accommodation"
+  },
+  "serviceOptions": {
+    "omraAccompagneeHorsRamadan": "Accompanied Omra (outside Ramadan)",
+    "omraAccompagneeRamadan": "Accompanied Omra Ramadan",
+    "omraBadal": "Omra Badal",
+    "visitesGuideesLegiferees": "Guided tours — Medina or Makkah",
+    "seulOuCouple": "Omra alone or as a couple",
+    "famille": "Omra as a family (3 to 7 people)",
+    "groupe": "Group Omra",
+    "standard": "Standard",
+    "ramadan": "Ramadan"
+  },
+  "services": {
+    "omraAccompagne": {
+      "title": "Accompanied Omra",
+      "shortDescription": "Experience your Omra with serenity",
+      "description": "Perform your Omra alongside qualified guides for reliable and caring accompaniment.",
+      "mainText": "Perform your Omra with full confidence alongside our qualified guides, recognized for their seriousness, knowledge and ethics.",
+      "details": "Present at every step, they accompany you with care so that you may experience this sacred journey in serenity, conformity with the rites and sincere pursuit of Allah's pleasure."
+    },
+    "omraBadal": {
+      "title": "Omra Badal",
+      "titleArabic": "Omra by Proxy",
+      "shortDescription": "A Mercy for your loved ones",
+      "description": "Perform an Omra on behalf of a deceased or ill loved one, a pious act of immense spiritual value.",
+      "mainText": "A journey of faith to the purest places on Earth, which erases sins and purifies the heart. From the Ihram to the Tawaf around the Kaaba, to the Sa'i between Safa and Marwa.",
+      "details": "Congratulations on this magnificent journey of faith. You leave behind the worries of this world to reach the honored Makkah, the blessed land that Allah has magnified."
+    },
+    "visiteGuidee": {
+      "title": "Guided Tours",
+      "titleArabic": "Visit of Medina",
+      "shortDescription": "Discover sacred history",
+      "description": "Explore the holy sites of Medina and Makkah with expert guides to understand prophetic history.",
+      "mainText": "Visiting the historical sites of Makkah and Medina connects you to the life of the Prophet ﷺ and his companions.",
+      "details": "Visit Mount Uhud, the mosque of Quba, and the historical sites of the Battle of the Trench. A total immersion in the history of Islam."
+    }
+  },
+  "hadiths": [
+    {
+      "title": "The sacredness (Ḥaram) of Makkah",
+      "arabic": "إِنَّ هَذَا الْبَلَدَ حَرَّمَهُ اللَّهُ يَوْمَ خَلَقَ السَّمَاوَاتِ وَالْأَرْضَ، فَهُوَ حَرَامٌ بِحُرْمَةِ اللَّهِ إِلَى يَوْمِ الْقِيَامَةِ",
+      "translation": "Allah made this city sacred on the day He created the heavens and the earth. It remains sacred by Allah’s decree until the Day of Resurrection.",
+      "source": "Sahih al-Bukhari, 1832; Sahih Muslim, 1353"
+    },
+    {
+      "title": "Prohibition of shedding blood and cutting trees in Makkah",
+      "arabic": "لَا يَحِلُّ لِامْرِئٍ يُؤْمِنُ بِاللَّهِ وَالْيَوْمِ الْآخِرِ أَنْ يَسْفِكَ فِيهَا دَمًا، وَلَا يَعْضُدَ بِهَا شَجَرًا",
+      "translation": "It is not lawful for one who believes in Allah and the Last Day to shed blood there or cut down its trees.",
+      "source": "Sahih al-Bukhari, 104; Sahih Muslim, 1354"
+    },
+    {
+      "title": "Makkah, the most beloved land to Allah",
+      "arabic": "وَاللَّهِ إِنَّكِ لَخَيْرُ أَرْضِ اللَّهِ، وَأَحَبُّ أَرْضِ اللَّهِ إِلَى اللَّهِ، وَلَوْلَا أَنِّي أُخْرِجْتُ مِنْكِ مَا خَرَجْتُ",
+      "translation": "By Allah, you are the best land of Allah and the most beloved land to Allah. Had I not been expelled from you, I would never have left you.",
+      "source": "Sunan at-Tirmidhi, 3925 (Hasan Sahih, authenticated by al-Albani)"
+    },
+    {
+      "title": "The reward of prayer in al-Masjid al-Ḥarām",
+      "arabic": "صَلَاةٌ فِي الْمَسْجِدِ الْحَرَامِ خَيْرٌ مِنْ مِائَةِ أَلْفِ صَلَاةٍ فِيمَا سِوَاهُ",
+      "translation": "One prayer in al-Masjid al-Haram is better than one hundred thousand prayers elsewhere.",
+      "source": "Musnad Ahmad, 14694 (authenticated by al-Albani in Sahih al-Jami‘)"
+    },
+    {
+      "title": "The Kaaba, the first house established on earth",
+      "arabic": "الْمَسْجِدُ الْحَرَامُ",
+      "translation": "Al-Masjid al-Haram.",
+      "source": "Sahih al-Bukhari, 3366"
+    },
+    {
+      "title": "Allah's protection of Makkah",
+      "arabic": "إِنَّ اللَّهَ حَبَسَ عَنْ مَكَّةَ الْفِيلَ، وَسَلَّطَ عَلَيْهَا رَسُولَهُ وَالْمُؤْمِنِينَ",
+      "translation": "Allah held back the elephant from Makkah, then granted it to His Messenger and the believers.",
+      "source": "Sahih al-Bukhari, 1053"
+    },
+    {
+      "title": "Angels guard the gates of Makkah",
+      "arabic": "عَلَى أَنْقَابِ مَكَّةَ مَلَائِكَةٌ، لَا يَدْخُلُهَا الطَّاعُونُ وَلَا الدَّجَّالُ",
+      "translation": "At the mountain passes of Makkah there are angels. Neither plague nor the Dajjal will enter it.",
+      "source": "Sahih al-Bukhari, 1880; Sahih Muslim, 1379"
+    },
+    {
+      "title": "The gravity of sinning in Makkah",
+      "arabic": "مَنْ أَحْدَثَ فِيهَا حَدَثًا أَوْ آوَى مُحْدِثًا فَعَلَيْهِ لَعْنَةُ اللَّهِ",
+      "translation": "Whoever introduces an offense there or shelters an offender is under the curse of Allah.",
+      "source": "Sahih Muslim, 1366"
+    },
+    {
+      "title": "The Prophet's ﷺ supplication for Makkah",
+      "arabic": "اللَّهُمَّ حَبِّبْ إِلَيْنَا مَكَّةَ كَحُبِّنَا الْمَدِينَةَ أَوْ أَشَدَّ",
+      "translation": "O Allah, make Makkah beloved to us as we love Madinah, or even more.",
+      "source": "Sahih al-Bukhari, 6372; Sahih Muslim, 1376"
+    },
+    {
+      "title": "Medina is a sacred sanctuary (Haram)",
+      "arabic": "إِنَّ إِبْرَاهِيمَ حَرَّمَ مَكَّةَ، وَإِنِّي حَرَّمْتُ الْمَدِينَةَ، مَا بَيْنَ لَابَتَيْهَا، لَا يُقْطَعُ شَجَرُهَا، وَلَا يُحْدَثُ فِيهَا حَدَثٌ",
+      "translation": "Ibrahim made Makkah sacred, and I have made Madinah sacred between its two lava plains. Its trees are not to be cut and no grave offense is to be committed there.",
+      "source": "Sahih al-Bukhari, 1867; Sahih Muslim, 1370"
+    },
+    {
+      "title": "Medina is sacred between its two lava fields",
+      "arabic": "إِنِّي أُحَرِّمُ مَا بَيْنَ لَابَتَيِ الْمَدِينَةِ",
+      "translation": "I declare sacred what lies between the two lava plains of Madinah.",
+      "source": "Sahih al-Bukhari, 1869"
+    },
+    {
+      "title": "The curse upon those who desecrate Medina",
+      "arabic": "مَنْ أَحْدَثَ فِيهَا حَدَثًا أَوْ آوَى مُحْدِثًا فَعَلَيْهِ لَعْنَةُ اللَّهِ وَالْمَلَائِكَةِ وَالنَّاسِ أَجْمَعِينَ",
+      "translation": "Whoever introduces an offense there or shelters an offender will be under the curse of Allah, the angels, and all people.",
+      "source": "Sahih al-Bukhari, 1870; Sahih Muslim, 1370"
+    },
+    {
+      "title": "Medina expels the wicked like a bellows",
+      "arabic": "إِنَّ الْمَدِينَةَ كَالْكِيرِ، تَنْفِي خَبَثَهَا وَيَنْصَعُ طَيِّبُهَا",
+      "translation": "Madinah is like a furnace: it expels its impurities and leaves its pure part clear.",
+      "source": "Sahih al-Bukhari, 1883; Sahih Muslim, 1383"
+    },
+    {
+      "title": "Faith will retreat to Medina",
+      "arabic": "إِنَّ الْإِيمَانَ لَيَأْرِزُ إِلَى الْمَدِينَةِ كَمَا تَأْرِزُ الْحَيَّةُ إِلَى جُحْرِهَا",
+      "translation": "Faith will retreat to Madinah just as a snake retreats to its hole.",
+      "source": "Sahih al-Bukhari, 1876; Sahih Muslim, 147"
+    },
+    {
+      "title": "The Prophet's ﷺ supplication for Medina's blessings",
+      "arabic": "اللَّهُمَّ بَارِكْ لَنَا فِي مَدِينَتِنَا، وَفِي صَاعِنَا، وَفِي مُدِّنَا، وَزِدْ مَعَ الْبَرَكَةِ بَرَكَةً",
+      "translation": "O Allah, bless our Madinah, bless our sa‘ and our mudd, and add blessing upon blessing.",
+      "source": "Sahih al-Bukhari, 1885; Sahih Muslim, 1374"
+    },
+    {
+      "title": "Medina is called \"Taybah / Tâbah\" (the Pure)",
+      "arabic": "هَذِهِ طَابَةُ",
+      "translation": "This is Tabah (the Pure).",
+      "source": "Sahih Muslim, 1383"
+    },
+    {
+      "title": "Encouragement to die in Medina",
+      "arabic": "مَنْ اسْتَطَاعَ مِنْكُمْ أَنْ يَمُوتَ بِالْمَدِينَةِ فَلْيَمُتْ بِهَا، فَإِنِّي أَشْفَعُ لِمَنْ يَمُوتُ بِهَا",
+      "translation": "Whoever among you can die in Madinah, let him die there, for I will intercede for the one who dies there.",
+      "source": "Musnad Ahmad, 16645 (authenticated by al-Albani, Sahih at-Targhib 1196)"
+    },
+    {
+      "title": "Patience with Medina's hardships",
+      "arabic": "لَا يَصْبِرُ عَلَى لَأْوَائِهَا وَشِدَّتِهَا أَحَدٌ إِلَّا كُنْتُ لَهُ شَهِيدًا أَوْ شَفِيعًا يَوْمَ الْقِيَامَةِ",
+      "translation": "No one patiently endures its hardship and difficulty except that I will be a witness or an intercessor for him on the Day of Resurrection.",
+      "source": "Sahih Muslim, 1377"
+    }
+  ],
+  "hadithPrefix": "The Prophet ﷺ said:",
+  "hadithToday": "Hadith of the day",
+  "omraHadith": "The Prophet ﷺ said: \"The Omra expiates sins committed between it and the previous one.\"",
+  "medinaHadith": "A prayer in my mosque is better than a thousand prayers elsewhere, except the Sacred Mosque.",
+  "prayerTimes": {
+    "mecca": "Makkah",
+    "medina": "Medina",
+    "change": "Change"
+  },
+  "legal": {
+    "title": "Legal notices",
+    "cgvu": "Terms & Conditions",
+    "cgvuSubtitle": "General terms of sale and use",
+    "cancellation": "Cancellation policy",
+    "cancellationSubtitle": "Deadlines, fees and refund conditions",
+    "privacy": "Privacy policy",
+    "privacySubtitle": "Data protection and GDPR rights",
+    "charter": "Pilgrim charter",
+    "charterSubtitle": "Rules, commitments and pilgrim rights",
+    "guideCodeOfConduct": "Guides code of conduct",
+    "guideCodeOfConductSubtitle": "Operational and professional rules",
+    "guideRegulation": "Guides religious regulation",
+    "guideRegulationSubtitle": "Amānah, ethics and religious compliance",
+    "charterTitle": "Pilgrim charter",
+    "guideCodeOfConductTitle": "Guides code of conduct",
+    "guideRegulationTitle": "Guides religious regulation",
+    "contactSupport": "Contact support: {{email}}"
+  },
+  "makkahHadiths": [
+    {
+      "title": "The sacredness (Ḥaram) of Makkah",
+      "arabic": "إِنَّ هَذَا الْبَلَدَ حَرَّمَهُ اللَّهُ يَوْمَ خَلَقَ السَّمَاوَاتِ وَالْأَرْضَ، فَهُوَ حَرَامٌ بِحُرْمَةِ اللَّهِ إِلَى يَوْمِ الْقِيَامَةِ",
+      "translation": "Allah made this city sacred on the day He created the heavens and the earth. It remains sacred by Allah’s decree until the Day of Resurrection.",
+      "source": "Sahih al-Bukhari, 1832; Sahih Muslim, 1353"
+    },
+    {
+      "title": "Prohibition of shedding blood and cutting trees in Makkah",
+      "arabic": "لَا يَحِلُّ لِامْرِئٍ يُؤْمِنُ بِاللَّهِ وَالْيَوْمِ الْآخِرِ أَنْ يَسْفِكَ فِيهَا دَمًا، وَلَا يَعْضُدَ بِهَا شَجَرًا",
+      "translation": "It is not lawful for one who believes in Allah and the Last Day to shed blood there or cut down its trees.",
+      "source": "Sahih al-Bukhari, 104; Sahih Muslim, 1354"
+    },
+    {
+      "title": "Makkah, the most beloved land to Allah",
+      "arabic": "وَاللَّهِ إِنَّكِ لَخَيْرُ أَرْضِ اللَّهِ، وَأَحَبُّ أَرْضِ اللَّهِ إِلَى اللَّهِ، وَلَوْلَا أَنِّي أُخْرِجْتُ مِنْكِ مَا خَرَجْتُ",
+      "translation": "By Allah, you are the best land of Allah and the most beloved land to Allah. Had I not been expelled from you, I would never have left you.",
+      "source": "Sunan at-Tirmidhi, 3925 (Hasan Sahih, authenticated by al-Albani)"
+    },
+    {
+      "title": "The reward of prayer in al-Masjid al-Ḥarām",
+      "arabic": "صَلَاةٌ فِي الْمَسْجِدِ الْحَرَامِ خَيْرٌ مِنْ مِائَةِ أَلْفِ صَلَاةٍ فِيمَا سِوَاهُ",
+      "translation": "One prayer in al-Masjid al-Haram is better than one hundred thousand prayers elsewhere.",
+      "source": "Musnad Ahmad, 14694 (authenticated by al-Albani in Sahih al-Jami‘)"
+    },
+    {
+      "title": "The Kaaba, the first house established on earth",
+      "arabic": "الْمَسْجِدُ الْحَرَامُ",
+      "translation": "Al-Masjid al-Haram.",
+      "source": "Sahih al-Bukhari, 3366"
+    },
+    {
+      "title": "Allah's protection of Makkah",
+      "arabic": "إِنَّ اللَّهَ حَبَسَ عَنْ مَكَّةَ الْفِيلَ، وَسَلَّطَ عَلَيْهَا رَسُولَهُ وَالْمُؤْمِنِينَ",
+      "translation": "Allah held back the elephant from Makkah, then granted it to His Messenger and the believers.",
+      "source": "Sahih al-Bukhari, 1053"
+    },
+    {
+      "title": "Angels guard the gates of Makkah",
+      "arabic": "عَلَى أَنْقَابِ مَكَّةَ مَلَائِكَةٌ، لَا يَدْخُلُهَا الطَّاعُونُ وَلَا الدَّجَّالُ",
+      "translation": "At the mountain passes of Makkah there are angels. Neither plague nor the Dajjal will enter it.",
+      "source": "Sahih al-Bukhari, 1880; Sahih Muslim, 1379"
+    },
+    {
+      "title": "The gravity of sinning in Makkah",
+      "arabic": "مَنْ أَحْدَثَ فِيهَا حَدَثًا أَوْ آوَى مُحْدِثًا فَعَلَيْهِ لَعْنَةُ اللَّهِ",
+      "translation": "Whoever introduces an offense there or shelters an offender is under the curse of Allah.",
+      "source": "Sahih Muslim, 1366"
+    },
+    {
+      "title": "The Prophet's ﷺ supplication for Makkah",
+      "arabic": "اللَّهُمَّ حَبِّبْ إِلَيْنَا مَكَّةَ كَحُبِّنَا الْمَدِينَةَ أَوْ أَشَدَّ",
+      "translation": "O Allah, make Makkah beloved to us as we love Madinah, or even more.",
+      "source": "Sahih al-Bukhari, 6372; Sahih Muslim, 1376"
+    }
+  ],
+  "medinaHadiths": [
+    {
+      "title": "Medina is a sacred sanctuary (Haram)",
+      "arabic": "إِنَّ إِبْرَاهِيمَ حَرَّمَ مَكَّةَ، وَإِنِّي حَرَّمْتُ الْمَدِينَةَ، مَا بَيْنَ لَابَتَيْهَا، لَا يُقْطَعُ شَجَرُهَا، وَلَا يُحْدَثُ فِيهَا حَدَثٌ",
+      "translation": "Ibrahim made Makkah sacred, and I have made Madinah sacred between its two lava plains. Its trees are not to be cut and no grave offense is to be committed there.",
+      "source": "Sahih al-Bukhari, 1867; Sahih Muslim, 1370"
+    },
+    {
+      "title": "Medina is sacred between its two lava fields",
+      "arabic": "إِنِّي أُحَرِّمُ مَا بَيْنَ لَابَتَيِ الْمَدِينَةِ",
+      "translation": "I declare sacred what lies between the two lava plains of Madinah.",
+      "source": "Sahih al-Bukhari, 1869"
+    },
+    {
+      "title": "The curse upon those who desecrate Medina",
+      "arabic": "مَنْ أَحْدَثَ فِيهَا حَدَثًا أَوْ آوَى مُحْدِثًا فَعَلَيْهِ لَعْنَةُ اللَّهِ وَالْمَلَائِكَةِ وَالنَّاسِ أَجْمَعِينَ",
+      "translation": "Whoever introduces an offense there or shelters an offender will be under the curse of Allah, the angels, and all people.",
+      "source": "Sahih al-Bukhari, 1870; Sahih Muslim, 1370"
+    },
+    {
+      "title": "Medina expels the wicked like a bellows",
+      "arabic": "إِنَّ الْمَدِينَةَ كَالْكِيرِ، تَنْفِي خَبَثَهَا وَيَنْصَعُ طَيِّبُهَا",
+      "translation": "Madinah is like a furnace: it expels its impurities and leaves its pure part clear.",
+      "source": "Sahih al-Bukhari, 1883; Sahih Muslim, 1383"
+    },
+    {
+      "title": "Faith will retreat to Medina",
+      "arabic": "إِنَّ الْإِيمَانَ لَيَأْرِزُ إِلَى الْمَدِينَةِ كَمَا تَأْرِزُ الْحَيَّةُ إِلَى جُحْرِهَا",
+      "translation": "Faith will retreat to Madinah just as a snake retreats to its hole.",
+      "source": "Sahih al-Bukhari, 1876; Sahih Muslim, 147"
+    },
+    {
+      "title": "The Prophet's ﷺ supplication for Medina's blessings",
+      "arabic": "اللَّهُمَّ بَارِكْ لَنَا فِي مَدِينَتِنَا، وَفِي صَاعِنَا، وَفِي مُدِّنَا، وَزِدْ مَعَ الْبَرَكَةِ بَرَكَةً",
+      "translation": "O Allah, bless our Madinah, bless our sa‘ and our mudd, and add blessing upon blessing.",
+      "source": "Sahih al-Bukhari, 1885; Sahih Muslim, 1374"
+    },
+    {
+      "title": "Medina is called \"Taybah / Tâbah\" (the Pure)",
+      "arabic": "هَذِهِ طَابَةُ",
+      "translation": "This is Tabah (the Pure).",
+      "source": "Sahih Muslim, 1383"
+    },
+    {
+      "title": "Encouragement to die in Medina",
+      "arabic": "مَنْ اسْتَطَاعَ مِنْكُمْ أَنْ يَمُوتَ بِالْمَدِينَةِ فَلْيَمُتْ بِهَا، فَإِنِّي أَشْفَعُ لِمَنْ يَمُوتُ بِهَا",
+      "translation": "Whoever among you can die in Madinah, let him die there, for I will intercede for the one who dies there.",
+      "source": "Musnad Ahmad, 16645 (authenticated by al-Albani, Sahih at-Targhib 1196)"
+    },
+    {
+      "title": "Patience with Medina's hardships",
+      "arabic": "لَا يَصْبِرُ عَلَى لَأْوَائِهَا وَشِدَّتِهَا أَحَدٌ إِلَّا كُنْتُ لَهُ شَهِيدًا أَوْ شَفِيعًا يَوْمَ الْقِيَامَةِ",
+      "translation": "No one patiently endures its hardship and difficulty except that I will be a witness or an intercessor for him on the Day of Resurrection.",
+      "source": "Sahih Muslim, 1377"
+    }
+  ],
+  "authenticSource": "Authentic source"
+}

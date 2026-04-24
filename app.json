@@ -53,11 +53,12 @@
           "color": "#b39164",
           "defaultChannel": "default"
         }
-      ]
+      ],
+      "expo-font",
+      "expo-localization"
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+      "typedRoutes": true
     }
   }
 }

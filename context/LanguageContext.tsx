@@ -31,7 +31,9 @@ export function useLanguage() {
 }
 
 function getLocale(lang: AppLanguage): string {
-  return lang === 'ar' ? 'ar-SA' : 'fr-FR';
+  if (lang === 'ar') return 'ar-SA';
+  if (lang === 'en') return 'en-US';
+  return 'fr-FR';
 }
 
 async function reloadForDirectionChange() {
@@ -55,7 +57,9 @@ async function reloadForDirectionChange() {
 function resolveDeviceLanguage(): AppLanguage {
   try {
     const locales = Localization.getLocales();
-    if (locales?.[0]?.languageCode?.startsWith('ar')) return 'ar';
+    const code = locales?.[0]?.languageCode;
+    if (code?.startsWith('ar')) return 'ar';
+    if (code?.startsWith('en')) return 'en';
   } catch {}
   return 'fr';
 }
@@ -72,8 +76,8 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
       // 1. Cache local
       const cached = await persistentStorage.getItemAsync(STORAGE_KEY);
-      if (cached === 'fr' || cached === 'ar') {
-        resolved = cached;
+      if (cached === 'fr' || cached === 'ar' || cached === 'en') {
+        resolved = cached as AppLanguage;
       } else {
         // 2. Profile language (if logged in)
         try {
@@ -84,8 +88,8 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
               .select('language')
               .eq('id', user.id)
               .single();
-            if (profile?.language === 'fr' || profile?.language === 'ar') {
-              resolved = profile.language;
+            if (profile?.language === 'fr' || profile?.language === 'ar' || profile?.language === 'en') {
+              resolved = profile.language as AppLanguage;
             }
           }
         } catch {}

@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(python3 -c \":*)",
-      "Bash(python -c \":*)"
+      "Bash(python -c \":*)",
+      "Bash(awk 'NR==146 || NR==147' /Users/m/Desktop/nefsyV2/My-personnal-guide/components/BookingModal.tsx)",
+      "Bash(grep -ao '\"text\":\"[^\"]\\\\{100,400\\\\}\"' /Users/m/.claude/projects/-Users-m-Desktop-nefsyV2-My-personnal-guide/39b0504b-7435-43e9-8ec5-56f687d911b8.jsonl)",
+      "Bash(npx tsc *)"
     ]
   }
 }

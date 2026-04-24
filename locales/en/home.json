@@ -1,0 +1,100 @@
+{
+  "welcomeUser": "Welcome {{name}}",
+  "welcome": "Welcome",
+  "welcomeSubtitle": "Welcome to the place of revelation and the origin of the divine message",
+  "findGuide": "Find a Guide",
+  "bookGuide": "Book your guide",
+  "yourReservations": "Your bookings",
+  "viewBookedGuides": "View booked guides",
+  "ourServices": "Our Services",
+  "premiumSelection": "Premium selection",
+  "recommendedGuides": "Recommended Guides",
+  "loadingGuides": "Loading guides...",
+  "noRecommendedGuides": "No recommended guides at this time.",
+  "createService": "+ Create a service",
+  "viewMyServices": "View my services",
+  "ongoingVisits": "Ongoing visits",
+  "activeCount": "{{count}} active",
+  "activeCount_plural": "{{count}} active",
+  "inProgress": "In progress",
+  "waitingEnd": "Awaiting end",
+  "waitingPilgrimEndConfirmation": "Awaiting pilgrim end confirmation",
+  "endVisit": "End visit",
+  "submitBadalProofs": "Submit Omra Badal proofs",
+  "myUpcomingVisits": "My upcoming visits",
+  "viewAllVisits": "View all my visits",
+  "waitingStart": "Awaiting start",
+  "confirmed": "Confirmed",
+  "waitingPilgrimStartConfirmation": "Awaiting pilgrim start confirmation",
+  "startVisit": "Start visit",
+  "noUpcomingVisits": "No upcoming visits",
+  "myRequests": "My requests",
+  "viewAllRequests": "View all my requests",
+  "refuse": "Decline",
+  "accept": "Accept",
+  "noRequests": "No pending requests",
+  "administration": "Administration",
+  "openAdminDashboard": "Open admin dashboard",
+  "adminDashboardSubtitle": "Guide validation, orders, finance, payments",
+  "needHelp": "Need help?",
+  "actionError": "An error occurred. Please try again.",
+  "serviceCard": {
+    "omraBadal": {
+      "title": "Omra Badal",
+      "subtitle": "By proxy",
+      "description": "A worship performed with seriousness, transparency and step-by-step follow-up.",
+      "badge": "Supervised service",
+      "cta": "View service"
+    },
+    "visitGuidee": {
+      "title": "Guided Tours",
+      "subtitle": "Medina & Makkah",
+      "description": "A structured spiritual journey to visit iconic sites with a guide.",
+      "badge": "Premium accompaniment",
+      "cta": "Discover"
+    },
+    "visitGuideeMakkah": {
+      "title": "Guided Tour Makkah",
+      "subtitle": "Makkah al-Mukarrama",
+      "description": "Discover the holy sites of Makkah with an expert guide in history and rites.",
+      "badge": "Premium accompaniment",
+      "cta": "View service"
+    },
+    "visitGuideeMedine": {
+      "title": "Guided Tour Medina",
+      "subtitle": "Al-Madinah al-Munawwarah",
+      "description": "Explore the historical sites of Medina and experience a prophetic history immersion.",
+      "badge": "Premium accompaniment",
+      "cta": "View service"
+    },
+    "omraAccompagne": {
+      "title": "Accompanied Omra",
+      "subtitle": "On-site accompaniment",
+      "description": "Complete and reassuring accompaniment to perform your Omra in the best conditions.",
+      "badge": "Supervised service",
+      "cta": "View service"
+    },
+    "deuxiemeOmra": {
+      "title": "2nd Omra accompanied",
+      "subtitle": "On-site accompaniment",
+      "description": "Perform your second Omra with the same quality accompaniment as the first.",
+      "badge": "Supervised service",
+      "cta": "View service"
+    },
+    "allServices": {
+      "title": "Find a guide",
+      "subtitle": "By your dates",
+      "description": "Choose your date then discover the services actually available.",
+      "badge": "Live availability",
+      "cta": "Get started"
+    }
+  },
+  "slideAccept": "Slide to accept",
+  "slideRefuse": "Slide to decline",
+  "slideStart": "Slide to start",
+  "slideEnd": "Slide to end",
+  "slideAcceptTitle": "Accept request",
+  "slideRefuseTitle": "Decline request",
+  "slideStartTitle": "Start visit",
+  "slideEndTitle": "End visit"
+}

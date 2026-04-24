@@ -341,9 +341,9 @@ export default function OmraGuideScreen() {
   const router = useRouter();
 
   return (
-    <View className="flex-1 bg-gray-50 dark:bg-zinc-900">
+    <View className="flex-1 bg-white">
       <Stack.Screen options={{ headerShown: false }} />
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle="dark-content" />
 
       {/* Hero Header */}
       <LinearGradient colors={[GOLD_DARK, GOLD, '#c8a87a']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ paddingBottom: 32 }}>

@@ -11,7 +11,7 @@ import { useRouter } from 'expo-router';
 import { Calendar, MapPin, Plus, Trash2, User, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, Modal, Platform, ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import * as Linking from 'expo-linking';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -46,9 +46,13 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
         }
     }, [service]);
 
-    const [pilgrims, setPilgrims] = useState<{ name: string, age: string }[]>([{ name: t('myself'), age: '' }]); // Default to self
-    const [newPilgrimName, setNewPilgrimName] = useState('');
+    const [pilgrims, setPilgrims] = useState<{ name: string, age: string, gender: string }[]>([{ name: t('myself'), age: '', gender: '' }]);
+    const [showAddPilgrimPopup, setShowAddPilgrimPopup] = useState(false);
+    const [newPilgrimLastName, setNewPilgrimLastName] = useState('');
+    const [newPilgrimFirstName, setNewPilgrimFirstName] = useState('');
     const [newPilgrimAge, setNewPilgrimAge] = useState('');
+    const [newPilgrimGender, setNewPilgrimGender] = useState<'male' | 'female' | ''>('');
+    const [addPilgrimError, setAddPilgrimError] = useState('');
     const [transportPickupType, setTransportPickupType] = useState<'haram' | 'hotel' | null>(null);
     const [hotelAddress, setHotelAddress] = useState('');
     const [hotelOver2KmByCar, setHotelOver2KmByCar] = useState<boolean | null>(null);
@@ -141,6 +145,18 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
     // Omra Badal : prestation à distance, pas de lieu de prise en charge
     const isBadal = (selectedService || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().includes('badal');
 
+    // Visite guidée : labels de prise en charge dépendent du lieu (Médine / La Mecque)
+    const normalizedCategory = String(selectedService || '').toLowerCase();
+    const isVisiteGuidee = normalizedCategory.includes('visite');
+    const rawServiceLocation = String(service?.location || '').toLowerCase();
+    const isMedineService = rawServiceLocation.includes('médine') || rawServiceLocation.includes('medine');
+    const meetAtReferenceLabel = isVisiteGuidee
+        ? (isMedineService ? t('modal.meetAtMasjidAlNabawi') : t('modal.meetAtMasjidAlHaram'))
+        : t('modal.meetAtHaram');
+    const locationReferenceLabel = isVisiteGuidee
+        ? (isMedineService ? t('modal.locationMasjidAlNabawi') : t('modal.locationMasjidAlHaram'))
+        : t('modal.locationHaram');
+
     // Price logic (EUR): base service + transport
     const normalizedHotelDistanceInput = hotelDistanceKm.replace(',', '.');
     const parsedHotelDistanceKm = Number(normalizedHotelDistanceInput);
@@ -158,8 +174,11 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
     const cardAmountPaid = Math.max(totalPrice - walletAmountUsed, 0);
     const isFemalePilgrim = profile?.role === 'pilgrim' && profile?.gender === 'female';
     const isMaleGuide = guideGender === 'male';
+    const isFemaleGuide = guideGender === 'female';
     const requiresFemaleCompanionForMaleGuide = isFemalePilgrim && isMaleGuide;
     const isFemaleSoloWithMaleGuideBlocked = requiresFemaleCompanionForMaleGuide && pilgrims.length < 2;
+    const hasRestrictedMalePilgrim = isFemalePilgrim && isFemaleGuide &&
+        pilgrims.slice(1).some(p => p.gender === 'male' && p.age && Number(p.age) > 12);
     const shouldShowPilgrimsSection = selectedService !== 'Omra seule' || requiresFemaleCompanionForMaleGuide || pilgrims.length > 1;
     const isHotelFlowValid = transportPickupType !== 'hotel'
         || (
@@ -170,14 +189,39 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                 || (hotelOver2KmByCar === false && transportWarningAcknowledged)
             )
         );
-    const canOpenConfirmation = (isBadal || !!transportPickupType) && !!visitDate && !!visitTime && !isFemaleSoloWithMaleGuideBlocked && (isBadal || isHotelFlowValid) && pilgrimCharterAccepted;
+    const canOpenConfirmation = (isBadal || !!transportPickupType) && !!visitDate && !!visitTime && !isFemaleSoloWithMaleGuideBlocked && !hasRestrictedMalePilgrim && (isBadal || isHotelFlowValid) && pilgrimCharterAccepted;
 
     const handleAddPilgrim = () => {
-        if (newPilgrimName.trim().length > 0) {
-            setPilgrims([...pilgrims, { name: newPilgrimName.trim(), age: newPilgrimAge.trim() }]);
-            setNewPilgrimName('');
-            setNewPilgrimAge('');
+        setAddPilgrimError('');
+        if (newPilgrimLastName.trim().length < 2) {
+            setAddPilgrimError('Veuillez saisir un nom valide (minimum 2 lettres).');
+            return;
         }
+        if (newPilgrimFirstName.trim().length < 2) {
+            setAddPilgrimError('Veuillez saisir un prénom valide (minimum 2 lettres).');
+            return;
+        }
+        if (!newPilgrimGender) {
+            setAddPilgrimError('Veuillez sélectionner le sexe du pèlerin.');
+            return;
+        }
+        const parsedAge = Number(newPilgrimAge.trim());
+        if (!newPilgrimAge.trim() || !Number.isInteger(parsedAge) || parsedAge < 0 || parsedAge > 110) {
+            setAddPilgrimError("Veuillez saisir un âge valide (entre 0 et 110 ans).");
+            return;
+        }
+        if (isFemalePilgrim && isFemaleGuide && newPilgrimGender === 'male' && Number(newPilgrimAge) > 12) {
+            setAddPilgrimError("Les garçons de plus de 12 ans ne peuvent pas réserver avec un guide femme. Veuillez réserver cette prestation avec un guide homme.");
+            return;
+        }
+        const fullName = `${newPilgrimFirstName.trim()} ${newPilgrimLastName.trim()}`;
+        setPilgrims([...pilgrims, { name: fullName, age: newPilgrimAge.trim(), gender: newPilgrimGender }]);
+        setNewPilgrimLastName('');
+        setNewPilgrimFirstName('');
+        setNewPilgrimAge('');
+        setNewPilgrimGender('');
+        setAddPilgrimError('');
+        setShowAddPilgrimPopup(false);
     };
 
     const handleRemovePilgrim = (index: number) => {
@@ -229,6 +273,10 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
             Alert.alert(t('modal.alertBookingBlocked'), t('femaleSoloWithMaleGuide'));
             return;
         }
+        if (hasRestrictedMalePilgrim) {
+            Alert.alert('Réservation impossible', "Votre groupe contient un garçon de plus de 12 ans. Cette prestation ne peut pas être réservée avec un guide femme. Veuillez réserver avec un guide homme.");
+            return;
+        }
 
         setLoading(true);
         try {
@@ -250,7 +298,7 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                 ? t('modal.locationBadal')
                 : transportPickupType === 'hotel'
                     ? t('modal.locationHotel', { address: normalizedHotelAddress })
-                    : t('modal.locationHaram');
+                    : locationReferenceLabel;
 
             if (cardAmountPaid > 0) {
                 const paymentStatusUrl = Linking.createURL('/payment-status');
@@ -398,7 +446,7 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                                 onPress={() => setShowCalendar(true)}
                                 className={`flex-row items-center bg-zinc-800 border ${visitDate ? 'border-[#b39164]' : 'border-white/5'} rounded-xl p-4 mb-8`}
                             >
-                                <Calendar color={visitDate ? "#b39164" : "#A1A1AA"} size={20} className="mr-3" />
+                                <Calendar color={visitDate ? "#b39164" : "#A1A1AA"} size={20} style={{ marginRight: 10 }} />
                                 <Text className={`font-medium text-base ${visitDate ? 'text-[#b39164]' : 'text-zinc-400'}`}>
                                     {formattedVisitDate ? t('modal.dateOn', { date: formattedVisitDate }) : t('modal.selectDate')}
                                 </Text>
@@ -442,44 +490,16 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                                 <>
                                     <Text className="text-white font-bold text-lg mb-4">{t('modal.pilgrims', { count: pilgrims.length })}</Text>
                                     <View className="bg-zinc-800 rounded-2xl p-4 mb-2 border border-white/5">
-                                        <View className="flex-row items-center mb-4 gap-3">
-                                            <View className="flex-1 flex-row gap-2">
-                                                <View className="flex-1 bg-zinc-900 rounded-xl px-4 py-3 flex-row items-center border border-white/5">
-                                                    <User size={18} color="#71717A" />
-                                                    <TextInput
-                                                        placeholder={t('modal.pilgrimName')}
-                                                        placeholderTextColor="#52525B"
-                                                        className="flex-1 ml-3 text-white text-base"
-                                                        value={newPilgrimName}
-                                                        onChangeText={setNewPilgrimName}
-                                                    />
-                                                </View>
-                                                <View className="w-24 bg-zinc-900 rounded-xl px-4 py-3 border border-white/5 justify-center">
-                                                    <TextInput
-                                                        placeholder={t('modal.pilgrimAge')}
-                                                        placeholderTextColor="#52525B"
-                                                        className="text-white text-base text-center"
-                                                        value={newPilgrimAge}
-                                                        onChangeText={setNewPilgrimAge}
-                                                        keyboardType="numeric"
-                                                    />
-                                                </View>
-                                            </View>
-                                            <TouchableOpacity
-                                                onPress={handleAddPilgrim}
-                                                className="bg-[#b39164] w-12 h-12 rounded-xl items-center justify-center"
-                                            >
-                                                <Plus size={24} color="white" />
-                                            </TouchableOpacity>
-                                        </View>
-
-                                        <View className="gap-3">
+                                        {/* Pilgrim list */}
+                                        <View className="gap-3 mb-4">
                                             {pilgrims.map((pilgrim, index) => (
                                                 <View key={index} className="flex-row items-center justify-between bg-zinc-900/50 p-3 rounded-xl">
-                                                    <View className="flex-row items-center">
+                                                    <View className="flex-row items-center flex-1">
                                                         <User size={16} color="#A1A1AA" />
-                                                        <Text className="text-zinc-300 ml-3 font-medium">
-                                                            {pilgrim.name} {pilgrim.age ? `(${t('modal.pilgrimAgeYears', { age: pilgrim.age })})` : ''}
+                                                        <Text className="text-zinc-300 ml-3 font-medium flex-1" numberOfLines={1}>
+                                                            {pilgrim.name}
+                                                            {pilgrim.gender ? (pilgrim.gender === 'female' ? ' · F' : ' · H') : ''}
+                                                            {pilgrim.age ? ` · ${pilgrim.age} ans` : ''}
                                                         </Text>
                                                     </View>
                                                     {index > 0 && (
@@ -490,6 +510,21 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                                                 </View>
                                             ))}
                                         </View>
+                                        {/* Add pilgrim button */}
+                                        <TouchableOpacity
+                                            onPress={() => {
+                                                setAddPilgrimError('');
+                                                setNewPilgrimLastName('');
+                                                setNewPilgrimFirstName('');
+                                                setNewPilgrimAge('');
+                                                setNewPilgrimGender('');
+                                                setShowAddPilgrimPopup(true);
+                                            }}
+                                            className="flex-row items-center justify-center bg-zinc-700 border border-white/10 rounded-xl py-3 gap-2"
+                                        >
+                                            <Plus size={18} color="#b39164" />
+                                            <Text className="text-[#b39164] font-semibold">Ajouter un pèlerin</Text>
+                                        </TouchableOpacity>
                                     </View>
                                     {isFemaleSoloWithMaleGuideBlocked && (
                                         <View className="mb-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2">
@@ -498,8 +533,24 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                                             </Text>
                                         </View>
                                     )}
+                                    {hasRestrictedMalePilgrim && (
+                                        <View className="mb-3 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2">
+                                            <Text className="text-red-300 text-xs">
+                                                Votre groupe contient un garçon de plus de 12 ans. Cette prestation ne peut pas être réservée avec un guide femme.
+                                            </Text>
+                                        </View>
+                                    )}
                                     <View className="mb-8" />
                                 </>
+                            )}
+
+                            {/* Avertissement frais de transport pour visites guidées */}
+                            {isVisiteGuidee && (
+                                <View className="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+                                    <Text className="text-amber-200 text-xs leading-5">
+                                        Les frais de transport durant la visite guidée (taxis, bus, déplacements sur place) sont à la charge du pèlerin.
+                                    </Text>
+                                </View>
                             )}
 
                             {/* Transport Section — masqué pour Omra Badal (prestation à distance) */}
@@ -519,7 +570,7 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                                         >
                                             <MapPin size={16} color={transportPickupType === 'haram' ? '#b39164' : '#A1A1AA'} />
                                             <Text className={`ml-2 font-medium ${transportPickupType === 'haram' ? 'text-primary' : 'text-zinc-400'}`}>
-                                                {t('modal.meetAtHaram')}
+                                                {meetAtReferenceLabel}
                                             </Text>
                                         </TouchableOpacity>
 
@@ -626,6 +677,7 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                                 )}
                                 </View>
                             )}
+                            {availableWalletBalance > 0 && (
                             <View className="mb-4 rounded-xl border border-white/10 bg-zinc-800/70 px-4 py-3">
                                 <View className="flex-row items-center justify-between">
                                     <View className="flex-1 pr-4">
@@ -654,6 +706,7 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                                     </View>
                                 </View>
                             </View>
+                            )}
                             <TouchableOpacity
                                 className={`py-4 rounded-2xl items-center shadow-lg ${canOpenConfirmation && !loading ? 'bg-[#b39164] shadow-[#b39164]/20' : 'bg-zinc-700'}`}
                                 onPress={() => {
@@ -735,6 +788,103 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                 </View>
             </Modal>
 
+            {/* Add Pilgrim Popup */}
+            <Modal
+                visible={showAddPilgrimPopup}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setShowAddPilgrimPopup(false)}
+            >
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.7)', paddingHorizontal: 24 }}
+                >
+                    <View className="bg-zinc-800 rounded-2xl p-6 w-full border border-white/10">
+                        <Text className="text-white font-bold text-lg mb-5">Ajouter un pèlerin</Text>
+
+                        <Text className="text-zinc-400 text-sm mb-2">Nom</Text>
+                        <View className="bg-zinc-900 rounded-xl px-4 py-3 flex-row items-center border border-white/5 mb-4">
+                            <User size={16} color="#71717A" />
+                            <TextInput
+                                placeholder="Nom de famille"
+                                placeholderTextColor="#52525B"
+                                className="flex-1 ml-3 text-white text-base"
+                                value={newPilgrimLastName}
+                                onChangeText={setNewPilgrimLastName}
+                                autoCapitalize="words"
+                            />
+                        </View>
+
+                        <Text className="text-zinc-400 text-sm mb-2">Prénom</Text>
+                        <View className="bg-zinc-900 rounded-xl px-4 py-3 flex-row items-center border border-white/5 mb-4">
+                            <User size={16} color="#71717A" />
+                            <TextInput
+                                placeholder="Prénom du pèlerin"
+                                placeholderTextColor="#52525B"
+                                className="flex-1 ml-3 text-white text-base"
+                                value={newPilgrimFirstName}
+                                onChangeText={setNewPilgrimFirstName}
+                                autoCapitalize="words"
+                            />
+                        </View>
+
+                        <View className="flex-row gap-3 mb-4">
+                            <View className="flex-1">
+                                <Text className="text-zinc-400 text-sm mb-2">Sexe</Text>
+                                <View className="flex-row gap-2">
+                                    <TouchableOpacity
+                                        onPress={() => setNewPilgrimGender('male')}
+                                        className={`flex-1 py-3 rounded-xl border items-center ${newPilgrimGender === 'male' ? 'bg-[#b39164]/20 border-[#b39164]' : 'bg-zinc-900 border-white/10'}`}
+                                    >
+                                        <Text className={`font-bold text-base ${newPilgrimGender === 'male' ? 'text-[#b39164]' : 'text-zinc-400'}`}>H</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        onPress={() => setNewPilgrimGender('female')}
+                                        className={`flex-1 py-3 rounded-xl border items-center ${newPilgrimGender === 'female' ? 'bg-[#b39164]/20 border-[#b39164]' : 'bg-zinc-900 border-white/10'}`}
+                                    >
+                                        <Text className={`font-bold text-base ${newPilgrimGender === 'female' ? 'text-[#b39164]' : 'text-zinc-400'}`}>F</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                            <View className="flex-1">
+                                <Text className="text-zinc-400 text-sm mb-2">Âge</Text>
+                                <View className="bg-zinc-900 rounded-xl px-4 py-3 border border-white/5">
+                                    <TextInput
+                                        placeholder="Âge"
+                                        placeholderTextColor="#52525B"
+                                        className="text-white text-base"
+                                        value={newPilgrimAge}
+                                        onChangeText={setNewPilgrimAge}
+                                        keyboardType="numeric"
+                                    />
+                                </View>
+                            </View>
+                        </View>
+
+                        {!!addPilgrimError && (
+                            <View className="bg-red-500/10 border border-red-500/30 rounded-xl px-3 py-2 mb-4">
+                                <Text className="text-red-300 text-xs leading-5">{addPilgrimError}</Text>
+                            </View>
+                        )}
+
+                        <View className="flex-row gap-3">
+                            <TouchableOpacity
+                                onPress={() => { setShowAddPilgrimPopup(false); setNewPilgrimLastName(''); setNewPilgrimFirstName(''); setNewPilgrimAge(''); setNewPilgrimGender(''); setAddPilgrimError(''); }}
+                                className="flex-1 py-3 rounded-xl bg-zinc-700 items-center"
+                            >
+                                <Text className="text-zinc-200 font-semibold">Annuler</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={handleAddPilgrim}
+                                className="flex-1 py-3 rounded-xl bg-[#b39164] items-center"
+                            >
+                                <Text className="text-white font-semibold">Ajouter</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </KeyboardAvoidingView>
+            </Modal>
+
             {/* Nested Calendar Modal */}
             <Modal visible={showCalendar} animationType="slide" transparent>
                 <View className="flex-1 bg-black/80 justify-end">
@@ -746,6 +896,8 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                                 setShowCalendar(false);
                             }}
                             initialStart={visitDate}
+                            minDate={activeService?.startDate ? new Date(activeService.startDate).setHours(0, 0, 0, 0) : undefined}
+                            maxDate={activeService?.endDate ? new Date(activeService.endDate).setHours(23, 59, 59, 999) : undefined}
                         />
                     </View>
                 </View>

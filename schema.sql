@@ -1,4 +1,4 @@
--- Enable necessary extensions
+Dans la base de données-- Enable necessary extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- -----------------------------------------------------------------------------

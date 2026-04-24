@@ -51,6 +51,8 @@
     "pilgrimAgeYears": "{{age}} ans",
     "pickup": "Prise en charge",
     "meetAtHaram": "Rendez-vous au haram",
+    "meetAtMasjidAlHaram": "Rendez-vous Masjid al-Haram (La Mecque)",
+    "meetAtMasjidAlNabawi": "Rendez-vous au Masjid Al-Nabawi (Médine)",
     "meetAtHotel": "Rendez-vous à l'hôtel",
     "hotelAddress": "Adresse de l'hôtel",
     "hotelAddressPlaceholder": "Adresse complète de l'hôtel",
@@ -104,7 +106,9 @@
     "alertGenericError": "Une erreur est survenue lors de la réservation.",
     "locationBadal": "Prestation à distance (Omra Badal)",
     "locationHotel": "Rendez-vous à l'hôtel - {{address}}",
-    "locationHaram": "Rendez-vous au haram"
+    "locationHaram": "Rendez-vous au haram",
+    "locationMasjidAlHaram": "Rendez-vous Masjid al-Haram (La Mecque)",
+    "locationMasjidAlNabawi": "Rendez-vous au Masjid Al-Nabawi (Médine)"
   },
   "confirmation": {
     "title": "Réservation Confirmée !",

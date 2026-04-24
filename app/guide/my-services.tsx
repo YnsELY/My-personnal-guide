@@ -7,7 +7,7 @@ import { ArrowRight, Calendar, Pencil, Plus, Trash2 } from 'lucide-react-native'
 import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, FlatList, Image, StatusBar, Text, TouchableOpacity, View } from 'react-native';
-import { getServiceImageForLocation } from '@/constants/serviceLocationImages';
+import { resolveServiceImageSource } from '@/constants/serviceLocationImages';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const getLocale = () => i18n.language === 'ar' ? 'ar-SA' : 'fr-FR';
@@ -77,7 +77,7 @@ export default function MyServicesScreen() {
     };
 
     const renderServiceItem = ({ item }: { item: any }) => {
-        const imageSource = item.imageUrl ? { uri: item.imageUrl } : getServiceImageForLocation(item.location);
+        const imageSource = resolveServiceImageSource(item.imageUrl, item.location);
         const dateLabel = formatDateRange(item.availabilityStart, item.availabilityEnd);
         const guideNetSar = resolveFixedGuideNetSarForService({
             title: item.title,

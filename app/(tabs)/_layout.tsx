@@ -8,6 +8,8 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { textStart } from '@/lib/rtl';
 
+let globalChannelIdCounter = 0;
+
 export default function TabLayout() {
   const router = useRouter();
   const pathname = usePathname();
@@ -45,11 +47,22 @@ export default function TabLayout() {
     loadUnreadCount();
   }, [pathname, user?.id, profile?.role, loadUnreadCount]);
 
+  const loadUnreadCountRef = React.useRef(loadUnreadCount);
   React.useEffect(() => {
-    if (!user?.id || profile?.role === 'admin') return;
+    loadUnreadCountRef.current = loadUnreadCount;
+  }, [loadUnreadCount]);
 
+  const profileRoleRef = React.useRef(profile?.role);
+  React.useEffect(() => {
+    profileRoleRef.current = profile?.role;
+  }, [profile?.role]);
+
+  React.useEffect(() => {
+    if (!user?.id || profileRoleRef.current === 'admin') return;
+
+    const uniqueId = ++globalChannelIdCounter;
     const channel = supabase
-      .channel(`messages-unread-${user.id}`)
+      .channel(`messages-unread-${user.id}-${uniqueId}-${Date.now()}`)
       .on(
         'postgres_changes',
         {
@@ -58,7 +71,7 @@ export default function TabLayout() {
           table: 'messages',
         },
         () => {
-          loadUnreadCount();
+          loadUnreadCountRef.current();
         }
       )
       .subscribe();
@@ -66,7 +79,7 @@ export default function TabLayout() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, profile?.role, loadUnreadCount]);
+  }, [user?.id]);
 
   const { t } = useTranslation();
   const { t: tTabs } = useTranslation('tabs');

@@ -51,6 +51,8 @@
     "pilgrimAgeYears": "{{age}} سنة",
     "pickup": "نقطة الالتقاء",
     "meetAtHaram": "اللقاء عند الحرم",
+    "meetAtMasjidAlHaram": "اللقاء عند المسجد الحرام (مكة المكرمة)",
+    "meetAtMasjidAlNabawi": "اللقاء عند المسجد النبوي (المدينة المنورة)",
     "meetAtHotel": "اللقاء في الفندق",
     "hotelAddress": "عنوان الفندق",
     "hotelAddressPlaceholder": "العنوان الكامل للفندق",
@@ -104,7 +106,9 @@
     "alertGenericError": "حدث خطأ أثناء الحجز.",
     "locationBadal": "خدمة عن بُعد (عمرة بالنيابة)",
     "locationHotel": "اللقاء في الفندق - {{address}}",
-    "locationHaram": "اللقاء عند الحرم"
+    "locationHaram": "اللقاء عند الحرم",
+    "locationMasjidAlHaram": "اللقاء عند المسجد الحرام (مكة المكرمة)",
+    "locationMasjidAlNabawi": "اللقاء عند المسجد النبوي (المدينة المنورة)"
   },
   "confirmation": {
     "title": "تم تأكيد الحجز!",

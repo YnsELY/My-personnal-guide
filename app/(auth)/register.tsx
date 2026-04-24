@@ -17,7 +17,8 @@ export default function RegisterScreen() {
     const { t } = useTranslation('auth');
     const { isRTL } = useLanguage();
 
-    const [fullName, setFullName] = useState('');
+    const [lastName, setLastName] = useState('');
+    const [firstName, setFirstName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [role, setRole] = useState<'pilgrim' | 'guide'>('pilgrim');
@@ -51,7 +52,7 @@ export default function RegisterScreen() {
             const y = parseInt(year);
             const dob = `${y}-${m.toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`;
 
-            await signUp(email, password, fullName, role, gender, dob, language);
+            await signUp(email, password, `${firstName.trim()} ${lastName.trim()}`, role, gender, dob, language);
             Alert.alert(t('accountCreated'), t('accountCreatedMessage'), [
                 {
                     text: "OK",
@@ -72,7 +73,7 @@ export default function RegisterScreen() {
     };
 
     const handleRegister = async () => {
-        if (!email || !password || !fullName || !day || !month || !year) {
+        if (!email || !password || !lastName || !firstName || !day || !month || !year) {
             Alert.alert(t('common:error'), t('fillAllFields'));
             return;
         }
@@ -156,16 +157,33 @@ export default function RegisterScreen() {
 
                         <View className="gap-5">
                             <View>
-                                <Text className="text-gray-500 mb-2 font-medium" style={textStart(isRTL)}>{t('fullName')}</Text>
+                                <Text className="text-gray-500 mb-2 font-medium" style={textStart(isRTL)}>Nom</Text>
                                 <View className="bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3" style={rowStyle(isRTL)}>
                                     <User size={20} color="#9CA3AF" />
                                     <TextInput
                                         className="flex-1 text-gray-900 dark:text-white"
-                                        placeholder={t('fullNamePlaceholder')}
+                                        placeholder="Nom de famille"
                                         placeholderTextColor="#9CA3AF"
-                                        value={fullName}
-                                        onChangeText={setFullName}
+                                        value={lastName}
+                                        onChangeText={setLastName}
                                         style={[endSpacing(12, isRTL), textStart(isRTL)]}
+                                        autoCapitalize="words"
+                                    />
+                                </View>
+                            </View>
+
+                            <View>
+                                <Text className="text-gray-500 mb-2 font-medium" style={textStart(isRTL)}>Prénom</Text>
+                                <View className="bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3" style={rowStyle(isRTL)}>
+                                    <User size={20} color="#9CA3AF" />
+                                    <TextInput
+                                        className="flex-1 text-gray-900 dark:text-white"
+                                        placeholder="Prénom"
+                                        placeholderTextColor="#9CA3AF"
+                                        value={firstName}
+                                        onChangeText={setFirstName}
+                                        style={[endSpacing(12, isRTL), textStart(isRTL)]}
+                                        autoCapitalize="words"
                                     />
                                 </View>
                             </View>
@@ -284,9 +302,9 @@ export default function RegisterScreen() {
                                     style={rowStyle(isRTL)}
                                 >
                                     <View className="flex-row items-center gap-2" style={rowStyle(isRTL)}>
-                                        <Text className="text-lg">{language === 'fr' ? '🇫🇷' : '🇸🇦'}</Text>
+                                        <Text className="text-lg">{language === 'ar' ? '🇸🇦' : language === 'en' ? '🇬🇧' : '🇫🇷'}</Text>
                                         <Text className="text-gray-900 dark:text-white capitalize" style={textStart(isRTL)}>
-                                            {language === 'fr' ? t('common:french') : t('common:arabic')}
+                                            {language === 'ar' ? t('common:arabic') : language === 'en' ? t('common:english') : t('common:french')}
                                         </Text>
                                     </View>
                                     <ChevronDown size={20} color="#9CA3AF" style={flipChevron(isRTL)} />
@@ -303,10 +321,17 @@ export default function RegisterScreen() {
                                         </TouchableOpacity>
                                         <TouchableOpacity
                                             onPress={() => { setLanguage('ar'); setOpenLanguage(false); }}
-                                            className="px-4 py-3 active:bg-gray-50 dark:active:bg-zinc-700 flex-row items-center gap-2"
+                                            className="px-4 py-3 border-b border-gray-100 dark:border-white/5 active:bg-gray-50 dark:active:bg-zinc-700 flex-row items-center gap-2"
                                         >
                                             <Text className="text-lg">🇸🇦</Text>
                                             <Text className="text-gray-900 dark:text-white">{t('common:arabic')}</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            onPress={() => { setLanguage('en'); setOpenLanguage(false); }}
+                                            className="px-4 py-3 active:bg-gray-50 dark:active:bg-zinc-700 flex-row items-center gap-2"
+                                        >
+                                            <Text className="text-lg">🇬🇧</Text>
+                                            <Text className="text-gray-900 dark:text-white">{t('common:english')}</Text>
                                         </TouchableOpacity>
                                     </View>
                                 )}

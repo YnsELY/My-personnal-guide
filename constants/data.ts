@@ -1,9 +1,7 @@
 export const CATEGORIES = [
     { id: '1', name: 'Omra accompagnée', icon: 'users' },
-    { id: '2', name: 'Omra Badal', icon: 'user-check' }, // Changed icon to valid Lucide icon name if needed, or keep 'hands-praying' if valid in set
+    { id: '2', name: 'Omra Badal', icon: 'user-check' },
     { id: '3', name: 'Visites guidées', icon: 'map' },
-    { id: '4', name: 'Transport VIP', icon: 'car' },
-    { id: '5', name: 'Hébergement', icon: 'home' }, // Changed 'hotel' to 'home' as generic or 'bed' if available
 ];
 
 const buildServiceOption = (label: string, price: number, guideNetSar: number) => ({
@@ -30,6 +28,22 @@ export const SERVICE_OPTIONS = [
         ]
     },
     {
+        category: '2ème Omra accompagnée (hors Ramadan)',
+        options: [
+            buildServiceOption('Omra seul ou en couple', 200, 530),
+            buildServiceOption('Omra en famille (3 à 7 personnes)', 250, 665),
+            buildServiceOption('Omra en groupe', 300, 800),
+        ]
+    },
+    {
+        category: '2ème Omra accompagnée Ramadan',
+        options: [
+            buildServiceOption('Omra seul ou en couple', 300, 800),
+            buildServiceOption('Omra en famille (3 à 7 personnes)', 350, 930),
+            buildServiceOption('Omra en groupe', 400, 1060),
+        ]
+    },
+    {
         category: 'Omra Badal',
         options: [
             buildServiceOption('Standard', 150, 400),
@@ -39,7 +53,8 @@ export const SERVICE_OPTIONS = [
     {
         category: 'Visites guidées légiféré Médine ou Makkah',
         options: [
-            buildServiceOption('Standard', 150, 400),
+            buildServiceOption('Standard Médine', 150, 400),
+            buildServiceOption('Standard Mekkah', 150, 400),
         ]
     }
 ];
@@ -55,7 +70,7 @@ export const GUIDES = [
         priceUnit: '/tour',
         languages: ['French', 'Arabic', 'English'],
         // Photo of a man in traditional Saudi dress / Omra context
-        image: require('@/assets/images/profil.jpeg'),
+        image: require('@/assets/images/services/9.webp'),
         location: 'Mecca',
         verified: true,
         bio: 'Specialized in the history of Mecca and the Seerah. 10 years of experience taking pilgrims to historical sites.',
@@ -71,7 +86,7 @@ export const GUIDES = [
         priceUnit: '/trip',
         languages: ['French', 'Darija', 'Arabic'],
         // Photo representing Medina / Transport or Guide
-        image: require('@/assets/images/profil.jpeg'), // Fallback to same profile or different if available
+        image: require('@/assets/images/services/9.webp'), // Fallback to same profile or different if available
         location: 'Medina',
         verified: true,
         bio: 'Comfortable transport for Ziyara in Medina. Knowledgeable about all holy sites and best times to visit.',
@@ -87,7 +102,7 @@ export const GUIDES = [
         priceUnit: '/day',
         languages: ['French', 'English'],
         // Photo of a woman in Hijab / Pilgrim context
-        image: require('@/assets/images/profil.jpeg'),
+        image: require('@/assets/images/services/9.webp'),
         location: 'Mecca',
         verified: true,
         bio: 'Dedicated guide for sisters performing Omra. Assisting with rituals, shopping, and navigating the Haram.',
@@ -103,7 +118,7 @@ export const GUIDES = [
         priceUnit: '/day',
         languages: ['French', 'English', 'Urdu'],
         // Man in business/formal attire or traditional
-        image: require('@/assets/images/profil.jpeg'),
+        image: require('@/assets/images/services/9.webp'),
         location: 'Mecca',
         verified: true,
         bio: 'Luxury experience for VIP pilgrims. Private car, exclusive access assistance, and 24/7 support.',
@@ -118,7 +133,7 @@ export const MESSAGES = [
         message: 'Wa alaykum salam! Yes, I am available this Friday for the Ziyara.',
         time: '10:30 AM',
         unread: 2,
-        avatar: require('@/assets/images/profil.jpeg'),
+        avatar: require('@/assets/images/services/9.webp'),
     },
     {
         id: '2',
@@ -126,7 +141,7 @@ export const MESSAGES = [
         message: 'Can you confirm the pickup location at the hotel?',
         time: 'Yesterday',
         unread: 0,
-        avatar: require('@/assets/images/profil.jpeg'),
+        avatar: require('@/assets/images/services/9.webp'),
     },
 ];
 
@@ -137,10 +152,21 @@ export const SERVICES = [
         titleArabic: 'Omra accompagnée',
         shortDescription: 'Vivez votre Omra avec sérénité',
         description: 'Accomplissez votre Omra aux côtés de guides qualifiés pour un accompagnement fiable et bienveillant.',
-        mainText: 'Accomplissez votre Omra en toute confiance aux côtés de nos guides qualifiés et reconnus pour leur sérieux, leur science et leur éthique.',
-        details: 'Présents à chaque étape, ils vous accompagnent avec bienveillance afin que vous viviez ce voyage sacré dans la sérénité, la conformité aux rites et la recherche sincère de l’agrément d’Allah.',
+        mainText: 'Accomplissez votre Omra en toute confiance aux côtés de nos guides qualifiés et reconnus pour leur sérieux, leur science et leur éthique. Présents à chaque étape, ils vous accompagnent avec bienveillance afin que vous viviez ce voyage sacré dans la sérénité, la conformité aux rites et la recherche sincère de l\'agrément d\'Allah.',
+        details: 'Présents à chaque étape, ils vous accompagnent avec bienveillance afin que vous viviez ce voyage sacré dans la sérénité, la conformité aux rites et la recherche sincère de l\'agrément d\'Allah.',
         hadith: 'Le Prophète ﷺ a dit : "La Omra efface les péchés commis entre elle et la précédente."',
-        image: require('@/assets/images/mecca.jpg'),
+        image: require('@/assets/images/services/Design sans titre-3.webp'),
+    },
+    {
+        id: 'deuxieme-omra',
+        title: '2ème Omra – Masjid Aisha (Tan\'im)',
+        titleArabic: '2ème Omra – Masjid Aisha',
+        shortDescription: 'Une 2ème Omra depuis Masjid Aisha (Tan\'im)',
+        description: 'Effectuez une 2ème Omra en toute sérénité depuis Masjid Aisha (Tan\'im), lieu authentique où le Prophète ﷺ autorisa Aïcha رضي الله عنها à entrer en ihram.',
+        mainText: 'Effectuez une 2ème Omra en toute sérénité depuis Masjid Aisha (Tan\'im), lieu authentique où le Prophète ﷺ autorisa Aïcha رضي الله عنها à entrer en ihram.\n\nCette prestation est proposée selon l\'avis majoritaire des savants, tout en respectant la divergence existante.\n\nCette prestation est basée sur l\'avis de grands savants tels que l\'Imam Ash-Shafi\'i, l\'Imam Ahmad, An-Nawawi, Ibn Baz et Ibn \'Uthaymin, qui ont autorisé la répétition de la Omra depuis Tan\'im, conformément au hadith authentique de Aïcha رضي الله عنها.',
+        details: 'Accomplissez votre deuxième Omra aux côtés de nos guides qualifiés pour un accompagnement fiable, conforme aux rites, dans la sérénité et la recherche de l\'agrément d\'Allah.',
+        hadith: 'Le Prophète ﷺ a dit : "La Omra efface les péchés commis entre elle et la précédente."',
+        image: require('@/assets/images/services/6-copie-2 copie.webp'),
     },
     {
         id: 'omra-badal',
@@ -148,21 +174,32 @@ export const SERVICES = [
         titleArabic: 'Omra par Procuration', // Changed to French as requested to have "text in French"
         shortDescription: 'Une Miséricorde pour vos proches',
         description: 'Accomplissez une Omra au nom d\'un proche décédé ou malade, une œuvre pieuse d\'une immense valeur spirituelle.',
-        mainText: 'Un voyage de foi vers les lieux les plus purs de la Terre, qui efface les péchés et purifie le cœur. De l\'Ihram au Tawaf autour de la Kaaba, jusqu\'au Sa\'i entre Safa et Marwa.',
+        mainText: 'Confiez-nous votre Omra Badal : une adoration accomplie avec sérieux, transparence et sincérité. Votre guide vous enverra une courte vidéo à l\'entrée en état de sacralisation (Ihram) ainsi qu\'à la fin de la Omra, pour vous permettre de vivre chaque étape en toute confiance.',
         details: 'Félicitations à vous pour ce voyage de foi grandiose. Vous laissez derrière vous les soucis d\'ici-bas pour atteindre La Mecque honorée, la terre bénie qu\'Allah a magnifiée.',
         hadith: 'Le Prophète ﷺ a dit : "La Omra efface les péchés commis entre elle et la précédente."',
-        image: require('@/assets/images/mecca.jpg'),
+        image: require('@/assets/images/services/9.webp'),
     },
     {
         id: 'visite-guidee',
-        title: 'Visites Guidées',
+        title: 'Visites Guidées — Médine',
         titleArabic: 'Visite de Médine',
-        shortDescription: 'Découvrez l\'histoire sacrée',
-        description: 'Explorez les lieux saints de Médine et La Mecque avec des guides experts pour comprendre l\'histoire prophétique.',
-        mainText: 'Visiter les sites historiques de La Mecque et Médine vous relie à la vie du Prophète ﷺ et de ses compagnons.',
+        shortDescription: 'Découvrez l\'histoire sacrée de Médine',
+        description: 'Explorez les lieux saints de Médine avec des guides experts pour comprendre l\'histoire prophétique.',
+        mainText: 'La visite de Médine est une immersion au cœur de l\'histoire et de l\'amour du Prophète ﷺ : entre la Mosquée de Quba, le mont Uhud et ses martyrs, et la douceur des palmeraies, chaque étape est un rappel vivant de foi, de sacrifice et de miséricorde, guidé avec bienveillance pour nourrir votre cœur autant que votre esprit.',
         details: 'Visitez la montagne de Uhud, la mosquée de Quba, et les sites historiques de la bataille du Fossé. Une immersion totale dans l\'histoire de l\'Islam.',
         hadith: 'Une prière dans ma mosquée est meilleure que mille prières ailleurs, sauf la Mosquée Sacrée.',
-        image: require('@/assets/images/medina.jpeg'),
+        image: require('@/assets/images/services/2-copie copie.webp'),
+    },
+    {
+        id: 'visite-guidee-makkah',
+        title: 'Visites Guidées — La Mecque',
+        titleArabic: 'Visite de Makkah',
+        shortDescription: 'Découvrez les lieux saints de La Mecque',
+        description: 'Explorez les sites historiques de La Mecque avec un guide expert en histoire et en rites islamiques.',
+        mainText: 'La visite de Makkah est un voyage au cœur de la foi et de la dévotion : du Jabal Thawr, refuge du Prophète ﷺ, aux plaines sacrées d\'Arafât, Mina et Mouzdalifa, jusqu\'au Jabal Nour qui abrite la grotte de Hira, chaque étape vous rapproche de l\'histoire, des sacrifices et de la lumière de l\'Islam, guidé avec soin pour que votre cœur et votre esprit s\'élèvent dans la contemplation et la sérénité.',
+        details: 'Du Jabal Nour à la grotte de Hira, en passant par les plaines d\'Arafât et Mina, chaque étape est un rappel vivant de la foi et du sacrifice.',
+        hadith: 'La Mosquée Sacrée est la plus noble des mosquées sur terre.',
+        image: require('@/assets/images/services/7-copie copie.webp'),
     }
 ];
 
@@ -176,7 +213,7 @@ export const RESERVATIONS = [
         time: '08:00',
         status: 'upcoming', // upcoming, completed, cancelled
         price: '200 €',
-        image: require('@/assets/images/profil.jpeg'),
+        image: require('@/assets/images/services/9.webp'),
         location: 'Hôtel Makkah',
     },
     {
@@ -188,7 +225,7 @@ export const RESERVATIONS = [
         time: '14:00',
         status: 'completed',
         price: '450 €',
-        image: require('@/assets/images/profil.jpeg'),
+        image: require('@/assets/images/services/9.webp'),
         location: 'Gare Haramain',
     },
 ];

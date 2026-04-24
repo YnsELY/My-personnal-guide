@@ -98,6 +98,13 @@ function AppStack() {
     );
   }
 
+  if (!user) {
+    const isAuthRoute = pathname === '/login' || pathname === '/register';
+    if (!isAuthRoute) {
+      return <Redirect href="/(auth)/login" />;
+    }
+  }
+
   if (effectiveRole === 'guide' && !isGuideApproved) {
     const canAccessRoute =
       pathname === '/guide/pending-approval' ||

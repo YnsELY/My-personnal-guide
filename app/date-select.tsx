@@ -10,36 +10,36 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 const DAYS = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
+function sameDay(a: Date, b: Date) {
+    return a.getDate() === b.getDate() && a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear();
+}
+
 export default function DateSelectScreen() {
     const router = useRouter();
     const params = useLocalSearchParams();
     const { t } = useTranslation('booking');
     const { isRTL } = useLanguage();
 
-    // Calendar State
-    const [selectedDate, setSelectedDate] = useState<Date | null>(params.startDate ? new Date(parseInt(params.startDate as string)) : null);
-    const [currentMonthOffset, setCurrentMonthOffset] = useState(0); // 0 = current month view
+    const initStart = params.startDate ? new Date(parseInt(params.startDate as string)) : null;
+    const initEnd = params.endDate ? new Date(parseInt(params.endDate as string)) : null;
 
-    // Dynamic Date Generation
+    const [rangeStart, setRangeStart] = useState<Date | null>(initStart);
+    const [rangeEnd, setRangeEnd] = useState<Date | null>(initEnd && initStart && !sameDay(new Date(parseInt(params.endDate as string)), new Date(parseInt(params.startDate as string))) ? initEnd : null);
+    const [currentMonthOffset, setCurrentMonthOffset] = useState(0);
+
     const { calendarData, monthLabel } = useMemo(() => {
         const now = new Date();
-        // Reset time to midnight for comparison
         now.setHours(0, 0, 0, 0);
 
         const year = now.getFullYear();
         const monthIndex = now.getMonth() + currentMonthOffset;
 
-        // Target "display" month
         const targetDate = new Date(year, monthIndex, 1);
         const displayYear = targetDate.getFullYear();
         const displayMonth = targetDate.getMonth();
 
-        // Get total days in month
         const daysInMonth = new Date(displayYear, displayMonth + 1, 0).getDate();
 
-        // Determine start day
-        // If currentMonthOffset is 0 (current month), we start from TODAY.
-        // If future month, we start from 1st.
         let startDay = 1;
         let firstDayOfWeek = new Date(displayYear, displayMonth, 1).getDay();
 
@@ -48,21 +48,15 @@ export default function DateSelectScreen() {
             firstDayOfWeek = now.getDay();
         }
 
-        // Generate days
         const days = [];
 
-        // Pre-pad with empty slots to align weekdays
         for (let i = 0; i < firstDayOfWeek; i++) {
             days.push(null);
         }
 
         for (let i = startDay; i <= daysInMonth; i++) {
             const dateObj = new Date(displayYear, displayMonth, i);
-            days.push({
-                day: i,
-                fullDate: dateObj,
-                isPast: false // Since we start from today/future, no past days shown
-            });
+            days.push({ day: i, fullDate: dateObj });
         }
 
         return {
@@ -72,60 +66,83 @@ export default function DateSelectScreen() {
     }, [currentMonthOffset]);
 
     const handleDatePress = (dateObj: Date) => {
-        setSelectedDate(dateObj);
+        if (!rangeStart || (rangeStart && rangeEnd)) {
+            // Start fresh
+            setRangeStart(dateObj);
+            setRangeEnd(null);
+        } else {
+            // Have start, no end
+            if (dateObj < rangeStart) {
+                // Clicked before start: reset with this as new start
+                setRangeStart(dateObj);
+                setRangeEnd(null);
+            } else {
+                // Clicked on or after start: set end (single date if same day)
+                setRangeEnd(dateObj);
+            }
+        }
     };
 
-    const isDateSelected = (dateObj: Date) => {
-        if (!selectedDate) return false;
-        return dateObj.getDate() === selectedDate.getDate() &&
-            dateObj.getMonth() === selectedDate.getMonth() &&
-            dateObj.getFullYear() === selectedDate.getFullYear();
+    const isStartDate = (dateObj: Date) => !!rangeStart && sameDay(dateObj, rangeStart);
+    const isEndDate = (dateObj: Date) => !!rangeEnd && sameDay(dateObj, rangeEnd);
+    const isInRange = (dateObj: Date) => {
+        if (!rangeStart || !rangeEnd) return false;
+        const d = dateObj.getTime();
+        return d > rangeStart.getTime() && d < rangeEnd.getTime();
     };
+    const isSelected = (dateObj: Date) => isStartDate(dateObj) || isEndDate(dateObj);
 
-    // Services Data
     const [services, setServices] = useState<any[]>([]);
 
     React.useEffect(() => {
-        // Fetch services to calculate availability
         import('@/lib/api').then(({ getServices }) => {
             getServices().then(setServices).catch(console.error);
         });
     }, []);
 
-    // Helper to count services for a specific date
     const getServiceCountForDate = (date: Date) => {
         if (!services.length) return 0;
-
         const targetTime = date.getTime();
-
         return services.filter(service => {
             const start = new Date(service.startDate).setHours(0, 0, 0, 0);
             const end = service.endDate ? new Date(service.endDate).setHours(0, 0, 0, 0) : start;
             const target = new Date(targetTime).setHours(0, 0, 0, 0);
-
             return target >= start && target <= end;
         }).length;
     };
 
     const getCrowdLevelColor = (dateObj: Date) => {
         const count = getServiceCountForDate(dateObj);
+        if (count === 0) return '#EF4444';
+        if (count < 10) return '#EAB308';
+        return '#22C55E';
+    };
 
-        if (count === 0) return '#EF4444';   // Red: 0 services
-        if (count < 10) return '#EAB308';    // Yellow: 1-9 services
-        return '#22C55E';                    // Green: >= 10 services
+    const getSelectionLabel = () => {
+        if (!rangeStart) return null;
+        const locale = 'fr-FR';
+        const startStr = rangeStart.toLocaleDateString(locale, { day: 'numeric', month: 'long' });
+        if (!rangeEnd || sameDay(rangeStart, rangeEnd)) {
+            return `Le ${startStr}`;
+        }
+        const endStr = rangeEnd.toLocaleDateString(locale, { day: 'numeric', month: 'long' });
+        return `Du ${startStr} au ${endStr}`;
     };
 
     const handleConfirm = () => {
-        if (selectedDate) {
+        if (rangeStart) {
+            const end = rangeEnd || rangeStart;
             router.push({
                 pathname: '/(tabs)/search',
                 params: {
-                    startDate: selectedDate.getTime().toString(),
-                    endDate: selectedDate.getTime().toString()
+                    startDate: rangeStart.getTime().toString(),
+                    endDate: end.getTime().toString()
                 }
             });
         }
     };
+
+    const selectionLabel = getSelectionLabel();
 
     return (
         <View className="flex-1 bg-zinc-900" style={directionStyle(isRTL)}>
@@ -137,7 +154,10 @@ export default function DateSelectScreen() {
                     <ChevronLeft color="white" size={28} style={flipChevron(isRTL)} />
                 </TouchableOpacity>
 
-                <Text className="text-4xl text-white font-serif mb-8" style={textStart(isRTL)}>{t('dateSelectTitle')}</Text>
+                <Text className="text-4xl text-white font-serif mb-2" style={textStart(isRTL)}>{t('dateSelectTitle')}</Text>
+                <Text className="text-zinc-400 text-sm mb-8" style={textStart(isRTL)}>
+                    {!rangeStart ? 'Appuyez sur une date pour commencer' : !rangeEnd ? 'Appuyez sur une 2ème date pour créer une plage' : selectionLabel}
+                </Text>
 
                 {/* Month Navigation */}
                 <View className="flex-row justify-between items-center mb-6" style={rowStyle(isRTL)}>
@@ -166,22 +186,21 @@ export default function DateSelectScreen() {
                                 return <View key={`empty-${index}`} className="w-[14.28%] h-14" />;
                             }
 
-                            const { day, fullDate, isPast } = item;
-                            const isSelected = isDateSelected(fullDate);
+                            const { day, fullDate } = item;
+                            const selected = isSelected(fullDate);
+                            const inRange = isInRange(fullDate);
                             const crowdColor = getCrowdLevelColor(fullDate);
 
                             return (
                                 <TouchableOpacity
                                     key={`${day}-${index}`}
-                                    onPress={() => !isPast && handleDatePress(fullDate)}
-                                    disabled={isPast}
+                                    onPress={() => handleDatePress(fullDate)}
                                     className="w-[14.28%] h-14 items-center justify-start pt-1"
                                 >
-                                    <View className={`w-10 h-10 items-center justify-center rounded-full ${isSelected ? 'bg-[#b39164] border border-[#b39164]' : ''} ${isPast ? 'opacity-30' : ''}`}>
-                                        <Text className={`font-medium text-lg ${isSelected ? 'text-white' : 'text-white'}`}>{day}</Text>
+                                    <View className={`w-10 h-10 items-center justify-center rounded-full ${selected ? 'bg-[#b39164]' : inRange ? 'bg-[#b39164]/25' : ''}`}>
+                                        <Text className={`font-medium text-lg ${selected ? 'text-white' : inRange ? 'text-[#b39164]' : 'text-white'}`}>{day}</Text>
                                     </View>
-                                    {/* Dot Indicator */}
-                                    {!isSelected && !isPast && <View style={{ backgroundColor: crowdColor }} className="w-1.5 h-1.5 rounded-full mt-1" />}
+                                    {!selected && !inRange && <View style={{ backgroundColor: crowdColor }} className="w-1.5 h-1.5 rounded-full mt-1" />}
                                 </TouchableOpacity>
                             );
                         })}
@@ -206,11 +225,13 @@ export default function DateSelectScreen() {
 
                 {/* Footer Button */}
                 <TouchableOpacity
-                    className={`w-full py-4 rounded-3xl items-center mb-4 border border-white/5 ${selectedDate ? 'bg-[#b39164]' : 'bg-[#1c1c1e]'}`}
+                    className={`w-full py-4 rounded-3xl items-center mb-4 border border-white/5 ${rangeStart ? 'bg-[#b39164]' : 'bg-[#1c1c1e]'}`}
                     onPress={handleConfirm}
-                    disabled={!selectedDate}
+                    disabled={!rangeStart}
                 >
-                    <Text className={`font-medium text-lg ${selectedDate ? 'text-white font-bold' : 'text-zinc-600'}`}>{t('common:confirm')}</Text>
+                    <Text className={`font-medium text-lg ${rangeStart ? 'text-white font-bold' : 'text-zinc-600'}`}>
+                        {selectionLabel ? `Confirmer — ${selectionLabel}` : t('common:confirm')}
+                    </Text>
                 </TouchableOpacity>
 
             </SafeAreaView>

@@ -1,6 +1,21 @@
-import { getCurrentProfile, getCurrentUser } from '@/lib/api';
+import { getCurrentProfile, getCurrentUser, getUserDisplayName } from '@/lib/api';
 import { computeReservationFinance, PLATFORM_COMMISSION_RATE } from '@/lib/pricing';
 import { supabase } from '@/lib/supabase';
+import {
+    notifyGuideApplicationApproved,
+    notifyGuideApplicationRejected,
+    notifyReservationCancelledByAdmin,
+    notifyPilgrimGuideReplaced,
+    notifyGuideServiceStatusChanged,
+    notifyAccountSuspended,
+    notifyAccountReactivated,
+    notifyGuidePayoutSent,
+    notifyPilgrimWalletAdjusted,
+    notifyGuideWalletAdjusted,
+    notifyGuideInterviewProposed,
+    notifyGuideInterviewAcceptedByAdmin,
+    notifyGuideInterviewCounterProposedByAdmin,
+} from '@/lib/notifications';
 
 type AccountStatus = 'active' | 'suspended';
 type ServiceStatus = 'active' | 'hidden' | 'archived';
@@ -285,6 +300,7 @@ export const approveGuideApplication = async (guideId: string) => {
         action: 'approve_guide',
     });
 
+    notifyGuideApplicationApproved(guideId).catch(() => {}); // G-13
     return data;
 };
 
@@ -318,6 +334,7 @@ export const rejectGuideApplication = async (guideId: string, reason: string) =>
         details: { reason },
     });
 
+    notifyGuideApplicationRejected(guideId, reason).catch(() => {}); // G-14
     return data;
 };
 
@@ -357,6 +374,7 @@ export const proposeGuideInterview = async (payload: {
         },
     });
 
+    notifyGuideInterviewProposed(payload.guideId, payload.scheduledAt).catch(() => {}); // G-10
     return data;
 };
 
@@ -457,6 +475,7 @@ export const acceptGuideInterviewProposalAsAdmin = async (interviewId: string) =
         action: 'accept_interview_proposal',
     });
 
+    notifyGuideInterviewAcceptedByAdmin(data.guide_id, data.scheduled_at).catch(() => {}); // G-11
     return data;
 };
 
@@ -498,6 +517,7 @@ export const counterProposeGuideInterviewAsAdmin = async (payload: {
         },
     });
 
+    notifyGuideInterviewCounterProposedByAdmin(data.guide_id, payload.scheduledAt).catch(() => {}); // G-12
     return data;
 };
 
@@ -578,6 +598,8 @@ export const updateAdminAccountStatus = async (accountId: string, accountStatus:
         details: { accountStatus },
     });
 
+    if (accountStatus === 'suspended') notifyAccountSuspended(accountId).catch(() => {}); // G-17
+    else notifyAccountReactivated(accountId).catch(() => {}); // G-18
     return data;
 };
 
@@ -790,6 +812,8 @@ export const adjustAdminWallet = async (payload: {
         },
     });
 
+    if (payload.role === 'pilgrim') notifyPilgrimWalletAdjusted(payload.userId, amountEur, payload.reason).catch(() => {}); // P-10
+    else notifyGuideWalletAdjusted(payload.userId, amountEur, payload.reason).catch(() => {}); // G-9
     return result;
 };
 
@@ -885,6 +909,7 @@ export const updateAdminServiceStatus = async (serviceId: string, status: Servic
         details: { status },
     });
 
+    notifyGuideServiceStatusChanged(data.guide_id, data.title || data.category || '', status).catch(() => {}); // G-16
     return data;
 };
 
@@ -1091,6 +1116,9 @@ export const updateAdminReservationStatus = async (reservationId: string, status
         details: { status, reason: reason || null },
     });
 
+    if (status === 'cancelled') {
+        notifyReservationCancelledByAdmin(data.user_id, data.guide_id, reason).catch(() => {}); // P-7+G-7
+    }
     return data;
 };
 
@@ -1207,10 +1235,16 @@ export const assignReplacementGuide = async (params: {
     const payload = Array.isArray(data) ? data[0] : data;
     if (!payload) throw new Error('Aucune donnée de remplacement retournée.');
 
+    const resId = payload.reservationId || payload.reservation_id;
+    const newGuideId = payload.newGuideId || payload.new_guide_id;
+    try {
+        const { data: res } = await supabase.from('reservations').select('user_id, service_name').eq('id', resId).maybeSingle();
+        if (res) { const ng = await getUserDisplayName(newGuideId); notifyPilgrimGuideReplaced(res.user_id, res.service_name, ng).catch(() => {}); }
+    } catch {}
     return {
-        reservationId: payload.reservationId || payload.reservation_id,
+        reservationId: resId,
         previousGuideId: payload.previousGuideId || payload.previous_guide_id,
-        newGuideId: payload.newGuideId || payload.new_guide_id,
+        newGuideId,
         status: 'confirmed',
     };
 };
@@ -1536,5 +1570,6 @@ export const markGuidePayoutAsPaid = async (guideId: string, paymentReference?: 
         },
     });
 
+    notifyGuidePayoutSent(guideId, netAmount, paymentReference).catch(() => {}); // G-8
     return { updatedReservations: reservationIds.length, netAmount };
 };

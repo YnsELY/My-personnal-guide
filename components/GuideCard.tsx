@@ -42,7 +42,9 @@ export function GuideCard({ guide }: { guide: GuideProps }) {
 
                 <View className="flex-row items-center mt-2">
                     <MapPin size={14} color="white" />
-                    <Text className="text-gray-400 text-xs ml-1">{guide.location}</Text>
+                    <Text className="text-gray-400 text-xs ml-1">
+                        {/les\s+deux/i.test(guide.location || '') ? 'La Mecque et Médine' : guide.location}
+                    </Text>
                 </View>
 
             </View>

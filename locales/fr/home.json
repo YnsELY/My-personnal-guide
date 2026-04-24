@@ -53,10 +53,31 @@
       "badge": "Accompagnement premium",
       "cta": "Découvrir"
     },
+    "visitGuideeMakkah": {
+      "title": "Visite guidée La Mecque",
+      "subtitle": "Makkah al-Mukarrama",
+      "description": "Découvrez les lieux saints de La Mecque avec un guide expert en histoire et en rites.",
+      "badge": "Accompagnement premium",
+      "cta": "Voir le service"
+    },
+    "visitGuideeMedine": {
+      "title": "Visite guidée Médine",
+      "subtitle": "Al-Madinah al-Munawwarah",
+      "description": "Explorez les sites historiques de Médine et vivez une immersion dans l'histoire prophétique.",
+      "badge": "Accompagnement premium",
+      "cta": "Voir le service"
+    },
     "omraAccompagne": {
       "title": "Omra accompagné",
       "subtitle": "Accompagnement sur place",
       "description": "Un accompagnement complet et rassurant pour accomplir votre Omra dans les meilleures conditions.",
+      "badge": "Service encadré",
+      "cta": "Voir le service"
+    },
+    "deuxiemeOmra": {
+      "title": "2ème Omra accompagné",
+      "subtitle": "Accompagnement sur place",
+      "description": "Accomplissez votre deuxième Omra avec le même accompagnement de qualité qu'à la première.",
       "badge": "Service encadré",
       "cta": "Voir le service"
     },

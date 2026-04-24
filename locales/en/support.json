@@ -1,0 +1,9 @@
+{
+  "title": "Support",
+  "subtitle": "Customer assistance",
+  "cardTitle": "Contact support",
+  "description": "For any request related to your account, your bookings or your security, contact us directly by email.",
+  "emailLabel": "Support email",
+  "openMail": "Open your email app",
+  "contactFallback": "Contact us at {{email}}"
+}

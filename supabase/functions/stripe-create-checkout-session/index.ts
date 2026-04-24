@@ -16,12 +16,14 @@ const normalize = (value?: string | null) =>
 
 const resolveServiceCode = (params: { title?: string; category?: string; location?: string }) => {
   const text = `${normalize(params.title)} ${normalize(params.category)}`.trim();
+  const titleOnly = normalize(params.title);
   const location = normalize(params.location);
 
   const isBadal = text.includes('badal');
   const isPmr = text.includes('pmr') || text.includes('mobilite reduite') || text.includes('pousseur');
-  const isRamadan = text.includes('ramadan');
+  const isRamadan = text.includes('ramadan') && !text.includes('hors ramadan');
   const isVisite = text.includes('visite');
+  const isOmra2 = text.includes('2eme') && text.includes('omra');
   const isOmra = text.includes('omra');
   const isSolo = text.includes('seul') || text.includes('couple');
   const isFamille = text.includes('famille') || text.includes('3 a 7');
@@ -31,11 +33,17 @@ const resolveServiceCode = (params: { title?: string; category?: string; locatio
   if (isPmr) return isRamadan ? 'PMR_RAMADAN' : 'PMR_HORS';
 
   if (isVisite) {
-    if (location.includes('medine') || text.includes('medine')) return 'VISITE_MEDINE';
-    if (location.includes('makkah') || location.includes('mecque') || text.includes('makkah') || text.includes('mecque')) {
-      return 'VISITE_MAKKAH';
-    }
+    if (location.includes('medine')) return 'VISITE_MEDINE';
+    if (location.includes('makkah') || location.includes('mecque')) return 'VISITE_MAKKAH';
+    if (titleOnly.includes('medine')) return 'VISITE_MEDINE';
+    if (titleOnly.includes('makkah') || titleOnly.includes('mecque') || titleOnly.includes('mekkah')) return 'VISITE_MAKKAH';
     return null;
+  }
+
+  if (isOmra2) {
+    if (isSolo) return isRamadan ? 'OMRA2_SOLO_RAMADAN' : 'OMRA2_SOLO_HORS';
+    if (isFamille) return isRamadan ? 'OMRA2_FAMILLE_RAMADAN' : 'OMRA2_FAMILLE_HORS';
+    if (isGroupe) return isRamadan ? 'OMRA2_GROUPE_RAMADAN' : 'OMRA2_GROUPE_HORS';
   }
 
   if (isOmra) {
@@ -252,8 +260,8 @@ Deno.serve(async (req) => {
           currency: 'eur',
           unit_amount: Math.round(serviceAmount * 100),
           product_data: {
-            name: String(serviceName || serviceRow.title || serviceRow.category || 'Prestation guide'),
-            description: String(serviceRow.category || serviceRow.title || ''),
+            name: String(serviceRow.title || serviceName || 'Prestation guide'),
+            description: String(serviceRow.title || serviceName || ''),
           },
         },
         quantity: 1,

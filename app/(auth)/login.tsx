@@ -55,7 +55,7 @@ export default function LoginScreen() {
             {/* Background / Header Image */}
             <View className="h-1/3 w-full bg-zinc-900 relative">
                 <Image
-                    source={require('@/assets/images/mecca.jpg')}
+                    source={require('@/assets/images/services/9.webp')}
                     className="w-full h-full opacity-30"
                 />
                 <View className="absolute inset-0 bg-gradient-to-b from-transparent to-white dark:to-zinc-900" />
