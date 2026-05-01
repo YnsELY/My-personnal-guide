@@ -1,0 +1,96 @@
+{
+  "categories": {
+    "omraAccompagnee": "Accompanied Omra",
+    "omraBadal": "Omra Badal",
+    "visitesGuidees": "Guided Tours",
+    "transportVIP": "VIP Transport",
+    "hebergement": "Accommodation"
+  },
+  "serviceOptions": {
+    "omraAccompagneeHorsRamadan": "Accompanied Omra (outside Ramadan)",
+    "omraAccompagneeRamadan": "Accompanied Omra Ramadan",
+    "omraBadal": "Omra Badal",
+    "visitesGuideesLegiferees": "Medina or Makkah guided visits",
+    "seulOuCouple": "Solo or couple Omra",
+    "famille": "Family Omra (3 to 7 people)",
+    "groupe": "Group Omra",
+    "standard": "Standard",
+    "ramadan": "Ramadan"
+  },
+  "services": {
+    "omraAccompagne": {
+      "title": "Accompanied Omra",
+      "shortDescription": "Experience your Omra with peace of mind",
+      "description": "Perform your Omra with full confidence alongside our qualified guides, known for their seriousness, knowledge and ethics. Present at every step, they guide you with care so you experience this sacred journey in serenity, compliance with the rites and sincere pursuit of Allah's pleasure.",
+      "mainText": "Perform your Omra with full confidence alongside our qualified guides, known for their seriousness, knowledge and ethics.",
+      "details": "Present at every step, they guide you with care so you experience this sacred journey in serenity, compliance with the rites and sincere pursuit of Allah's pleasure."
+    },
+    "omraBadal": {
+      "title": "Omra Badal",
+      "titleArabic": "Omra by Proxy",
+      "shortDescription": "A mercy for your loved ones",
+      "description": "Entrust us with your Omra Badal: a worship performed with seriousness, transparency and sincerity. Your guide will send you a short video upon entering the state of Ihram and at the end of the Omra, so you can follow each step with full confidence.",
+      "mainText": "A journey of faith to the purest places on Earth, which erases sins and purifies the heart. From Ihram to Tawaf around the Kaaba, to Sa'i between Safa and Marwa.",
+      "details": "Congratulations on this great journey of faith. You leave behind worldly worries to reach the honoured Makkah, the blessed land that Allah has magnified."
+    },
+    "visiteGuidee": {
+      "title": "Guided Tours",
+      "titleArabic": "Medina Visit",
+      "shortDescription": "Discover sacred history",
+      "description": "Masjid Nabawi with peace of mind: faith, history and emotion guided by our expert guides.",
+      "mainText": "Visiting the historical sites of Makkah and Medina connects you to the life of the Prophet ﷺ and his companions.",
+      "details": "Visit Mount Uhud, Quba Mosque, and the Al-Baqi' cemetery where the companions of the Prophet ﷺ rest. A complete immersion in Islamic history."
+    }
+  },
+  "hadiths": [
+    {
+      "text": "Actions are judged by their intentions, and everyone will be rewarded according to what they intended.",
+      "source": "Bukhari & Muslim"
+    },
+    {
+      "text": "The best among you is the one who learns the Quran and teaches it.",
+      "source": "Bukhari"
+    },
+    {
+      "text": "Beware of injustice, for injustice will be darkness on the Day of Resurrection.",
+      "source": "Muslim"
+    },
+    {
+      "text": "Patience is a light.",
+      "source": "Muslim"
+    },
+    {
+      "text": "He who does not thank people does not thank Allah.",
+      "source": "Tirmidhi"
+    },
+    {
+      "text": "Smiling at your brother is an act of charity.",
+      "source": "Tirmidhi"
+    },
+    {
+      "text": "Richness is not in the abundance of possessions, but true richness is the richness of the soul.",
+      "source": "Bukhari & Muslim"
+    }
+  ],
+  "hadithPrefix": "The Prophet ﷺ said:",
+  "hadithToday": "Hadith of the day",
+  "omraHadith": "The Prophet ﷺ said: \"The Omra erases the sins committed between it and the previous one.\"",
+  "medinaHadith": "A prayer in my mosque is better than a thousand prayers elsewhere, except the Sacred Mosque.",
+  "prayerTimes": {
+    "mecca": "Makkah",
+    "medina": "Medina",
+    "change": "Change"
+  },
+  "legal": {
+    "title": "Legal notices",
+    "cgvu": "Terms of Service",
+    "cgvuSubtitle": "General terms and conditions of sale and use",
+    "cancellation": "Cancellation policy",
+    "cancellationSubtitle": "Deadlines, fees and refund terms",
+    "privacy": "Privacy policy",
+    "privacySubtitle": "Data protection and GDPR rights",
+    "charter": "Pilgrim Charter",
+    "charterSubtitle": "Rules, commitments and pilgrim rights",
+    "contactSupport": "Contact support: {{email}}"
+  }
+}

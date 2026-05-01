@@ -3,7 +3,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { directionStyle, endSpacing, flipChevron, forceLTRText, rowStyle, textStart } from '@/lib/rtl';
 import { useRouter } from 'expo-router';
-import { Briefcase, Check, ChevronDown, Lock, Mail, User, UserCircle2 } from 'lucide-react-native';
+import { Briefcase, Check, ChevronDown, Globe2, Lock, Mail, User, UserCircle2 } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, KeyboardAvoidingView, Modal, Platform, ScrollView, StatusBar, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -15,7 +15,7 @@ export default function RegisterScreen() {
     const router = useRouter();
     const { signUp } = useAuth();
     const { t } = useTranslation('auth');
-    const { isRTL } = useLanguage();
+    const { isRTL, language, setLanguage } = useLanguage();
 
     const [fullName, setFullName] = useState('');
     const [email, setEmail] = useState('');
@@ -25,13 +25,11 @@ export default function RegisterScreen() {
     // New Fields
     const [gender, setGender] = useState<'male' | 'female'>('male');
     const [openGender, setOpenGender] = useState(false);
+    const [openLanguage, setOpenLanguage] = useState(false);
 
     const [day, setDay] = useState('');
     const [month, setMonth] = useState('');
     const [year, setYear] = useState('');
-    const [language, setLanguage] = useState<'fr' | 'ar'>('fr');
-    const [openLanguage, setOpenLanguage] = useState(false);
-
     const [loading, setLoading] = useState(false);
 
     // Charter State
@@ -207,7 +205,7 @@ export default function RegisterScreen() {
                             <View className="z-50">
                                 <Text className="text-gray-500 mb-2 font-medium" style={textStart(isRTL)}>{t('gender')}</Text>
                                 <TouchableOpacity
-                                    onPress={() => setOpenGender(!openGender)}
+                                    onPress={() => { setOpenGender(!openGender); setOpenLanguage(false); }}
                                     className="flex-row justify-between items-center bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3"
                                     style={rowStyle(isRTL)}
                                 >
@@ -230,6 +228,46 @@ export default function RegisterScreen() {
                                             className="px-4 py-3 active:bg-gray-50 dark:active:bg-zinc-700"
                                         >
                                             <Text className="text-gray-900 dark:text-white">{t('common:female')}</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                )}
+                            </View>
+
+                            {/* Language */}
+                            <View className="z-40">
+                                <Text className="text-gray-500 mb-2 font-medium" style={textStart(isRTL)}>{t('profile:preferredLanguage')}</Text>
+                                <TouchableOpacity
+                                    onPress={() => { setOpenLanguage(!openLanguage); setOpenGender(false); }}
+                                    className="flex-row justify-between items-center bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3"
+                                    style={rowStyle(isRTL)}
+                                >
+                                    <View className="flex-row items-center gap-2" style={rowStyle(isRTL)}>
+                                        <Globe2 size={20} color="#9CA3AF" />
+                                        <Text className="text-gray-900 dark:text-white">
+                                            {language === 'fr' ? t('common:french') : language === 'ar' ? t('common:arabic') : t('common:english')}
+                                        </Text>
+                                    </View>
+                                    <ChevronDown size={20} color="#9CA3AF" style={flipChevron(isRTL)} />
+                                </TouchableOpacity>
+                                {openLanguage && (
+                                    <View className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl shadow-lg z-40 overflow-hidden">
+                                        <TouchableOpacity
+                                            onPress={async () => { await setLanguage('fr'); setOpenLanguage(false); }}
+                                            className="px-4 py-3 border-b border-gray-100 dark:border-white/5 active:bg-gray-50 dark:active:bg-zinc-700"
+                                        >
+                                            <Text className="text-gray-900 dark:text-white">{t('common:french')}</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            onPress={async () => { await setLanguage('ar'); setOpenLanguage(false); }}
+                                            className="px-4 py-3 border-b border-gray-100 dark:border-white/5 active:bg-gray-50 dark:active:bg-zinc-700"
+                                        >
+                                            <Text className="text-gray-900 dark:text-white">{t('common:arabic')}</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            onPress={async () => { await setLanguage('en'); setOpenLanguage(false); }}
+                                            className="px-4 py-3 active:bg-gray-50 dark:active:bg-zinc-700"
+                                        >
+                                            <Text className="text-gray-900 dark:text-white">{t('common:english')}</Text>
                                         </TouchableOpacity>
                                     </View>
                                 )}
@@ -273,43 +311,6 @@ export default function RegisterScreen() {
                                         />
                                     </View>
                                 </View>
-                            </View>
-
-                            {/* Language */}
-                            <View className="z-40">
-                                <Text className="text-gray-500 mb-2 font-medium" style={textStart(isRTL)}>{t('preferredLanguage')}</Text>
-                                <TouchableOpacity
-                                    onPress={() => setOpenLanguage(!openLanguage)}
-                                    className="flex-row justify-between items-center bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3"
-                                    style={rowStyle(isRTL)}
-                                >
-                                    <View className="flex-row items-center gap-2" style={rowStyle(isRTL)}>
-                                        <Text className="text-lg">{language === 'fr' ? '🇫🇷' : '🇸🇦'}</Text>
-                                        <Text className="text-gray-900 dark:text-white capitalize" style={textStart(isRTL)}>
-                                            {language === 'fr' ? t('common:french') : t('common:arabic')}
-                                        </Text>
-                                    </View>
-                                    <ChevronDown size={20} color="#9CA3AF" style={flipChevron(isRTL)} />
-                                </TouchableOpacity>
-
-                                {openLanguage && (
-                                    <View className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl shadow-lg z-50 overflow-hidden">
-                                        <TouchableOpacity
-                                            onPress={() => { setLanguage('fr'); setOpenLanguage(false); }}
-                                            className="px-4 py-3 border-b border-gray-100 dark:border-white/5 active:bg-gray-50 dark:active:bg-zinc-700 flex-row items-center gap-2"
-                                        >
-                                            <Text className="text-lg">🇫🇷</Text>
-                                            <Text className="text-gray-900 dark:text-white">{t('common:french')}</Text>
-                                        </TouchableOpacity>
-                                        <TouchableOpacity
-                                            onPress={() => { setLanguage('ar'); setOpenLanguage(false); }}
-                                            className="px-4 py-3 active:bg-gray-50 dark:active:bg-zinc-700 flex-row items-center gap-2"
-                                        >
-                                            <Text className="text-lg">🇸🇦</Text>
-                                            <Text className="text-gray-900 dark:text-white">{t('common:arabic')}</Text>
-                                        </TouchableOpacity>
-                                    </View>
-                                )}
                             </View>
 
                             {/* Removed Checkbox UI for Charter */}

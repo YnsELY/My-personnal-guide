@@ -34,7 +34,6 @@ export default function SearchScreen() {
   const [advancedFilters, setAdvancedFilters] = useState<FilterState>({
     languages: [],
     city: null,
-    priceRange: null,
     people: 1,
   });
 
@@ -72,14 +71,6 @@ export default function SearchScreen() {
     // Let's comment out language filter for now or assume true to avoid crash if field missing)
     const matchesLanguage = true;
 
-    // Price
-    const priceVal = parseInt(service.price?.toString().replace(/\D/g, '') || '0');
-    let priceCategory = 'standard';
-    if (priceVal < 200) priceCategory = 'budget';
-    else if (priceVal >= 400) priceCategory = 'premium';
-
-    const matchesPrice = advancedFilters.priceRange ? priceCategory === advancedFilters.priceRange : true;
-
     // 4. Date Filter - Strict Inclusion
     // User selects a range: [userStart, userEnd]
     // Service available: [serviceStart, serviceEnd]
@@ -105,7 +96,7 @@ export default function SearchScreen() {
       }
     }
 
-    return matchesSearch && matchesCategory && matchesCity && matchesLanguage && matchesPrice && matchesDate;
+    return matchesSearch && matchesCategory && matchesCity && matchesLanguage && matchesDate;
   });
 
   const visibleServices = filteredServices

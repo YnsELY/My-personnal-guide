@@ -23,7 +23,7 @@ export const signUp = async (
     role: 'guide' | 'pilgrim',
     gender: 'male' | 'female',
     dob: string,
-    language: 'fr' | 'ar'
+    language: 'fr' | 'ar' | 'en'
 ) => {
     const { data, error } = await supabase.auth.signUp({
         email,
@@ -93,7 +93,7 @@ export const updateCurrentProfile = async (fields: {
     full_name?: string;
     gender?: 'male' | 'female';
     date_of_birth?: string;
-    language?: 'fr' | 'ar';
+    language?: 'fr' | 'ar' | 'en';
 }) => {
     const user = await getCurrentUser();
     if (!user) throw new Error("Non connecté.");
@@ -174,6 +174,23 @@ const formatFunctionsInvokeError = async (functionName: string, error: any) => {
     }
 
     return String(error?.message || `Erreur Edge Function sur "${functionName}".`);
+};
+
+export const triggerEmailNotification = async (
+    payload:
+        | { type: 'pilgrim_signup_confirmation'; profileId: string }
+        | { type: 'pilgrim_order_confirmation' | 'guide_booking_confirmation'; reservationId: string }
+) => {
+    const { data, error } = await supabase.functions.invoke('send-notification-email', {
+        body: payload,
+    });
+
+    if (error) {
+        const message = await formatFunctionsInvokeError('send-notification-email', error);
+        throw new Error(message);
+    }
+
+    return data;
 };
 
 const parseDateValue = (value: any): Date | null => {
@@ -897,6 +914,17 @@ export const createReservation = async (reservationData: any, options?: { useWal
         pilgrimName,
         serviceName: reservationData.serviceName,
     }).catch(() => undefined);
+
+    void Promise.allSettled([
+        triggerEmailNotification({
+            type: 'pilgrim_order_confirmation',
+            reservationId,
+        }),
+        triggerEmailNotification({
+            type: 'guide_booking_confirmation',
+            reservationId,
+        }),
+    ]);
 
     return data;
 };

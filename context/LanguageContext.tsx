@@ -9,8 +9,6 @@ import { supabase } from '@/lib/supabase';
 
 const STORAGE_KEY = 'app.language';
 
-type FormatOptions = Intl.DateTimeFormatOptions;
-
 interface LanguageContextValue {
   language: AppLanguage;
   setLanguage: (lang: AppLanguage) => Promise<void>;
@@ -31,7 +29,9 @@ export function useLanguage() {
 }
 
 function getLocale(lang: AppLanguage): string {
-  return lang === 'ar' ? 'ar-SA' : 'fr-FR';
+  if (lang === 'ar') return 'ar-SA';
+  if (lang === 'en') return 'en-US';
+  return 'fr-FR';
 }
 
 async function reloadForDirectionChange() {
@@ -55,7 +55,9 @@ async function reloadForDirectionChange() {
 function resolveDeviceLanguage(): AppLanguage {
   try {
     const locales = Localization.getLocales();
-    if (locales?.[0]?.languageCode?.startsWith('ar')) return 'ar';
+    const code = locales?.[0]?.languageCode;
+    if (code?.startsWith('ar')) return 'ar';
+    if (code?.startsWith('en')) return 'en';
   } catch {}
   return 'fr';
 }
@@ -64,43 +66,6 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation();
   const [language, setLanguageState] = useState<AppLanguage>('fr');
   const [isReady, setIsReady] = useState(false);
-
-  // Bootstrap: resolve language from cache → profile → device → fallback
-  useEffect(() => {
-    (async () => {
-      let resolved: AppLanguage = 'fr';
-
-      // 1. Cache local
-      const cached = await persistentStorage.getItemAsync(STORAGE_KEY);
-      if (cached === 'fr' || cached === 'ar') {
-        resolved = cached;
-      } else {
-        // 2. Profile language (if logged in)
-        try {
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user) {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('language')
-              .eq('id', user.id)
-              .single();
-            if (profile?.language === 'fr' || profile?.language === 'ar') {
-              resolved = profile.language;
-            }
-          }
-        } catch {}
-
-        // 3. Device language
-        if (!cached) {
-          const deviceLang = resolveDeviceLanguage();
-          if (resolved === 'fr') resolved = deviceLang;
-        }
-      }
-
-      await applyLanguage(resolved, { persist: false, allowReload: true });
-      setIsReady(true);
-    })();
-  }, [applyLanguage]);
 
   const applyLanguage = useCallback(async (
     lang: AppLanguage,
@@ -128,10 +93,42 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  useEffect(() => {
+    (async () => {
+      let resolved: AppLanguage = 'fr';
+
+      const cached = await persistentStorage.getItemAsync(STORAGE_KEY);
+      if (cached === 'fr' || cached === 'ar' || cached === 'en') {
+        resolved = cached;
+      } else {
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('language')
+              .eq('id', user.id)
+              .single();
+            if (profile?.language === 'fr' || profile?.language === 'ar' || profile?.language === 'en') {
+              resolved = profile.language;
+            }
+          }
+        } catch {}
+
+        if (!cached) {
+          const deviceLang = resolveDeviceLanguage();
+          if (resolved === 'fr') resolved = deviceLang;
+        }
+      }
+
+      await applyLanguage(resolved, { persist: false, allowReload: true });
+      setIsReady(true);
+    })();
+  }, [applyLanguage]);
+
   const setLanguage = useCallback(async (lang: AppLanguage) => {
     await applyLanguage(lang, { persist: true, allowReload: true });
 
-    // Sync to profile + auth metadata (fire and forget)
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {

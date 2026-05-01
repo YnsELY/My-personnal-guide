@@ -1,6 +1,7 @@
 // @ts-nocheck
 import Stripe from 'https://esm.sh/stripe@14.25.0?target=denonext';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { sendReservationNotificationIfNeeded } from '../_shared/notification-email.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -240,6 +241,19 @@ Deno.serve(async (req) => {
 
     if (insertEventError && isTableMissing(insertEventError, 'stripe_webhook_events')) {
       console.warn('stripe_webhook_events table missing, webhook idempotency persistence disabled for this event.');
+    }
+
+    if (resolvedReservationId && processingResult?.status === 'finalized') {
+      const emailResults = await Promise.allSettled([
+        sendReservationNotificationIfNeeded(admin, 'pilgrim_order_confirmation', resolvedReservationId),
+        sendReservationNotificationIfNeeded(admin, 'guide_booking_confirmation', resolvedReservationId),
+      ]);
+
+      for (const result of emailResults) {
+        if (result.status === 'rejected') {
+          console.error('reservation email notification failed', result.reason);
+        }
+      }
     }
 
     return withJson({

@@ -8,6 +8,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 const GOLD = '#b39164';
 const GOLD_LIGHT = '#d4b896';
 const GOLD_DARK = '#7a6143';
+const CARD_BG = '#24211c';
+const CARD_BG_ELEVATED = '#2f2a22';
+const CARD_BG_SOFT = '#1f1c18';
+const CARD_BORDER = 'rgba(212,184,150,0.16)';
+const TEXT_PRIMARY = '#f8f4ee';
+const TEXT_SECONDARY = '#d8cec1';
+const TEXT_MUTED = '#a99d8e';
 
 type Step = {
   id: number;
@@ -205,28 +212,28 @@ function StepCard({ step }: { step: Step }) {
       onPress={() => setExpanded(!expanded)}
       activeOpacity={0.95}
       className="mb-4 rounded-3xl overflow-hidden border border-gray-100 dark:border-white/8"
-      style={{ backgroundColor: expanded ? '#fff' : '#fff', shadowColor: '#b39164', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }}
+      style={{ backgroundColor: CARD_BG, borderColor: CARD_BORDER, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.18, shadowRadius: 12, elevation: 3 }}
     >
       {/* Card Header */}
       <LinearGradient
-        colors={expanded ? [GOLD, GOLD_DARK] : ['#fafaf9', '#f5f0ea']}
+        colors={expanded ? [GOLD, GOLD_DARK] : [CARD_BG_ELEVATED, CARD_BG]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         style={{ paddingHorizontal: 18, paddingVertical: 16 }}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-            <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: expanded ? 'rgba(255,255,255,0.18)' : 'rgba(179,145,100,0.12)', alignItems: 'center', justifyContent: 'center', marginRight: 14, flexShrink: 0 }}>
+            <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: expanded ? 'rgba(255,255,255,0.18)' : 'rgba(179,145,100,0.18)', alignItems: 'center', justifyContent: 'center', marginRight: 14, flexShrink: 0 }}>
               <Text style={{ fontSize: 22 }}>{step.icon}</Text>
             </View>
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 10, fontWeight: '700', letterSpacing: 2, color: expanded ? 'rgba(255,255,255,0.6)' : GOLD, textTransform: 'uppercase', marginBottom: 3 }}>
                 ÉTAPE {step.number}
               </Text>
-              <Text style={{ fontSize: 17, fontWeight: '700', color: expanded ? '#fff' : '#1a1a1a', letterSpacing: -0.3 }}>
+              <Text style={{ fontSize: 17, fontWeight: '700', color: expanded ? '#fff' : TEXT_PRIMARY, letterSpacing: -0.3 }}>
                 {step.title}
               </Text>
-              <Text style={{ fontSize: 12, color: expanded ? 'rgba(255,255,255,0.7)' : '#888', marginTop: 3 }}>
+              <Text style={{ fontSize: 12, color: expanded ? 'rgba(255,255,255,0.7)' : TEXT_MUTED, marginTop: 3 }}>
                 {step.subtitle}
               </Text>
             </View>
@@ -242,7 +249,7 @@ function StepCard({ step }: { step: Step }) {
 
       {/* Card Body */}
       {expanded && (
-        <View style={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 24, backgroundColor: '#fff' }}>
+        <View style={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 24, backgroundColor: CARD_BG }}>
           {step.content.map((section, i) => (
             <ContentSection key={i} section={section} />
           ))}
@@ -255,8 +262,8 @@ function StepCard({ step }: { step: Step }) {
 function ContentSection({ section }: { section: Section }) {
   if (section.type === 'arabic') {
     return (
-      <View style={{ marginVertical: 12, paddingVertical: 18, paddingHorizontal: 18, borderRadius: 16, backgroundColor: '#fdf8f2', borderLeftWidth: 3, borderLeftColor: GOLD }}>
-        <Text style={{ fontSize: 24, lineHeight: 44, color: GOLD_DARK, fontWeight: '500', textAlign: 'right', writingDirection: 'rtl' }}>
+      <View style={{ marginVertical: 12, paddingVertical: 18, paddingHorizontal: 18, borderRadius: 16, backgroundColor: 'rgba(179,145,100,0.12)', borderLeftWidth: 3, borderLeftColor: GOLD }}>
+        <Text style={{ fontSize: 24, lineHeight: 44, color: GOLD_LIGHT, fontWeight: '500', textAlign: 'right', writingDirection: 'rtl' }}>
           {section.text}
         </Text>
       </View>
@@ -267,7 +274,7 @@ function ContentSection({ section }: { section: Section }) {
     return (
       <View style={{ marginBottom: 6, paddingHorizontal: 4 }}>
         <Text style={{ fontSize: 10, fontWeight: '700', letterSpacing: 1.5, color: GOLD, textTransform: 'uppercase', marginBottom: 5 }}>Translittération</Text>
-        <Text style={{ fontSize: 14, fontStyle: 'italic', color: '#4a4a4a', lineHeight: 23 }}>
+        <Text style={{ fontSize: 14, fontStyle: 'italic', color: TEXT_SECONDARY, lineHeight: 23 }}>
           {section.text}
         </Text>
       </View>
@@ -276,9 +283,9 @@ function ContentSection({ section }: { section: Section }) {
 
   if (section.type === 'translation') {
     return (
-      <View style={{ marginBottom: 14, marginTop: 6, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 14, backgroundColor: '#f2f2f2' }}>
-        <Text style={{ fontSize: 10, fontWeight: '700', letterSpacing: 1.5, color: '#999', textTransform: 'uppercase', marginBottom: 6 }}>Traduction</Text>
-        <Text style={{ fontSize: 14, color: '#333', lineHeight: 23, fontStyle: 'italic' }}>
+      <View style={{ marginBottom: 14, marginTop: 6, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 14, backgroundColor: CARD_BG_SOFT }}>
+        <Text style={{ fontSize: 10, fontWeight: '700', letterSpacing: 1.5, color: TEXT_MUTED, textTransform: 'uppercase', marginBottom: 6 }}>Traduction</Text>
+        <Text style={{ fontSize: 14, color: TEXT_SECONDARY, lineHeight: 23, fontStyle: 'italic' }}>
           {section.text}
         </Text>
       </View>
@@ -287,9 +294,9 @@ function ContentSection({ section }: { section: Section }) {
 
   if (section.type === 'note') {
     return (
-      <View style={{ flexDirection: 'row', marginVertical: 10, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 14, backgroundColor: '#fffbf0', borderWidth: 1, borderColor: '#f0e4c8' }}>
+      <View style={{ flexDirection: 'row', marginVertical: 10, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 14, backgroundColor: 'rgba(179,145,100,0.12)', borderWidth: 1, borderColor: CARD_BORDER }}>
         <Text style={{ fontSize: 15, marginRight: 10, marginTop: 1 }}>💡</Text>
-        <Text style={{ flex: 1, fontSize: 13, color: '#7a6143', lineHeight: 21 }}>{section.text}</Text>
+        <Text style={{ flex: 1, fontSize: 13, color: TEXT_SECONDARY, lineHeight: 21 }}>{section.text}</Text>
       </View>
     );
   }
@@ -300,7 +307,7 @@ function ContentSection({ section }: { section: Section }) {
         {section.items.map((item, i) => (
           <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 }}>
             <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: GOLD, marginTop: 8, marginRight: 12, flexShrink: 0 }} />
-            <Text style={{ flex: 1, fontSize: 14, color: '#333', lineHeight: 23 }}>{item}</Text>
+            <Text style={{ flex: 1, fontSize: 14, color: TEXT_SECONDARY, lineHeight: 23 }}>{item}</Text>
           </View>
         ))}
       </View>
@@ -308,7 +315,7 @@ function ContentSection({ section }: { section: Section }) {
   }
 
   return (
-    <Text style={{ fontSize: 14, color: '#555', lineHeight: 23, marginVertical: 5, paddingHorizontal: 4 }}>
+    <Text style={{ fontSize: 14, color: TEXT_SECONDARY, lineHeight: 23, marginVertical: 5, paddingHorizontal: 4 }}>
       {section.text}
     </Text>
   );
@@ -379,9 +386,9 @@ export default function OmraGuideScreen() {
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingTop: 20 }}>
         {/* Intro quote */}
-        <View className="mb-6 mx-1 py-4 px-5 rounded-2xl" style={{ backgroundColor: '#fffbf4', borderWidth: 1, borderColor: '#e8d9c0' }}>
-          <Text style={{ fontSize: 20, textAlign: 'center', marginBottom: 8 }}>بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</Text>
-          <Text style={{ fontSize: 13, color: '#7a6143', textAlign: 'center', fontStyle: 'italic', lineHeight: 20 }}>
+        <View className="mb-6 mx-1 py-4 px-5 rounded-2xl" style={{ backgroundColor: CARD_BG, borderWidth: 1, borderColor: CARD_BORDER }}>
+          <Text style={{ fontSize: 20, color: TEXT_PRIMARY, textAlign: 'center', marginBottom: 8 }}>بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</Text>
+          <Text style={{ fontSize: 13, color: TEXT_SECONDARY, textAlign: 'center', fontStyle: 'italic', lineHeight: 20 }}>
             Appuyez sur chaque étape pour la développer et lire les invocations détaillées.
           </Text>
         </View>
@@ -395,7 +402,7 @@ export default function OmraGuideScreen() {
         ))}
 
         {/* Divider */}
-        <View style={{ height: 1, backgroundColor: '#e8d9c0', marginVertical: 24, marginHorizontal: 8 }} />
+        <View style={{ height: 1, backgroundColor: CARD_BORDER, marginVertical: 24, marginHorizontal: 8 }} />
 
         {/* Summary Section */}
         <Text style={{ fontSize: 13, fontWeight: '700', letterSpacing: 2, color: GOLD, textTransform: 'uppercase', marginBottom: 12, marginLeft: 4 }}>
@@ -409,7 +416,7 @@ export default function OmraGuideScreen() {
         <View className="items-center mt-6 mb-10">
           <Text style={{ fontSize: 22, marginBottom: 6 }}>🤲</Text>
           <Text style={{ fontSize: 13, color: '#aaa', textAlign: 'center', lineHeight: 20 }}>
-            Qu'Allah vous accorde une ʿOmra acceptée,{'\n'}des péchés pardonnés et une récompense immense.
+            Qu{"'"}Allah vous accorde une ʿOmra acceptée,{'\n'}des péchés pardonnés et une récompense immense.
           </Text>
           <Text style={{ fontSize: 15, color: GOLD, fontWeight: '600', marginTop: 8, textAlign: 'center' }}>
             آمين يا رب العالمين

@@ -25,7 +25,19 @@ import arLegal from '@/locales/ar/legal.json';
 import arSupport from '@/locales/ar/support.json';
 import arMessages from '@/locales/ar/messages.json';
 
-export type AppLanguage = 'fr' | 'ar';
+import enCommon from '@/locales/en/common.json';
+import enAuth from '@/locales/en/auth.json';
+import enTabs from '@/locales/en/tabs.json';
+import enProfile from '@/locales/en/profile.json';
+import enHome from '@/locales/en/home.json';
+import enBooking from '@/locales/en/booking.json';
+import enGuide from '@/locales/en/guide.json';
+import enContent from '@/locales/en/content.json';
+import enLegal from '@/locales/en/legal.json';
+import enSupport from '@/locales/en/support.json';
+import enMessages from '@/locales/en/messages.json';
+
+export type AppLanguage = 'fr' | 'ar' | 'en';
 
 export const defaultNS = 'common';
 
@@ -55,6 +67,19 @@ export const resources = {
     legal: arLegal,
     support: arSupport,
     messages: arMessages,
+  },
+  en: {
+    common: enCommon,
+    auth: enAuth,
+    tabs: enTabs,
+    profile: enProfile,
+    home: enHome,
+    booking: enBooking,
+    guide: enGuide,
+    content: enContent,
+    legal: enLegal,
+    support: enSupport,
+    messages: enMessages,
   },
 } as const;
 

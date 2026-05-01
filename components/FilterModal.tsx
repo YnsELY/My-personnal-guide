@@ -8,7 +8,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export type FilterState = {
     languages: string[];
     city: string | null;
-    priceRange: 'budget' | 'standard' | 'premium' | null;
     people: number;
 };
 
@@ -19,7 +18,7 @@ interface FilterModalProps {
     initialFilters: FilterState;
 }
 
-const LANGUAGE_KEYS = ['french', 'english', 'arabic', 'urdu', 'indonesian'] as const;
+const LANGUAGE_KEYS = ['french', 'english', 'arabic'] as const;
 const CITY_KEYS = ['laMecque', 'medine'] as const;
 
 export function FilterModal({ visible, onClose, onApply, initialFilters }: FilterModalProps) {
@@ -119,25 +118,6 @@ export function FilterModal({ visible, onClose, onApply, initialFilters }: Filte
                                 </View>
                             </View>
 
-                            {/* Price Section */}
-                            <View className="mb-8">
-                                <Text className="text-white font-bold text-lg mb-4">{t('priceRange')}</Text>
-                                <View className="flex-row gap-3">
-                                    {[
-                                        { id: 'budget', label: t('budget') },
-                                        { id: 'standard', label: t('standard') },
-                                        { id: 'premium', label: t('premium') },
-                                    ].map((option) => (
-                                        <TouchableOpacity
-                                            key={option.id}
-                                            onPress={() => setFilters(prev => ({ ...prev, priceRange: prev.priceRange === option.id ? null : option.id as any }))}
-                                            className={`flex-1 items-center justify-center px-4 py-3 rounded-xl border ${filters.priceRange === option.id ? 'bg-[#b39164] border-[#b39164]' : 'bg-zinc-800 border-white/5'}`}
-                                        >
-                                            <Text className={`font-medium ${filters.priceRange === option.id ? 'text-white' : 'text-zinc-400'}`}>{option.label}</Text>
-                                        </TouchableOpacity>
-                                    ))}
-                                </View>
-                            </View>
                         </ScrollView>
 
                         {/* Footer Actions */}
@@ -150,7 +130,7 @@ export function FilterModal({ visible, onClose, onApply, initialFilters }: Filte
                             </TouchableOpacity>
 
                             <TouchableOpacity
-                                onPress={() => setFilters({ languages: [], city: null, priceRange: null, people: 1 })}
+                                onPress={() => setFilters({ languages: [], city: null, people: 1 })}
                                 className="items-center mt-4"
                             >
                                 <Text className="text-zinc-500 font-medium">{t('resetFilters')}</Text>

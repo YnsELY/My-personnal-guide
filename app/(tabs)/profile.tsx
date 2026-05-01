@@ -40,6 +40,7 @@ export default function ProfileScreen() {
     const [showDeleteModal, setShowDeleteModal] = React.useState(false);
     const [deleteConfirmText, setDeleteConfirmText] = React.useState('');
     const [isDeletingAccount, setIsDeletingAccount] = React.useState(false);
+    const [showLanguagePicker, setShowLanguagePicker] = React.useState(false);
 
     const loadGuideWalletSummary = React.useCallback(async () => {
         if (profile?.role !== 'guide') {
@@ -378,18 +379,16 @@ export default function ProfileScreen() {
                             <MenuItem
                                 icon={Globe2}
                                 label={t('appLanguage')}
+                                onPress={() => setShowLanguagePicker(true)}
                                 rightElement={
                                     <TouchableOpacity
-                                        onPress={async () => {
-                                            const newLang = language === 'fr' ? 'ar' : 'fr';
-                                            await setLanguage(newLang);
-                                        }}
+                                        onPress={() => setShowLanguagePicker(true)}
                                         className="flex-row items-center gap-2 bg-gray-100 dark:bg-zinc-700 px-3 py-1.5 rounded-full"
                                         style={rowStyle(isRTL)}
                                     >
-                                        <Text className="text-sm">{language === 'fr' ? '\u{1F1EB}\u{1F1F7}' : '\u{1F1F8}\u{1F1E6}'}</Text>
+                                        <Text className="text-sm">{language === 'fr' ? '\u{1F1EB}\u{1F1F7}' : language === 'ar' ? '\u{1F1F8}\u{1F1E6}' : '\u{1F1EC}\u{1F1E7}'}</Text>
                                         <Text className="text-gray-900 dark:text-white text-sm font-medium">
-                                            {language === 'fr' ? t('common:french') : t('common:arabic')}
+                                            {language === 'fr' ? t('common:french') : language === 'ar' ? t('common:arabic') : t('common:english')}
                                         </Text>
                                     </TouchableOpacity>
                                 }
@@ -420,6 +419,48 @@ export default function ProfileScreen() {
                     </View>
                 </ScrollView>
             </SafeAreaView>
+
+            <Modal visible={showLanguagePicker} transparent animationType="fade" onRequestClose={() => setShowLanguagePicker(false)}>
+                <TouchableOpacity
+                    className="flex-1 bg-black/60 justify-end"
+                    activeOpacity={1}
+                    onPress={() => setShowLanguagePicker(false)}
+                >
+                    <TouchableOpacity activeOpacity={1} onPress={() => {}}>
+                        <View className="bg-white dark:bg-zinc-800 rounded-t-3xl px-5 pt-5 pb-10 border-t border-gray-200 dark:border-white/10">
+                            <View className="w-10 h-1 bg-gray-300 dark:bg-zinc-600 rounded-full self-center mb-5" />
+                            <Text className="text-lg font-bold text-gray-900 dark:text-white mb-4" style={textStart(isRTL)}>{t('appLanguage')}</Text>
+                            {([
+                                { code: 'fr', flag: '\u{1F1EB}\u{1F1F7}', label: t('common:french') },
+                                { code: 'ar', flag: '\u{1F1F8}\u{1F1E6}', label: t('common:arabic') },
+                                { code: 'en', flag: '\u{1F1EC}\u{1F1E7}', label: t('common:english') },
+                            ] as const).map((lang, idx, arr) => (
+                                <React.Fragment key={lang.code}>
+                                    <TouchableOpacity
+                                        onPress={async () => {
+                                            setShowLanguagePicker(false);
+                                            await setLanguage(lang.code);
+                                        }}
+                                        className="flex-row items-center justify-between py-4"
+                                        style={rowStyle(isRTL)}
+                                    >
+                                        <View className="flex-row items-center gap-3" style={rowStyle(isRTL)}>
+                                            <Text className="text-2xl">{lang.flag}</Text>
+                                            <Text className="text-gray-900 dark:text-white text-base font-medium">{lang.label}</Text>
+                                        </View>
+                                        {language === lang.code && (
+                                            <View className="w-5 h-5 rounded-full bg-[#b39164] items-center justify-center">
+                                                <View className="w-2 h-2 rounded-full bg-white" />
+                                            </View>
+                                        )}
+                                    </TouchableOpacity>
+                                    {idx < arr.length - 1 && <View className="h-[1px] bg-gray-100 dark:bg-zinc-700" />}
+                                </React.Fragment>
+                            ))}
+                        </View>
+                    </TouchableOpacity>
+                </TouchableOpacity>
+            </Modal>
 
             <Modal visible={showDeleteModal} transparent animationType="fade" onRequestClose={() => setShowDeleteModal(false)}>
                 <View className="flex-1 bg-black/70 justify-center px-6">

@@ -1,8 +1,9 @@
 import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { signIn as apiSignIn, updateCurrentEmail, updateCurrentPassword, updateCurrentProfile } from '@/lib/api';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { ChevronDown, ChevronLeft, Lock, Mail, User } from 'lucide-react-native';
+import { ChevronDown, ChevronLeft, Globe2, Lock, Mail, User } from 'lucide-react-native';
 import { Stack } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
@@ -22,6 +23,7 @@ export default function EditProfileScreen() {
     const router = useRouter();
     const { user, profile, refreshProfile } = useAuth();
     const { t } = useTranslation('profile');
+    const { language, setLanguage } = useLanguage();
 
     const [fullName, setFullName] = useState('');
     const [email, setEmail] = useState('');
@@ -30,11 +32,10 @@ export default function EditProfileScreen() {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [gender, setGender] = useState<'male' | 'female'>('male');
     const [openGender, setOpenGender] = useState(false);
+    const [openLanguage, setOpenLanguage] = useState(false);
     const [day, setDay] = useState('');
     const [month, setMonth] = useState('');
     const [year, setYear] = useState('');
-    const [language, setLanguage] = useState<'fr' | 'ar'>('fr');
-    const [openLanguage, setOpenLanguage] = useState(false);
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -42,8 +43,6 @@ export default function EditProfileScreen() {
         setFullName(profile.full_name || '');
         setEmail(user.email || '');
         setGender(profile.gender || 'male');
-        setLanguage(profile.language || 'fr');
-
         if (profile.date_of_birth) {
             const parts = profile.date_of_birth.split('-');
             if (parts.length === 3) {
@@ -257,6 +256,45 @@ export default function EditProfileScreen() {
                                 )}
                             </View>
 
+                            {/* Langue */}
+                            <View className="z-40">
+                                <Text className="text-gray-500 dark:text-gray-400 mb-2 font-medium">{t('preferredLanguage')}</Text>
+                                <TouchableOpacity
+                                    onPress={() => { setOpenLanguage(!openLanguage); setOpenGender(false); }}
+                                    className="flex-row justify-between items-center bg-white dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3"
+                                >
+                                    <View className="flex-row items-center gap-2">
+                                        <Globe2 size={20} color="#9CA3AF" />
+                                        <Text className="text-gray-900 dark:text-white">
+                                            {language === 'fr' ? t('common:french') : language === 'ar' ? t('common:arabic') : t('common:english')}
+                                        </Text>
+                                    </View>
+                                    <ChevronDown size={20} color="#9CA3AF" />
+                                </TouchableOpacity>
+                                {openLanguage && (
+                                    <View className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl shadow-lg z-40 overflow-hidden">
+                                        <TouchableOpacity
+                                            onPress={async () => { await setLanguage('fr'); setOpenLanguage(false); }}
+                                            className="px-4 py-3 border-b border-gray-100 dark:border-white/5 active:bg-gray-50 dark:active:bg-zinc-700"
+                                        >
+                                            <Text className="text-gray-900 dark:text-white">{t('common:french')}</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            onPress={async () => { await setLanguage('ar'); setOpenLanguage(false); }}
+                                            className="px-4 py-3 border-b border-gray-100 dark:border-white/5 active:bg-gray-50 dark:active:bg-zinc-700"
+                                        >
+                                            <Text className="text-gray-900 dark:text-white">{t('common:arabic')}</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            onPress={async () => { await setLanguage('en'); setOpenLanguage(false); }}
+                                            className="px-4 py-3 active:bg-gray-50 dark:active:bg-zinc-700"
+                                        >
+                                            <Text className="text-gray-900 dark:text-white">{t('common:english')}</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                )}
+                            </View>
+
                             {/* Date de naissance */}
                             <View>
                                 <Text className="text-gray-500 dark:text-gray-400 mb-2 font-medium">{t('dateOfBirth')}</Text>
@@ -295,41 +333,6 @@ export default function EditProfileScreen() {
                                         />
                                     </View>
                                 </View>
-                            </View>
-
-                            {/* Langue */}
-                            <View className="z-40">
-                                <Text className="text-gray-500 dark:text-gray-400 mb-2 font-medium">{t('preferredLanguage')}</Text>
-                                <TouchableOpacity
-                                    onPress={() => { setOpenLanguage(!openLanguage); setOpenGender(false); }}
-                                    className="flex-row justify-between items-center bg-white dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3"
-                                >
-                                    <View className="flex-row items-center gap-2">
-                                        <Text className="text-lg">{language === 'fr' ? '🇫🇷' : '🇸🇦'}</Text>
-                                        <Text className="text-gray-900 dark:text-white">
-                                            {language === 'fr' ? t('common:french') : t('common:arabic')}
-                                        </Text>
-                                    </View>
-                                    <ChevronDown size={20} color="#9CA3AF" />
-                                </TouchableOpacity>
-                                {openLanguage && (
-                                    <View className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl shadow-lg z-50 overflow-hidden">
-                                        <TouchableOpacity
-                                            onPress={() => { setLanguage('fr'); setOpenLanguage(false); }}
-                                            className="px-4 py-3 border-b border-gray-100 dark:border-white/5 active:bg-gray-50 dark:active:bg-zinc-700 flex-row items-center gap-2"
-                                        >
-                                            <Text className="text-lg">🇫🇷</Text>
-                                            <Text className="text-gray-900 dark:text-white">{t('common:french')}</Text>
-                                        </TouchableOpacity>
-                                        <TouchableOpacity
-                                            onPress={() => { setLanguage('ar'); setOpenLanguage(false); }}
-                                            className="px-4 py-3 active:bg-gray-50 dark:active:bg-zinc-700 flex-row items-center gap-2"
-                                        >
-                                            <Text className="text-lg">🇸🇦</Text>
-                                            <Text className="text-gray-900 dark:text-white">{t('common:arabic')}</Text>
-                                        </TouchableOpacity>
-                                    </View>
-                                )}
                             </View>
 
                             {/* Bouton enregistrer */}

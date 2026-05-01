@@ -1,5 +1,5 @@
 import { type AvatarPresetId } from '@/lib/avatar';
-import { getCurrentProfile, getCurrentUser, getGuideApprovalInfo, signIn as apiSignIn, signOut as apiSignOut, signUp as apiSignUp, updateCurrentProfileAvatar } from '@/lib/api';
+import { getCurrentProfile, getCurrentUser, getGuideApprovalInfo, signIn as apiSignIn, signOut as apiSignOut, signUp as apiSignUp, triggerEmailNotification, updateCurrentProfileAvatar } from '@/lib/api';
 import { registerForPushNotificationsAsync, savePushToken } from '@/lib/notifications';
 import { supabase } from '@/lib/supabase';
 import i18n from '@/lib/i18n';
@@ -15,7 +15,7 @@ interface AuthContextType {
     guideApprovalStatus: GuideApprovalStatus;
     isGuideApproved: boolean;
     signIn: (email: string, pass: string) => Promise<void>;
-    signUp: (email: string, pass: string, name: string, role: SignUpRole, gender: 'male' | 'female', dob: string, language: 'fr' | 'ar') => Promise<void>;
+    signUp: (email: string, pass: string, name: string, role: SignUpRole, gender: 'male' | 'female', dob: string, language: 'fr' | 'ar' | 'en') => Promise<void>;
     updateProfileAvatar: (presetId: AvatarPresetId) => Promise<void>;
     refreshProfile: () => Promise<void>;
     signOut: () => Promise<void>;
@@ -115,9 +115,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         await refreshUser({ throwOnSuspended: true });
     };
 
-    const signUp = async (email: string, pass: string, name: string, role: SignUpRole, gender: 'male' | 'female', dob: string, language: 'fr' | 'ar') => {
-        await apiSignUp(email, pass, name, role, gender, dob, language);
+    const signUp = async (email: string, pass: string, name: string, role: SignUpRole, gender: 'male' | 'female', dob: string, language: 'fr' | 'ar' | 'en') => {
+        const authData = await apiSignUp(email, pass, name, role, gender, dob, language);
         await refreshUser();
+        const createdUserId = authData?.user?.id || authData?.session?.user?.id;
+
+        if (role === 'pilgrim' && createdUserId) {
+            triggerEmailNotification({
+                type: 'pilgrim_signup_confirmation',
+                profileId: createdUserId,
+            }).catch(() => undefined);
+        }
     };
 
     const updateProfileAvatar = async (presetId: AvatarPresetId) => {

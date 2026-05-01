@@ -1,0 +1,8 @@
+{
+  "title": "Messages",
+  "empty": "No conversations found.",
+  "blockedByMe": "User blocked",
+  "blockedForMe": "You are blocked",
+  "blockedInfoByMe": "Messaging suspended (active block)",
+  "blockedInfoForMe": "This conversation is blocked"
+}

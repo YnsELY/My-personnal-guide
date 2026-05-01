@@ -301,17 +301,162 @@ export const GUIDE_RELIGIOUS_REGULATION_TEXT_AR = `لائحة المرشدين �
 المادة 5 – الالتزام الصريح
 بقبوله المهمة، يقر المرشد بأنه اطّلع على هذه اللائحة ويلتزم باحترامها كاملاً، سائلاً الله العون على أداء هذه المسؤولية بصدق واستقامة.`;
 
+export const CHARTER_TEXT_EN = `Pilgrim Charter
+
+Preamble
+This charter aims to establish a clear, ethical and respectful framework between the pilgrim and the organizer, to ensure the smooth conduct of the pilgrimage in a spirit of serenity, responsibility and compliance with religious and organizational principles.
+It is based on Islamic principles of responsibility, honesty, benevolence and patience.
+
+1. Pilgrim Commitment
+The pilgrim commits to:
+- Respect the religious rules and instructions given by the religious guide.
+- Adopt respectful behavior towards other pilgrims, the guide, and local authorities.
+- Comply with schedules, programs and logistical instructions communicated.
+- Provide accurate information during registration (identity, documents, specific needs).
+
+"The believer is the one whom people trust with their property and their persons."
+(Reported by at-Tirmidhi, no. 2629 - Hasan-Sahih hadith)
+
+2. Personal Responsibility
+Each pilgrim remains responsible for:
+- Their personal belongings.
+- Their health condition and any important medical information that should be reported in advance.
+- Compliance with the laws and regulations in force in the host country.
+
+"Every person is responsible for what is in their charge."
+(Reported by Muslim, Book of Faith, Hadith 182)
+
+3. Services
+The services offered (religious guidance, tours, Omra Badal, specific services, etc.) are clearly defined at the time of purchase.
+Any service purchased constitutes full and unconditional acceptance of this charter.
+
+4. Cancellation and Refund Terms
+Any service purchased may be cancelled up to 48 hours before the start of the service.
+Any cancellation made less than 48 hours before the service entitles a refund minus 25% of the total amount, corresponding to management, booking and organization fees.
+Cancellation requests must be made in writing via the official communication channel.
+
+5. Force Majeure
+In cases of force majeure (justified serious illness, administrative decision, exceptional event), each situation will be examined with fairness and care, as far as possible.
+
+6. Spirit of Pilgrimage
+The pilgrim is reminded that Hajj and Omra are above all acts of worship.
+Patience, benevolence, respect and sincere intention are an integral part of the spiritual experience.
+
+"He who is patient obtains Allah's victory and reward."
+(Reported by al-Bukhari and Muslim)
+
+7. Charter Acceptance
+Registration and purchase of a service constitute unconditional acceptance of this charter.`;
+
+export const GUIDE_CODE_OF_CONDUCT_TEXT_EN = `CODE OF CONDUCT AND OPERATIONAL RULES
+(Applicable to all guidance services)
+
+Article 1 - Respect for the Professional Framework
+The guide commits to respecting:
+- The rules, procedures and directives of the application
+- The commitments made to pilgrims
+- The organizational and professional framework in place
+"Muslims are bound to respect their commitments."
+(Abu Dawud - authentic)
+
+Article 2 - Mandatory Wearing of Official Vest
+The guide commits to systematically wearing the official branded vest of the application:
+- During all guided tours in Makkah and Medina
+- During official travel with pilgrims
+- During any service performed on behalf of the application
+This is mandatory for identification, safety and professionalism purposes.
+
+Article 3 - Prohibition of Delegation and Account Lending
+The guide commits to:
+- Using exclusively their own personal account on the application
+- Never lending, sharing or transferring their account to a third party
+- Never sending another person in their place, for any reason
+Any substitution or account lending constitutes a serious violation of amanah and a major professional breach.
+"Each of you is a guardian, and each will be questioned about those in their charge."
+(Al-Bukhari and Muslim)
+
+Article 4 - Protection and Respect of Pilgrims
+The guide acts exclusively in the interest of pilgrims, without financial pressure, emotional or religious exploitation, abuse of authority, and with full respect for their dignity, privacy and safety.
+
+Article 5 - Punctuality
+The guide is required to be strictly punctual for all services.
+Any unjustified delay constitutes a breach of the entrusted amanah.
+
+Article 6 - Pilgrim Pickup
+For all services:
+- The guide goes to the pilgrim's hotel when it is within a 500-meter perimeter of Masjid Al-Haram
+- Beyond this perimeter, the meeting point is jointly defined between the guide and the pilgrim, in an accessible and secure location
+- The guide ensures complete care of the pilgrim until the end of the service
+
+Article 7 - Care for People with Reduced Mobility
+For all services involving people with reduced mobility, the guide commits to:
+- Going directly to the pilgrim's room
+- Providing wheelchair care from the room
+- Accompanying the pilgrim throughout the entire service
+- Returning the pilgrim to their room at the end of the service
+
+Article 8 - General Behavior
+The guide must demonstrate at all times respect, patience, benevolence, discretion and a sense of service.
+They represent the application, the religious mission and the image of Islam in the Holy Places.
+
+Article 9 - Commitment to Honor
+For Omra Badal services, the guide is required to produce a short video upon entering the state of ihram, and a second video after full completion of the Omra. These videos must be transmitted to the requester to attest to the proper execution of the mission.
+Every accepted mission must be fully honored.
+Any task, mission or service accepted by the guide via the application must be fully honored, except in cases of duly justified force majeure.
+Acceptance of a mission constitutes a moral, religious and professional commitment.
+"O you who believe, fulfill your commitments."
+(Quran, Al-Ma'idah, 5:1)`;
+
+export const GUIDE_RELIGIOUS_REGULATION_TEXT_EN = `RELIGIOUS GUIDE REGULATIONS
+(Based on the Quran and authentic Sunnah)
+
+Preamble
+The religious guide carries out a noble mission in the Holy Places of Islam. They are the custodian of an amanah (sacred trust) towards Allah, towards the pilgrims and towards the application that entrusts them with this responsibility. They commit to fulfilling their mission in strict compliance with the Quran, the authentic Sunnah of Prophet Muhammad (peace be upon him), and the ethical principles defined in these regulations.
+
+Article 1 - Intention and Sincerity (Ikhlas)
+The guide commits to renewing their intention exclusively for Allah, with the purpose of serving pilgrims, accompanying them in their rites and transmitting authentic teaching, without seeking prestige, notoriety or illicit personal gain.
+
+Article 2 - Compliance with the Quran and Sunnah
+The guide commits to:
+- Teaching and applying only what is established by the Quran and authentic Sunnah
+- Avoiding any religious innovation (bid'a) or unfounded practice
+- Adopting behavior consistent with the prophetic way: modesty, patience, gentleness, justice, humility and respect
+
+Article 3 - Amanah and Prohibition of Client Diversion
+The guide is strictly prohibited from:
+- Exploiting, recovering or diverting for personal purposes the clientele generated by the application
+- Contacting pilgrims outside the official framework to offer private, parallel or competing services
+- Using their religious function or spiritual position to obtain personal advantage
+Any breach of this article constitutes a manifest betrayal of amanah.
+"Return the trust to the one who entrusted it to you."
+(Abu Dawud, at-Tirmidhi - authentic)
+"There is no faith for one who has no loyalty."
+(Ahmad - authenticated)
+
+Article 4 - Religious and Moral Responsibility
+The guide is aware that any breach of these regulations engages:
+- Their professional responsibility
+- And above all their responsibility before Allah
+"When entrusted with something, they betray."
+(Al-Bukhari and Muslim)
+
+Article 5 - Formal Commitment
+By accepting their mission, the guide acknowledges having read these regulations and commits to respecting them fully, asking Allah's help to honor this responsibility with righteousness and sincerity.`;
+
 export const CHARTER_TEXTS = {
   fr: CHARTER_TEXT,
   ar: CHARTER_TEXT_AR,
+  en: CHARTER_TEXT_EN,
 } as const;
 
 export const GUIDE_CODE_OF_CONDUCT_TEXTS = {
   fr: GUIDE_CODE_OF_CONDUCT_TEXT,
   ar: GUIDE_CODE_OF_CONDUCT_TEXT_AR,
+  en: GUIDE_CODE_OF_CONDUCT_TEXT_EN,
 } as const;
 
 export const GUIDE_RELIGIOUS_REGULATION_TEXTS = {
   fr: GUIDE_RELIGIOUS_REGULATION_TEXT,
   ar: GUIDE_RELIGIOUS_REGULATION_TEXT_AR,
+  en: GUIDE_RELIGIOUS_REGULATION_TEXT_EN,
 } as const;
