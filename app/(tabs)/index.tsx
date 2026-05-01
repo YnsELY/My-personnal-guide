@@ -62,6 +62,17 @@ export default function HomeScreen() {
       onPress: () => router.push('/service/visite-guidee'),
     },
     {
+      id: 'visite-masjid-nabawi',
+      title: t('serviceCard.visiteMasjidNabawi.title'),
+      subtitle: t('serviceCard.visiteMasjidNabawi.subtitle'),
+      description: t('serviceCard.visiteMasjidNabawi.description'),
+      image: require('@/assets/images/medina.jpeg'),
+      badge: t('serviceCard.visiteMasjidNabawi.badge'),
+      cta: t('serviceCard.visiteMasjidNabawi.cta'),
+      accent: ['#365b64', '#6aa9ba'] as const,
+      onPress: () => router.push('/service/visite-masjid-nabawi'),
+    },
+    {
       id: 'omra-accompagne',
       title: t('serviceCard.omraAccompagne.title'),
       subtitle: t('serviceCard.omraAccompagne.subtitle'),

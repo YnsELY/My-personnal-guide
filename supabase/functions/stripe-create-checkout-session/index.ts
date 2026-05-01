@@ -30,6 +30,10 @@ const resolveServiceCode = (params: { title?: string; category?: string; locatio
   if (isBadal) return isRamadan ? 'BADAL_RAMADAN' : 'BADAL_HORS';
   if (isPmr) return isRamadan ? 'PMR_RAMADAN' : 'PMR_HORS';
 
+  if (text.includes('masjid nabawi') || text.includes('masjid al nabawi') || text.includes('nabawi')) {
+    return 'VISITE_MASJID_NABAWI';
+  }
+
   if (isVisite) {
     if (location.includes('medine') || text.includes('medine')) return 'VISITE_MEDINE';
     if (location.includes('makkah') || location.includes('mecque') || text.includes('makkah') || text.includes('mecque')) {

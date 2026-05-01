@@ -21,6 +21,7 @@ const FIXED_GUIDE_NET_EUR_BY_SERVICE_CODE: Record<ServicePriceCode, number> = {
     PMR_RAMADAN: 137.5,
     VISITE_MAKKAH: 100,
     VISITE_MEDINE: 100,
+    VISITE_MASJID_NABAWI: 32.5,
 };
 
 const normalizeText = (value?: string | null) =>
@@ -53,6 +54,10 @@ const inferServicePriceCodeFromBasePrice = (params: GuideTariffParams): ServiceP
 
     if (isPmr) {
         return isRamadan ? 'PMR_RAMADAN' : 'PMR_HORS';
+    }
+
+    if (text.includes('masjid nabawi') || text.includes('masjid al nabawi') || text.includes('nabawi')) {
+        return 'VISITE_MASJID_NABAWI';
     }
 
     if (isVisite) {

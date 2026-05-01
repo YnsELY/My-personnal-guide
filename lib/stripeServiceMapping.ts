@@ -10,7 +10,8 @@ export type ServicePriceCode =
   | 'PMR_HORS'
   | 'PMR_RAMADAN'
   | 'VISITE_MAKKAH'
-  | 'VISITE_MEDINE';
+  | 'VISITE_MEDINE'
+  | 'VISITE_MASJID_NABAWI';
 
 export const PRICE_ID_BY_SERVICE_CODE: Partial<Record<ServicePriceCode, string>> = {
   OMRA_SOLO_HORS: 'price_1TAHzVL9j73enH7JJSyr6PEF',
@@ -23,6 +24,7 @@ export const PRICE_ID_BY_SERVICE_CODE: Partial<Record<ServicePriceCode, string>>
   BADAL_RAMADAN: 'price_1TAI6GL9j73enH7J6ZX3VW4c',
   VISITE_MEDINE: 'price_1TAI77L9j73enH7JRNbldbeV',
   VISITE_MAKKAH: 'price_1TAI7jL9j73enH7JIDKwRF81',
+  VISITE_MASJID_NABAWI: 'price_1TRsIoL9j73enH7Jecu4MCcy',
 };
 
 const normalizeText = (value?: string | null) =>
@@ -54,6 +56,10 @@ export const resolveServicePriceCode = (params: {
 
   if (isPmr) {
     return isRamadan ? 'PMR_RAMADAN' : 'PMR_HORS';
+  }
+
+  if (text.includes('masjid nabawi') || text.includes('masjid al nabawi') || text.includes('nabawi')) {
+    return 'VISITE_MASJID_NABAWI';
   }
 
   if (isVisite) {

@@ -2,8 +2,8 @@ import { SERVICES } from '@/constants/data';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Award, Share2 } from 'lucide-react-native';
-import React, { useEffect, useMemo, useRef } from 'react';
-import { Animated, Image, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, Dimensions, Image, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ServiceDetailsScreen() {
@@ -12,6 +12,8 @@ export default function ServiceDetailsScreen() {
     const service = SERVICES.find(s => s.id === id) || SERVICES[0];
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const translateAnim = useRef(new Animated.Value(24)).current;
+    const [hadithIndex, setHadithIndex] = useState(0);
+    const cardWidth = Dimensions.get('window').width - 48;
 
     useEffect(() => {
         Animated.parallel([
@@ -45,6 +47,26 @@ export default function ServiceDetailsScreen() {
                     { title: 'Début du rite', description: 'Vous recevez une confirmation visuelle à l’entrée en état de sacralisation.' },
                     { title: 'Réalisation', description: 'La Omra est effectuée avec sérieux en respectant les rites prescrits.' },
                     { title: 'Clôture', description: 'Un retour final vous est transmis pour valider l’achèvement du service.' },
+                ],
+            };
+        }
+
+        if (service.id === 'visite-masjid-nabawi') {
+            return {
+                sectionTag: 'Visite légiférée à Médine',
+                intensity: 'Parcours spirituel',
+                duration: 'Demi-journée',
+                location: 'Médine',
+                highlights: [
+                    'Portes importantes du Masjid Nabawi',
+                    'Al-Rawdha et le cimetière du Baqi\'',
+                    'Repères pratiques pour la prière et le cortège funéraire',
+                ],
+                steps: [
+                    { title: 'Accueil', description: 'Le guide vous accueille et présente le déroulé de la visite du Masjid Nabawi.' },
+                    { title: 'Portes & Rawdha', description: 'Découverte des portes importantes du Masjid Nabawi et orientation vers Al-Rawdha.' },
+                    { title: 'Baqi\' & repères de prière', description: 'Visite du cimetière du Baqi\', emplacement pour suivre le cortège funéraire et limite à ne pas dépasser pour la prière.' },
+                    { title: 'Musée & restauration', description: 'Découverte du Musée et indications des meilleurs endroits pour aller se restaurer.' },
                 ],
             };
         }
@@ -165,17 +187,86 @@ export default function ServiceDetailsScreen() {
                         </View>
                     </View>
 
-                    <View className="rounded-3xl border border-[#b39164]/20 bg-zinc-800/70 px-6 py-6">
-                        <View className="flex-row items-center mb-4">
-                            <Award size={16} color="#f2d7b1" />
-                            <Text className="text-[#f2d7b1] text-xs font-bold uppercase tracking-widest ml-2">
-                                Référence spirituelle
+                    {service.hadiths ? (
+                        <View>
+                            <View className="flex-row items-center justify-between mb-4">
+                                <View className="flex-row items-center gap-2">
+                                    <Award size={16} color="#f2d7b1" />
+                                    <Text className="text-[#f2d7b1] text-xs font-bold uppercase tracking-widest">
+                                        {service.id === 'visite-masjid-nabawi'
+                                            ? 'Hadiths sur le Masjid Nabawi'
+                                            : service.id === 'visite-guidee'
+                                                ? 'Hadiths sur Médine'
+                                                : 'Hadiths sur Makkah'}
+                                    </Text>
+                                </View>
+                                <Text className="text-zinc-500 text-xs">
+                                    {hadithIndex + 1} / {service.hadiths.length}
+                                </Text>
+                            </View>
+
+                            <ScrollView
+                                horizontal
+                                pagingEnabled
+                                showsHorizontalScrollIndicator={false}
+                                decelerationRate="fast"
+                                onMomentumScrollEnd={(e) => {
+                                    const index = Math.round(e.nativeEvent.contentOffset.x / cardWidth);
+                                    setHadithIndex(index);
+                                }}
+                            >
+                                {service.hadiths.map((h) => (
+                                    <View
+                                        key={h.number}
+                                        style={{ width: cardWidth }}
+                                        className="rounded-3xl border border-[#b39164]/20 bg-zinc-800/70 px-6 py-6 mr-0"
+                                    >
+                                        <View className="flex-row items-center mb-4 gap-3">
+                                            <View className="w-7 h-7 rounded-full bg-[#b39164]/20 items-center justify-center">
+                                                <Text className="text-[#f6dfbf] text-xs font-bold">{h.number}</Text>
+                                            </View>
+                                            <Text className="text-[#f2d7b1] text-sm font-semibold flex-1">{h.title}</Text>
+                                        </View>
+                                        <Text className="text-zinc-200 text-lg leading-9 font-serif text-right mb-4" style={{ writingDirection: 'rtl' }}>
+                                            {h.arabic}
+                                        </Text>
+                                        <Text className="text-zinc-300 text-sm leading-6 italic mb-3">
+                                            {h.text}
+                                        </Text>
+                                        <Text className="text-[#b39164] text-xs font-medium">
+                                            {h.source}
+                                        </Text>
+                                    </View>
+                                ))}
+                            </ScrollView>
+
+                            <View className="flex-row justify-center items-center gap-1.5 mt-4">
+                                {service.hadiths.map((_, i) => (
+                                    <View
+                                        key={i}
+                                        style={{
+                                            width: i === hadithIndex ? 16 : 6,
+                                            height: 6,
+                                            borderRadius: 3,
+                                            backgroundColor: i === hadithIndex ? '#b39164' : '#52525b',
+                                        }}
+                                    />
+                                ))}
+                            </View>
+                        </View>
+                    ) : service.hadith ? (
+                        <View className="rounded-3xl border border-[#b39164]/20 bg-zinc-800/70 px-6 py-6">
+                            <View className="flex-row items-center mb-4">
+                                <Award size={16} color="#f2d7b1" />
+                                <Text className="text-[#f2d7b1] text-xs font-bold uppercase tracking-widest ml-2">
+                                    Référence spirituelle
+                                </Text>
+                            </View>
+                            <Text className="text-zinc-100 text-lg leading-8 font-serif italic">
+                                {service.hadith}
                             </Text>
                         </View>
-                        <Text className="text-zinc-100 text-lg leading-8 font-serif italic">
-                            {service.hadith}
-                        </Text>
-                    </View>
+                    ) : null}
                 </Animated.View>
             </ScrollView>
         </View>

@@ -42,21 +42,28 @@
     "omraBadal": {
       "title": "Omra Badal",
       "subtitle": "Par procuration",
-      "description": "Une adoration accomplie avec sérieux, transparence et suivi des étapes clés.",
+      "description": "Confiez-nous votre Omra Badal : une adoration accomplie avec sérieux, transparence et sincérité. Votre guide vous enverra une courte vidéo à l'entrée en état de sacralisation (Ihram) ainsi qu'à la fin de la Omra, pour vous permettre de vivre chaque étape en toute confiance.",
       "badge": "Service encadré",
       "cta": "Voir le service"
     },
     "visitGuidee": {
       "title": "Visites Guidées",
       "subtitle": "Médine & Makkah",
-      "description": "Un parcours spirituel structuré pour visiter les lieux emblématiques avec un guide.",
+      "description": "Masjid Nabawi en toute sérénité : foi, histoire et émotion guidées par nos guides experts.",
       "badge": "Accompagnement premium",
+      "cta": "Découvrir"
+    },
+    "visiteMasjidNabawi": {
+      "title": "Visite du Masjid Nabawi",
+      "subtitle": "Médine",
+      "description": "Masjid Nabawi en toute sérénité : foi, histoire et émotion guidées par nos guides experts.",
+      "badge": "Visite légiférée",
       "cta": "Découvrir"
     },
     "omraAccompagne": {
       "title": "Omra accompagné",
       "subtitle": "Accompagnement sur place",
-      "description": "Un accompagnement complet et rassurant pour accomplir votre Omra dans les meilleures conditions.",
+      "description": "Accomplissez votre Omra en toute confiance aux côtés de nos guides qualifiés et reconnus pour leur sérieux, leur science et leur éthique. Présents à chaque étape, ils vous accompagnent avec bienveillance afin que vous viviez ce voyage sacré dans la sérénité, la conformité aux rites et la recherche sincère de l'agrément d'Allah.",
       "badge": "Service encadré",
       "cta": "Voir le service"
     },
