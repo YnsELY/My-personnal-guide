@@ -16,7 +16,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
-import { AVATAR_PRESET_OPTIONS, DEFAULT_AVATAR_PRESET_ID, getAvatarPresetIdFromUrl, type AvatarPresetId, resolveProfileAvatarSource } from '@/lib/avatar';
+import { getAvatarPresetOptions, getDefaultAvatarPresetId, getAvatarPresetIdFromUrl, type AvatarPresetId, resolveProfileAvatarSource } from '@/lib/avatar';
 import { deleteMyAccount, getGuideWalletSummary, getPilgrimWalletSummary } from '@/lib/api';
 import { formatEUR, formatSAR } from '@/lib/pricing';
 import { directionStyle, flipChevron, forceLTRText, rowStyle, textEnd, textStart } from '@/lib/rtl';
@@ -87,8 +87,9 @@ export default function ProfileScreen() {
         }, [loadGuideWalletSummary, loadPilgrimWalletSummary])
     );
 
-    const currentAvatarPresetId = getAvatarPresetIdFromUrl(profile?.avatar_url) || DEFAULT_AVATAR_PRESET_ID;
-    const profileAvatarSource = resolveProfileAvatarSource(profile?.avatar_url);
+    const avatarPresetOptions = getAvatarPresetOptions(profile?.gender, profile?.role);
+    const currentAvatarPresetId = getAvatarPresetIdFromUrl(profile?.avatar_url) || getDefaultAvatarPresetId(profile?.gender, profile?.role);
+    const profileAvatarSource = resolveProfileAvatarSource(profile?.avatar_url, profile?.gender, profile?.role);
 
     const handleSelectAvatar = async (presetId: AvatarPresetId) => {
         if (isAvatarUpdating) return;
@@ -207,7 +208,7 @@ export default function ProfileScreen() {
                             <View className="mt-4 bg-white dark:bg-zinc-800 rounded-2xl border border-gray-200 dark:border-white/10 p-3 w-[92%]">
                                 <Text className="text-gray-500 dark:text-gray-300 text-xs mb-3" style={textStart(isRTL)}>{t('chooseAvatar')}</Text>
                                 <View className="flex-row items-center justify-between" style={rowStyle(isRTL)}>
-                                    {AVATAR_PRESET_OPTIONS.map((avatar) => {
+                                    {avatarPresetOptions.map((avatar) => {
                                         const isSelected = currentAvatarPresetId === avatar.id;
                                         return (
                                             <TouchableOpacity

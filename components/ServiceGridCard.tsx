@@ -63,7 +63,7 @@ export function ServiceGridCard({ service }: ServiceGridCardProps) {
                     {/* Guide Info */}
                     <View className="flex-row items-center mt-1 mb-2">
                         <Image
-                            source={resolveProfileAvatarSource(service.guideAvatar)}
+                            source={resolveProfileAvatarSource(service.guideAvatar, service.guideGender, 'guide')}
                             className="w-5 h-5 rounded-full mr-2"
                         />
                         <Text className="text-gray-500 dark:text-gray-400 text-xs flex-1" numberOfLines={1}>
