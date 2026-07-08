@@ -104,7 +104,16 @@
     "alertGenericError": "Une erreur est survenue lors de la réservation.",
     "locationBadal": "Prestation à distance (Omra Badal)",
     "locationHotel": "Rendez-vous à l'hôtel - {{address}}",
-    "locationHaram": "Rendez-vous au haram"
+    "locationHaram": "Rendez-vous au haram",
+    "badalWeekTitle": "Semaine souhaitée",
+    "badalWeekSelect": "Choisir la semaine (fourchette de 7 jours)",
+    "badalWeekRange": "Du {{start}} au {{end}}",
+    "badalWeekHint": "L'Omra Badal sera réalisée à un moment durant cette semaine. L'heure est indifférente : aucun créneau à choisir.",
+    "badalBeneficiaryTitle": "Bénéficiaire de l'Omra Badal",
+    "badalBeneficiaryPlaceholder": "Nom de la personne pour qui l'Omra est réalisée",
+    "badalBeneficiaryHint": "Indiquez le nom complet de la personne (vivante ou décédée) pour qui l'Omra Badal doit être accomplie.",
+    "alertBadalBeneficiaryRequired": "Bénéficiaire manquant",
+    "alertBadalBeneficiaryRequiredMsg": "Veuillez indiquer le nom de la personne pour qui l'Omra Badal est réalisée."
   },
   "confirmation": {
     "title": "Réservation Confirmée !",
@@ -126,6 +135,8 @@
     "paidByWallet": "Payé via cagnotte",
     "paidByCard": "Payé via carte",
     "viewReservations": "Voir mes réservations",
-    "backToHome": "Retour à l'accueil"
+    "backToHome": "Retour à l'accueil",
+    "badalWeek": "Semaine prévue",
+    "badalWeekRange": "Du {{start}} au {{end}} (heure indifférente)"
   }
 }

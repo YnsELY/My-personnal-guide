@@ -56,7 +56,12 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
     const [transportWarningAcknowledged, setTransportWarningAcknowledged] = useState(false);
     const [visitDate, setVisitDate] = useState<number | null>(startDate || null);
     const [visitTime, setVisitTime] = useState<string | null>(null);
+    const [badalBeneficiaryName, setBadalBeneficiaryName] = useState('');
     const [showCalendar, setShowCalendar] = useState(false);
+
+    // Omra Badal : prestation à distance, sans créneau horaire (fourchette d'une semaine, heure indifférente)
+    const isBadal = (selectedService || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().includes('badal');
+    const BADAL_WINDOW_DAYS = 7;
     const [loading, setLoading] = useState(false);
     const [showCharterModal, setShowCharterModal] = useState(false);
     const [pilgrimCharterAccepted, setPilgrimCharterAccepted] = useState(false);
@@ -84,6 +89,7 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
         setTransportWarningAcknowledged(false);
         setUseWalletBalance(false);
         setPilgrimCharterAccepted(false);
+        setBadalBeneficiaryName('');
         setWalletLoading(true);
         getPilgrimWalletSummary()
             .then((summary) => {
@@ -107,7 +113,8 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
     }, [visible]);
 
     useEffect(() => {
-        if (!visible || !guideId || !visitDate) {
+        // Omra Badal : aucune validation de créneau (heure indifférente)
+        if (!visible || !guideId || !visitDate || isBadal) {
             setReservedTimeSlots([]);
             return;
         }
@@ -133,13 +140,10 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
         return () => {
             isMounted = false;
         };
-    }, [visible, guideId, visitDate]);
+    }, [visible, guideId, visitDate, isBadal]);
 
     // Use passed service directly
     const activeService = service;
-
-    // Omra Badal : prestation à distance, pas de lieu de prise en charge
-    const isBadal = (selectedService || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().includes('badal');
 
     // Price logic (EUR): base service + transport
     const normalizedHotelDistanceInput = hotelDistanceKm.replace(',', '.');
@@ -159,8 +163,11 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
     const isFemalePilgrim = profile?.role === 'pilgrim' && profile?.gender === 'female';
     const isMaleGuide = guideGender === 'male';
     const requiresFemaleCompanionForMaleGuide = isFemalePilgrim && isMaleGuide;
-    const isFemaleSoloWithMaleGuideBlocked = requiresFemaleCompanionForMaleGuide && pilgrims.length < 2;
-    const shouldShowPilgrimsSection = selectedService !== 'Omra seule' || requiresFemaleCompanionForMaleGuide || pilgrims.length > 1;
+    // Omra Badal : prestation à distance par procuration → la règle d'accompagnement ne s'applique pas
+    const isFemaleSoloWithMaleGuideBlocked = !isBadal && requiresFemaleCompanionForMaleGuide && pilgrims.length < 2;
+    // Pour l'Omra Badal, on remplace la section "pèlerins" par un champ bénéficiaire dédié
+    const shouldShowPilgrimsSection = !isBadal && (selectedService !== 'Omra seule' || requiresFemaleCompanionForMaleGuide || pilgrims.length > 1);
+    const badalBeneficiaryProvided = badalBeneficiaryName.trim().length > 0;
     const isHotelFlowValid = transportPickupType !== 'hotel'
         || (
             hotelAddress.trim().length > 0
@@ -170,7 +177,7 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                 || (hotelOver2KmByCar === false && transportWarningAcknowledged)
             )
         );
-    const canOpenConfirmation = (isBadal || !!transportPickupType) && !!visitDate && !!visitTime && !isFemaleSoloWithMaleGuideBlocked && (isBadal || isHotelFlowValid) && pilgrimCharterAccepted;
+    const canOpenConfirmation = (isBadal || !!transportPickupType) && !!visitDate && (isBadal || !!visitTime) && !isFemaleSoloWithMaleGuideBlocked && (isBadal || isHotelFlowValid) && (!isBadal || badalBeneficiaryProvided) && pilgrimCharterAccepted;
 
     const handleAddPilgrim = () => {
         if (newPilgrimName.trim().length > 0) {
@@ -213,17 +220,24 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
             Alert.alert(t('modal.alertDateMissing'), t('modal.alertDateMissingMsg'));
             return;
         }
+        if (isBadal && !badalBeneficiaryProvided) {
+            Alert.alert(t('modal.alertBadalBeneficiaryRequired'), t('modal.alertBadalBeneficiaryRequiredMsg'));
+            return;
+        }
         if (!pilgrimCharterAccepted) {
             Alert.alert(t('modal.alertCharterRequired'), t('modal.alertCharterRequiredMsg'));
             return;
         }
-        if (!visitTime) {
-            Alert.alert(t('modal.alertTimeMissing'), t('modal.alertTimeMissingMsg'));
-            return;
-        }
-        if (reservedTimeSlots.includes(visitTime)) {
-            Alert.alert(t('modal.alertSlotTaken'), t('modal.alertSlotTakenMsg'));
-            return;
+        // Omra Badal : heure indifférente → pas de sélection ni de validation de créneau
+        if (!isBadal) {
+            if (!visitTime) {
+                Alert.alert(t('modal.alertTimeMissing'), t('modal.alertTimeMissingMsg'));
+                return;
+            }
+            if (reservedTimeSlots.includes(visitTime)) {
+                Alert.alert(t('modal.alertSlotTaken'), t('modal.alertSlotTakenMsg'));
+                return;
+            }
         }
         if (isFemaleSoloWithMaleGuideBlocked) {
             Alert.alert(t('modal.alertBookingBlocked'), t('femaleSoloWithMaleGuide'));
@@ -232,16 +246,27 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
 
         setLoading(true);
         try {
-            const latestReservedSlots = await getReservedGuideTimeSlots(guideId, visitDate);
-            setReservedTimeSlots(latestReservedSlots);
-            if (visitTime && latestReservedSlots.includes(visitTime)) {
-                setVisitTime(null);
-                Alert.alert(t('modal.alertSlotTaken'), t('modal.alertSlotJustTakenMsg'));
-                return;
+            if (!isBadal) {
+                const latestReservedSlots = await getReservedGuideTimeSlots(guideId, visitDate);
+                setReservedTimeSlots(latestReservedSlots);
+                if (visitTime && latestReservedSlots.includes(visitTime)) {
+                    setVisitTime(null);
+                    Alert.alert(t('modal.alertSlotTaken'), t('modal.alertSlotJustTakenMsg'));
+                    return;
+                }
             }
 
+            // Omra Badal : fourchette d'une semaine, sans heure. Le bénéficiaire devient le "pèlerin" enregistré.
+            const badalStartDate = visitDate;
+            const badalEndDate = visitDate + (BADAL_WINDOW_DAYS - 1) * 24 * 60 * 60 * 1000;
+            const submittedStartDate = badalStartDate;
+            const submittedEndDate = isBadal ? badalEndDate : visitDate;
+            const submittedVisitTime = isBadal ? null : visitTime;
+
             // Format pilgrims as string for now: "Name (Age ans)" or just Name if no age
-            const formattedPilgrims = pilgrims.map(p => p.age ? `${p.name} (${p.age} ans)` : p.name);
+            const formattedPilgrims = isBadal
+                ? [badalBeneficiaryName.trim()]
+                : pilgrims.map(p => p.age ? `${p.name} (${p.age} ans)` : p.name);
             const normalizedHotelDistanceKm = transportPickupType === 'hotel' && hotelOver2KmByCar === true
                 ? parsedHotelDistanceKm
                 : null;
@@ -258,11 +283,11 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                     serviceId: String(activeService?.id || ''),
                     guideId,
                     serviceName: resolvedServiceName,
-                    startDate: visitDate,
-                    endDate: visitDate,
+                    startDate: submittedStartDate,
+                    endDate: submittedEndDate,
                     totalPrice,
                     location: resolvedLocation,
-                    visitTime: visitTime,
+                    visitTime: submittedVisitTime,
                     pilgrims: formattedPilgrims,
                     transportPickupType: (transportPickupType ?? 'haram') as 'haram' | 'hotel',
                     hotelAddress: normalizedHotelAddress,
@@ -294,12 +319,12 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
             const createdReservation = await createReservation({
                 guideId,
                 serviceName: resolvedServiceName,
-                date: visitDate,
-                startDate: visitDate,
-                endDate: visitDate,
+                date: submittedStartDate,
+                startDate: submittedStartDate,
+                endDate: submittedEndDate,
                 price: totalPrice,
                 location: resolvedLocation,
-                visitTime: visitTime,
+                visitTime: submittedVisitTime,
                 pilgrims: formattedPilgrims,
                 transportPickupType: (transportPickupType ?? 'haram') as 'haram' | 'hotel',
                 hotelAddress: normalizedHotelAddress,
@@ -322,8 +347,10 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                 params: {
                     reservationId: createdReservation?.id,
                     serviceName: resolvedServiceName,
-                    date: visitDate,
-                    time: visitTime,
+                    date: submittedStartDate,
+                    endDate: submittedEndDate,
+                    time: submittedVisitTime ?? '',
+                    isBadal: isBadal ? '1' : '',
                     price: totalPrice,
                     walletAmountUsed: walletUsed,
                     cardAmountPaid: cardPaid,
@@ -365,6 +392,14 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
     const formattedVisitDate = visitDate
         ? new Date(visitDate).toLocaleDateString(getLocale(), { day: 'numeric', month: 'long', year: 'numeric' })
         : null;
+    // Omra Badal : fourchette d'une semaine à partir de la date choisie
+    const badalWindowEndMs = visitDate ? visitDate + (BADAL_WINDOW_DAYS - 1) * 24 * 60 * 60 * 1000 : null;
+    const formattedBadalStart = visitDate
+        ? new Date(visitDate).toLocaleDateString(getLocale(), { day: 'numeric', month: 'long' })
+        : null;
+    const formattedBadalEnd = badalWindowEndMs
+        ? new Date(badalWindowEndMs).toLocaleDateString(getLocale(), { day: 'numeric', month: 'long', year: 'numeric' })
+        : null;
 
     return (
         <Modal
@@ -393,50 +428,84 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                         <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
 
                             {/* Date Selection */}
-                            <Text className="text-white font-bold text-lg mb-4">{t('modal.visitDate')}</Text>
+                            <Text className="text-white font-bold text-lg mb-4">
+                                {isBadal ? t('modal.badalWeekTitle') : t('modal.visitDate')}
+                            </Text>
                             <TouchableOpacity
                                 onPress={() => setShowCalendar(true)}
-                                className={`flex-row items-center bg-zinc-800 border ${visitDate ? 'border-[#b39164]' : 'border-white/5'} rounded-xl p-4 mb-8`}
+                                className={`flex-row items-center bg-zinc-800 border ${visitDate ? 'border-[#b39164]' : 'border-white/5'} rounded-xl p-4 ${isBadal ? 'mb-2' : 'mb-8'}`}
                             >
                                 <Calendar color={visitDate ? "#b39164" : "#A1A1AA"} size={20} className="mr-3" />
-                                <Text className={`font-medium text-base ${visitDate ? 'text-[#b39164]' : 'text-zinc-400'}`}>
-                                    {formattedVisitDate ? t('modal.dateOn', { date: formattedVisitDate }) : t('modal.selectDate')}
+                                <Text className={`font-medium text-base flex-1 ${visitDate ? 'text-[#b39164]' : 'text-zinc-400'}`}>
+                                    {isBadal
+                                        ? (formattedBadalStart && formattedBadalEnd
+                                            ? t('modal.badalWeekRange', { start: formattedBadalStart, end: formattedBadalEnd })
+                                            : t('modal.badalWeekSelect'))
+                                        : (formattedVisitDate ? t('modal.dateOn', { date: formattedVisitDate }) : t('modal.selectDate'))}
                                 </Text>
                             </TouchableOpacity>
 
-                            {/* Time Selection */}
-                            <Text className="text-white font-bold text-lg mb-4">{t('modal.visitTime')}</Text>
-                            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-8" contentContainerStyle={{ paddingRight: 20 }}>
-                                {Array.from({ length: 15 }, (_, i) => i + 8).map((hour) => {
-                                    const time = `${hour < 10 ? '0' + hour : hour}:00`;
-                                    const isTaken = reservedTimeSlots.includes(time);
-                                    const isSelected = visitTime === time;
-                                    return (
-                                        <TouchableOpacity
-                                            key={time}
-                                            onPress={() => {
-                                                if (isTaken) return;
-                                                setVisitTime(time);
-                                            }}
-                                            disabled={isTaken}
-                                            className={`mr-3 px-5 py-3 rounded-xl border ${isTaken
-                                                ? 'bg-zinc-900 border-red-500/30 opacity-60'
-                                                : isSelected
-                                                    ? 'bg-[#b39164] border-[#b39164]'
-                                                    : 'bg-zinc-800 border-white/5'
-                                                }`}
-                                        >
-                                            <Text className={`font-medium ${isTaken ? 'text-red-300' : isSelected ? 'text-white' : 'text-zinc-400'}`}>
-                                                {time}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    );
-                                })}
-                            </ScrollView>
-                            <Text className="text-zinc-500 text-xs mb-8 -mt-6">
-                                {reservedSlotsLoading ? t('modal.checkingSlots') : t('modal.slotsUnavailableHint')}
-                            </Text>
+                            {isBadal ? (
+                                <View className="mb-8 rounded-xl border border-[#b39164]/25 bg-[#b39164]/10 px-4 py-3">
+                                    <Text className="text-[#b39164] text-xs leading-5">
+                                        {t('modal.badalWeekHint')}
+                                    </Text>
+                                </View>
+                            ) : (
+                                <>
+                                    {/* Time Selection */}
+                                    <Text className="text-white font-bold text-lg mb-4">{t('modal.visitTime')}</Text>
+                                    <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-8" contentContainerStyle={{ paddingRight: 20 }}>
+                                        {Array.from({ length: 15 }, (_, i) => i + 8).map((hour) => {
+                                            const time = `${hour < 10 ? '0' + hour : hour}:00`;
+                                            const isTaken = reservedTimeSlots.includes(time);
+                                            const isSelected = visitTime === time;
+                                            return (
+                                                <TouchableOpacity
+                                                    key={time}
+                                                    onPress={() => {
+                                                        if (isTaken) return;
+                                                        setVisitTime(time);
+                                                    }}
+                                                    disabled={isTaken}
+                                                    className={`mr-3 px-5 py-3 rounded-xl border ${isTaken
+                                                        ? 'bg-zinc-900 border-red-500/30 opacity-60'
+                                                        : isSelected
+                                                            ? 'bg-[#b39164] border-[#b39164]'
+                                                            : 'bg-zinc-800 border-white/5'
+                                                        }`}
+                                                >
+                                                    <Text className={`font-medium ${isTaken ? 'text-red-300' : isSelected ? 'text-white' : 'text-zinc-400'}`}>
+                                                        {time}
+                                                    </Text>
+                                                </TouchableOpacity>
+                                            );
+                                        })}
+                                    </ScrollView>
+                                    <Text className="text-zinc-500 text-xs mb-8 -mt-6">
+                                        {reservedSlotsLoading ? t('modal.checkingSlots') : t('modal.slotsUnavailableHint')}
+                                    </Text>
+                                </>
+                            )}
 
+                            {isBadal && (
+                                <>
+                                    <Text className="text-white font-bold text-lg mb-4">{t('modal.badalBeneficiaryTitle')}</Text>
+                                    <View className="bg-zinc-800 rounded-xl px-4 py-3 mb-2 flex-row items-center border border-white/5">
+                                        <User size={18} color="#71717A" />
+                                        <TextInput
+                                            placeholder={t('modal.badalBeneficiaryPlaceholder')}
+                                            placeholderTextColor="#52525B"
+                                            className="flex-1 ml-3 text-white text-base"
+                                            value={badalBeneficiaryName}
+                                            onChangeText={setBadalBeneficiaryName}
+                                        />
+                                    </View>
+                                    <Text className="text-zinc-500 text-xs mb-8">
+                                        {t('modal.badalBeneficiaryHint')}
+                                    </Text>
+                                </>
+                            )}
 
                             {shouldShowPilgrimsSection && (
                                 <>
@@ -663,8 +732,12 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                                         Alert.alert(t('modal.alertBookingBlocked'), t('femaleSoloWithMaleGuide'));
                                         return;
                                     }
-                                    if (!visitDate || !visitTime) { Alert.alert(t('modal.alertIncomplete'), t('modal.alertIncompleteMsg')); return; }
-                                    if (!isHotelFlowValid) { Alert.alert(t('modal.alertTransportIncomplete'), t('modal.alertTransportIncompleteMsg')); return; }
+                                    if (!visitDate || (!isBadal && !visitTime)) { Alert.alert(t('modal.alertIncomplete'), t('modal.alertIncompleteMsg')); return; }
+                                    if (isBadal && !badalBeneficiaryProvided) {
+                                        Alert.alert(t('modal.alertBadalBeneficiaryRequired'), t('modal.alertBadalBeneficiaryRequiredMsg'));
+                                        return;
+                                    }
+                                    if (!isBadal && !isHotelFlowValid) { Alert.alert(t('modal.alertTransportIncomplete'), t('modal.alertTransportIncompleteMsg')); return; }
                                     if (!pilgrimCharterAccepted) {
                                         Alert.alert(t('modal.alertCharterRequired'), t('modal.alertCharterRequiredMsg'));
                                         return;

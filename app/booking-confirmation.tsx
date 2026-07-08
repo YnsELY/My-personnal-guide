@@ -33,11 +33,13 @@ export default function BookingConfirmationScreen() {
     const params = useLocalSearchParams();
 
     // Parse params if needed or use directly
-    const { serviceName, date, time, price, location, guideName, walletAmountUsed, cardAmountPaid, transportPickupType, hotelAddress, hotelOver2KmByCar, hotelDistanceKm, transportExtraFeeAmount } = params;
+    const { serviceName, date, endDate, time, isBadal: isBadalParam, price, location, guideName, walletAmountUsed, cardAmountPaid, transportPickupType, hotelAddress, hotelOver2KmByCar, hotelDistanceKm, transportExtraFeeAmount } = params;
     const totalPrice = Number(price || 0);
     const walletPaid = Number(walletAmountUsed || 0);
     const cardPaid = Number(cardAmountPaid || Math.max(totalPrice - walletPaid, 0));
+    const isBadal = isBadalParam === '1';
     const formattedDate = formatBookingDate(date, t('confirmation.dateNotSpecified'));
+    const formattedEndDate = formatBookingDate(endDate, t('confirmation.dateNotSpecified'));
     const normalizedPickupType = transportPickupType === 'hotel' ? 'hotel' : transportPickupType === 'haram' ? 'haram' : null;
     const over2Km = hotelOver2KmByCar === 'true' ? true : hotelOver2KmByCar === 'false' ? false : null;
     const distanceKm = hotelDistanceKm ? Number(hotelDistanceKm) : null;
@@ -87,8 +89,12 @@ export default function BookingConfirmationScreen() {
                                     <Calendar size={16} color="#b39164" />
                                 </View>
                                 <View className="flex-1">
-                                    <Text className="text-gray-500 text-xs mb-1">{t('confirmation.dateAndTime')}</Text>
-                                    <Text className="text-gray-900 dark:text-white font-semibold text-base">{t('confirmation.dateAtTime', { date: formattedDate, time })}</Text>
+                                    <Text className="text-gray-500 text-xs mb-1">{isBadal ? t('confirmation.badalWeek') : t('confirmation.dateAndTime')}</Text>
+                                    <Text className="text-gray-900 dark:text-white font-semibold text-base">
+                                        {isBadal
+                                            ? t('confirmation.badalWeekRange', { start: formattedDate, end: formattedEndDate })
+                                            : t('confirmation.dateAtTime', { date: formattedDate, time })}
+                                    </Text>
                                 </View>
                             </View>
 

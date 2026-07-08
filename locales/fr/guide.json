@@ -25,6 +25,7 @@
   "cancelService": "Annuler la prestation",
   "submitBadalProofs": "Déposer les preuves Omra Badal",
   "viewUpdateBadalProofs": "Voir / mettre à jour les preuves Omra Badal",
+  "badalBeneficiaryLabel": "Personne pour qui l'Omra Badal est réalisée",
   "waitingStartConfirmation": "Début en attente",
   "confirmedStatus": "Confirmée",
   "waitingEndConfirmation": "Fin en attente",
@@ -198,5 +199,7 @@
     "reportError": "Impossible d'envoyer le signalement.",
     "sending": "Envoi...",
     "send": "Envoyer"
-  }
+  },
+  "badalWeekLabel": "Semaine prévue",
+  "badalWeekRange": "Du {{start}} au {{end}}"
 }

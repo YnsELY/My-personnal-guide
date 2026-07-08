@@ -25,6 +25,7 @@
   "cancelService": "إلغاء الخدمة",
   "submitBadalProofs": "تقديم إثباتات العمرة بالنيابة",
   "viewUpdateBadalProofs": "عرض / تحديث إثباتات العمرة بالنيابة",
+  "badalBeneficiaryLabel": "الشخص الذي تُؤدى العمرة بالنيابة عنه",
   "waitingStartConfirmation": "في انتظار البدء",
   "confirmedStatus": "مؤكدة",
   "waitingEndConfirmation": "في انتظار الانتهاء",
@@ -198,5 +199,7 @@
     "reportError": "تعذر إرسال البلاغ.",
     "sending": "جارٍ الإرسال...",
     "send": "إرسال"
-  }
+  },
+  "badalWeekLabel": "الأسبوع المحدّد",
+  "badalWeekRange": "من {{start}} إلى {{end}}"
 }

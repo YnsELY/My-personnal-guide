@@ -104,7 +104,16 @@
     "alertGenericError": "حدث خطأ أثناء الحجز.",
     "locationBadal": "خدمة عن بُعد (عمرة بالنيابة)",
     "locationHotel": "اللقاء في الفندق - {{address}}",
-    "locationHaram": "اللقاء عند الحرم"
+    "locationHaram": "اللقاء عند الحرم",
+    "badalWeekTitle": "الأسبوع المفضّل",
+    "badalWeekSelect": "اختر الأسبوع (مدة 7 أيام)",
+    "badalWeekRange": "من {{start}} إلى {{end}}",
+    "badalWeekHint": "ستُؤدى العمرة بالنيابة في وقت ما خلال هذا الأسبوع. الوقت غير محدد: لا يوجد موعد لاختياره.",
+    "badalBeneficiaryTitle": "المستفيد من العمرة بالنيابة",
+    "badalBeneficiaryPlaceholder": "اسم الشخص الذي تُؤدى العمرة نيابةً عنه",
+    "badalBeneficiaryHint": "أدخل الاسم الكامل للشخص (حيًّا كان أو متوفى) الذي ستُؤدى العمرة بالنيابة عنه.",
+    "alertBadalBeneficiaryRequired": "المستفيد مفقود",
+    "alertBadalBeneficiaryRequiredMsg": "يرجى إدخال اسم الشخص الذي تُؤدى العمرة بالنيابة عنه."
   },
   "confirmation": {
     "title": "تم تأكيد الحجز!",
@@ -126,6 +135,8 @@
     "paidByWallet": "مدفوع من المحفظة",
     "paidByCard": "مدفوع بالبطاقة",
     "viewReservations": "عرض حجوزاتي",
-    "backToHome": "العودة إلى الرئيسية"
+    "backToHome": "العودة إلى الرئيسية",
+    "badalWeek": "الأسبوع المحدّد",
+    "badalWeekRange": "من {{start}} إلى {{end}} (الوقت غير محدد)"
   }
 }

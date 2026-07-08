@@ -104,7 +104,16 @@
     "alertGenericError": "An error occurred during booking.",
     "locationBadal": "Remote service (Omra Badal)",
     "locationHotel": "Meet at hotel - {{address}}",
-    "locationHaram": "Meet at haram"
+    "locationHaram": "Meet at haram",
+    "badalWeekTitle": "Preferred week",
+    "badalWeekSelect": "Choose the week (7-day window)",
+    "badalWeekRange": "From {{start}} to {{end}}",
+    "badalWeekHint": "The Omra Badal will be performed at some point during this week. Time does not matter: no slot to choose.",
+    "badalBeneficiaryTitle": "Omra Badal beneficiary",
+    "badalBeneficiaryPlaceholder": "Name of the person the Omra is performed for",
+    "badalBeneficiaryHint": "Enter the full name of the person (living or deceased) for whom the Omra Badal is to be performed.",
+    "alertBadalBeneficiaryRequired": "Beneficiary missing",
+    "alertBadalBeneficiaryRequiredMsg": "Please enter the name of the person the Omra Badal is performed for."
   },
   "confirmation": {
     "title": "Booking Confirmed!",
@@ -126,6 +135,8 @@
     "paidByWallet": "Paid by wallet",
     "paidByCard": "Paid by card",
     "viewReservations": "View my bookings",
-    "backToHome": "Back to home"
+    "backToHome": "Back to home",
+    "badalWeek": "Scheduled week",
+    "badalWeekRange": "From {{start}} to {{end}} (any time)"
   }
 }

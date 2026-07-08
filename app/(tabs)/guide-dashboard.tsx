@@ -1,6 +1,7 @@
 import { SlideToConfirmModal } from '@/components/SlideToConfirmModal';
 import { useAuth } from '@/context/AuthContext';
 import { useReservations } from '@/context/ReservationsContext';
+import i18n from '@/lib/i18n';
 import { formatSAR, toSar } from '@/lib/pricing';
 import { Redirect, useRouter } from 'expo-router';
 import { Check, Clock, MapPin, User, X } from 'lucide-react-native';
@@ -174,6 +175,59 @@ export default function GuideDashboardScreen() {
         return String(reservation?.serviceName || '').toLowerCase().includes('badal');
     };
 
+    const badalBeneficiaries = (reservation: any) => {
+        const names = Array.isArray(reservation?.pilgrimsNames) ? reservation.pilgrimsNames : [];
+        return names.map((n: any) => String(n || '').trim()).filter(Boolean).join(', ');
+    };
+
+    const badalLocale = () => (i18n.language === 'ar' ? 'ar-SA' : 'fr-FR');
+
+    // Fourchette d'une semaine : "du X au Y" (dates DATE en 'YYYY-MM-DD', on évite le décalage de fuseau)
+    const badalDateRange = (reservation: any) => {
+        const parseDay = (value: any) => {
+            if (!value) return null;
+            const d = new Date(`${String(value).slice(0, 10)}T12:00:00`);
+            return isNaN(d.getTime()) ? null : d;
+        };
+        const start = parseDay(reservation?.startDate);
+        if (!start) return null;
+        const end = parseDay(reservation?.endDate) || start;
+        const startStr = start.toLocaleDateString(badalLocale(), { day: 'numeric', month: 'long' });
+        const endStr = end.toLocaleDateString(badalLocale(), { day: 'numeric', month: 'long', year: 'numeric' });
+        return t('badalWeekRange', { start: startStr, end: endStr });
+    };
+
+    const renderBadalBeneficiary = (reservation: any) => {
+        if (!isBadalReservation(reservation)) return null;
+        const beneficiaries = badalBeneficiaries(reservation);
+        const range = badalDateRange(reservation);
+        if (!beneficiaries && !range) return null;
+        return (
+            <View className="mt-3 rounded-lg border border-indigo-500/20 bg-indigo-500/10 px-3 py-2">
+                {!!beneficiaries && (
+                    <>
+                        <Text className="text-indigo-400 text-[10px] font-semibold uppercase tracking-wide">
+                            {t('badalBeneficiaryLabel')}
+                        </Text>
+                        <Text className="text-gray-900 dark:text-white text-sm font-medium mt-0.5">
+                            {beneficiaries}
+                        </Text>
+                    </>
+                )}
+                {!!range && (
+                    <View className={beneficiaries ? 'mt-2' : ''}>
+                        <Text className="text-indigo-400 text-[10px] font-semibold uppercase tracking-wide">
+                            {t('badalWeekLabel')}
+                        </Text>
+                        <Text className="text-gray-900 dark:text-white text-sm font-medium mt-0.5">
+                            {range}
+                        </Text>
+                    </View>
+                )}
+            </View>
+        );
+    };
+
     const isWaitingPilgrimStartConfirmation = (reservation: any) => {
         return !!reservation?.guideStartConfirmedAt && !reservation?.pilgrimStartConfirmedAt;
     };
@@ -273,6 +327,8 @@ export default function GuideDashboardScreen() {
                                                 </View>
                                             </View>
 
+                                            {renderBadalBeneficiary(visit)}
+
                                             <View className="mt-4 gap-2">
                                                 {isWaitingStartConfirmation ? (
                                                     <View className="bg-amber-100 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 py-3 rounded-lg items-center">
@@ -356,6 +412,8 @@ export default function GuideDashboardScreen() {
                                                 </View>
                                             </View>
 
+                                            {renderBadalBeneficiary(visit)}
+
                                             {isWaitingEndConfirmation ? (
                                                 <View className="mt-4 bg-amber-100 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 py-3 rounded-lg items-center">
                                                     <Text className="text-amber-700 dark:text-amber-300 font-semibold text-sm">
@@ -420,6 +478,8 @@ export default function GuideDashboardScreen() {
                                                 </View>
                                             </View>
 
+                                            {renderBadalBeneficiary(req)}
+
                                             <View className="flex-row gap-3 mt-1">
                                                 <TouchableOpacity
                                                     className="flex-1 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 py-3 rounded-lg flex-row items-center justify-center"
@@ -476,6 +536,7 @@ export default function GuideDashboardScreen() {
                                                     <Text className="text-blue-500 text-xs font-semibold">{t('completedStatus')}</Text>
                                                 </View>
                                             </View>
+                                            {renderBadalBeneficiary(reservation)}
                                             {isBadalReservation(reservation) && (
                                                 <TouchableOpacity
                                                     className="mt-3 bg-indigo-500/10 border border-indigo-500/20 py-2.5 rounded-lg items-center"

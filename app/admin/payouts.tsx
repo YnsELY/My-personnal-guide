@@ -1,6 +1,6 @@
 import { AdminGuard } from '@/components/admin/AdminGuard';
 import { getAdminFinance, markGuidePayoutAsPaid } from '@/lib/adminApi';
-import { formatEUR } from '@/lib/pricing';
+import { formatSAR, toSar } from '@/lib/pricing';
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import { ArrowLeft, BadgeCheck } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
@@ -84,7 +84,7 @@ export default function AdminPayoutsScreen() {
                                     <View className="mt-3">
                                         <View className="flex-row justify-between">
                                             <Text className="text-gray-500 text-xs">Net dû</Text>
-                                            <Text className="text-[#b39164] font-semibold">{formatEUR(item.dueAmount || 0)}</Text>
+                                            <Text className="text-[#b39164] font-semibold">{formatSAR(toSar(item.dueAmount || 0))}</Text>
                                         </View>
                                     </View>
 

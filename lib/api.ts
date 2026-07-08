@@ -937,7 +937,7 @@ export const startStripeCheckoutForReservation = async (payload: {
     endDate: string | number;
     totalPrice: number;
     location: string;
-    visitTime: string;
+    visitTime: string | null;
     pilgrims: string[];
     transportPickupType: 'haram' | 'hotel';
     hotelAddress?: string | null;
@@ -1380,6 +1380,7 @@ export const getReservations = async () => {
         guideNetAmountEur,
         commissionableNetAmountEur,
         location: r.location,
+        pilgrimsNames: Array.isArray(r.pilgrims_names) ? r.pilgrims_names : [],
         transportPickupType: (r.transport_pickup_type || null) as 'haram' | 'hotel' | null,
         hotelAddress: r.hotel_address || null,
         hotelOver2KmByCar: typeof r.hotel_over_2km_by_car === 'boolean' ? r.hotel_over_2km_by_car : null,

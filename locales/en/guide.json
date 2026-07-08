@@ -25,6 +25,7 @@
   "cancelService": "Cancel service",
   "submitBadalProofs": "Submit Omra Badal proofs",
   "viewUpdateBadalProofs": "View / update Omra Badal proofs",
+  "badalBeneficiaryLabel": "Person the Omra Badal is performed for",
   "waitingStartConfirmation": "Waiting for start",
   "confirmedStatus": "Confirmed",
   "waitingEndConfirmation": "Waiting for end",
@@ -198,5 +199,7 @@
     "reportError": "Unable to send report.",
     "sending": "Sending...",
     "send": "Send"
-  }
+  },
+  "badalWeekLabel": "Scheduled week",
+  "badalWeekRange": "From {{start}} to {{end}}"
 }
