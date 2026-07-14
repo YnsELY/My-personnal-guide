@@ -25,7 +25,7 @@ BEGIN
   END IF;
 
   IF v_service_name LIKE '%badal%' THEN
-    IF v_service_name LIKE '%ramadan%' OR ABS(v_service_base_amount - 250) <= 0.01 THEN
+    IF v_service_name LIKE '%ramadan%' OR ABS(v_service_base_amount - 300) <= 0.01 THEN
       v_guide_net_base_amount := 150;
     ELSIF ABS(v_service_base_amount - 150) <= 0.01 THEN
       v_guide_net_base_amount := 100;

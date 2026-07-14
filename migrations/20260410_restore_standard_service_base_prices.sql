@@ -15,7 +15,7 @@ WITH normalized_services AS (
 )
 UPDATE public.services AS s
 SET price_override = CASE
-  WHEN ns.normalized_text LIKE '%badal%' AND ns.normalized_text LIKE '%ramadan%' THEN 250
+  WHEN ns.normalized_text LIKE '%badal%' AND ns.normalized_text LIKE '%ramadan%' THEN 300
   WHEN ns.normalized_text LIKE '%badal%' THEN 150
   WHEN ns.normalized_text LIKE '%visite%' THEN 150
   WHEN ns.normalized_text LIKE '%omra%' AND ns.normalized_text LIKE '%ramadan%' AND (ns.normalized_text LIKE '%seul%' OR ns.normalized_text LIKE '%couple%') THEN 300

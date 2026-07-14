@@ -24,7 +24,7 @@ export const SERVICE_OPTIONS = [
         category: 'Omra Badal',
         options: [
             buildServiceOption('Standard', 150, 400),
-            buildServiceOption('Ramadan', 250, 600),
+            buildServiceOption('Ramadan', 300, 600),
         ]
     },
     {

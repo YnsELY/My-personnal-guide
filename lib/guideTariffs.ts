@@ -47,7 +47,7 @@ const inferServicePriceCodeFromBasePrice = (params: GuideTariffParams): ServiceP
     const isGroupe = text.includes('groupe');
 
     if (isBadal) {
-        if (isRamadan || isSamePrice(amount, 250)) return 'BADAL_RAMADAN';
+        if (isRamadan || isSamePrice(amount, 300)) return 'BADAL_RAMADAN';
         if (isSamePrice(amount, 150)) return 'BADAL_HORS';
         return 'BADAL_HORS';
     }
