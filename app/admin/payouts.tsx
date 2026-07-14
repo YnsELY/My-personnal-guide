@@ -4,7 +4,7 @@ import { formatSAR, toSar } from '@/lib/pricing';
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import { ArrowLeft, BadgeCheck } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, StatusBar, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Animated, FlatList, StatusBar, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function AdminPayoutsScreen() {
@@ -88,15 +88,11 @@ export default function AdminPayoutsScreen() {
                                         </View>
                                     </View>
 
-                                    <TouchableOpacity
-                                        className="mt-3 rounded-xl bg-[#b39164] py-2.5 items-center"
+                                    <PayoutButton
+                                        label={isPayingGuideId === item.guideId ? 'Traitement...' : 'Confirmer le paiement'}
                                         onPress={() => handlePayGuide(item)}
                                         disabled={isPayingGuideId === item.guideId}
-                                    >
-                                        <Text className="text-white font-semibold text-sm">
-                                            {isPayingGuideId === item.guideId ? 'Traitement...' : 'Confirmer le paiement'}
-                                        </Text>
-                                    </TouchableOpacity>
+                                    />
                                 </View>
                             )}
                         />
@@ -104,5 +100,37 @@ export default function AdminPayoutsScreen() {
                 </SafeAreaView>
             </View>
         </AdminGuard>
+    );
+}
+
+function PayoutButton({ label, onPress, disabled }: { label: string; onPress: () => void; disabled?: boolean }) {
+    const pulse = React.useRef(new Animated.Value(1)).current;
+
+    React.useEffect(() => {
+        if (disabled) {
+            pulse.setValue(1);
+            return;
+        }
+
+        const animation = Animated.loop(
+            Animated.sequence([
+                Animated.timing(pulse, { toValue: 0.55, duration: 650, useNativeDriver: true }),
+                Animated.timing(pulse, { toValue: 1, duration: 650, useNativeDriver: true }),
+            ])
+        );
+        animation.start();
+        return () => animation.stop();
+    }, [disabled, pulse]);
+
+    return (
+        <Animated.View style={{ opacity: pulse }}>
+            <TouchableOpacity
+                className="mt-3 rounded-xl bg-[#b39164] border border-amber-300 py-2.5 items-center"
+                onPress={onPress}
+                disabled={disabled}
+            >
+                <Text className="text-white font-semibold text-sm">{label}</Text>
+            </TouchableOpacity>
+        </Animated.View>
     );
 }

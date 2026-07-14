@@ -15,6 +15,8 @@ export default function DateSelectScreen() {
     const params = useLocalSearchParams();
     const { t } = useTranslation('booking');
     const { isRTL } = useLanguage();
+    const serviceType = Array.isArray(params.serviceType) ? params.serviceType[0] : params.serviceType;
+    const serviceLabel = Array.isArray(params.serviceLabel) ? params.serviceLabel[0] : params.serviceLabel;
 
     // Calendar State
     const [selectedDate, setSelectedDate] = useState<Date | null>(params.startDate ? new Date(parseInt(params.startDate as string)) : null);
@@ -92,6 +94,36 @@ export default function DateSelectScreen() {
         });
     }, []);
 
+    const normalizeText = (value?: string | null) => {
+        return (value || '')
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/Ã©|ã©/g, 'e');
+    };
+
+    const serviceMatchesType = (service: any) => {
+        if (!serviceType) return true;
+
+        const searchable = normalizeText(`${service.title || ''} ${service.category || ''} ${service.description || ''}`);
+        const location = normalizeText(service.location);
+
+        switch (serviceType) {
+            case 'omra-badal':
+                return searchable.includes('badal');
+            case 'visite-medine':
+                return searchable.includes('visite') && (location.includes('medine') || location.includes('medina'));
+            case 'visite-makkah':
+                return searchable.includes('visite') && (location.includes('makkah') || location.includes('mecque') || location.includes('mecca'));
+            case 'visite-masjid-nabawi':
+                return searchable.includes('masjid nabawi') || searchable.includes('masgid nabawi');
+            case 'omra':
+                return searchable.includes('omra') && !searchable.includes('badal');
+            default:
+                return true;
+        }
+    };
+
     // Helper to count services for a specific date
     const getServiceCountForDate = (date: Date) => {
         if (!services.length) return 0;
@@ -99,6 +131,8 @@ export default function DateSelectScreen() {
         const targetTime = date.getTime();
 
         return services.filter(service => {
+            if (!serviceMatchesType(service)) return false;
+
             const start = new Date(service.startDate).setHours(0, 0, 0, 0);
             const end = service.endDate ? new Date(service.endDate).setHours(0, 0, 0, 0) : start;
             const target = new Date(targetTime).setHours(0, 0, 0, 0);
@@ -121,7 +155,9 @@ export default function DateSelectScreen() {
                 pathname: '/(tabs)/search',
                 params: {
                     startDate: selectedDate.getTime().toString(),
-                    endDate: selectedDate.getTime().toString()
+                    endDate: selectedDate.getTime().toString(),
+                    ...(serviceType ? { serviceType } : {}),
+                    ...(serviceLabel ? { serviceLabel } : {}),
                 }
             });
         }
@@ -138,6 +174,16 @@ export default function DateSelectScreen() {
                 </TouchableOpacity>
 
                 <Text className="text-4xl text-white font-serif mb-8" style={textStart(isRTL)}>{t('dateSelectTitle')}</Text>
+                {!!serviceLabel && (
+                    <View className="bg-white/10 border border-white/10 px-4 py-3 rounded-2xl mb-6">
+                        <Text className="text-zinc-300 text-xs font-semibold uppercase tracking-widest mb-1" style={textStart(isRTL)}>
+                            Service choisi
+                        </Text>
+                        <Text className="text-white text-xl font-bold" style={textStart(isRTL)}>
+                            {serviceLabel}
+                        </Text>
+                    </View>
+                )}
 
                 {/* Month Navigation */}
                 <View className="flex-row justify-between items-center mb-6" style={rowStyle(isRTL)}>

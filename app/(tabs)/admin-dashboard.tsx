@@ -13,7 +13,7 @@ import {
     Wallet,
 } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Animated, RefreshControl, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const PERIOD_OPTIONS = [7, 30, 90];
@@ -176,24 +176,14 @@ export default function AdminDashboardScreen() {
                                         icon={<CalendarClock size={18} color="#6366f1" />}
                                         onPress={() => router.push('/admin/interviews' as any)}
                                     />
-                                    {(() => {
-                                        const guidesToPay = overview?.guidesToPay || 0;
-                                        const hasGuidesToPay = guidesToPay > 0;
-                                        return (
-                                            <ActionCard
-                                                title="Finance & Paiements"
-                                                subtitle={hasGuidesToPay
-                                                    ? `${guidesToPay} guide${guidesToPay > 1 ? 's' : ''} à payer`
-                                                    : 'Aucun paiement en attente'}
-                                                icon={<Wallet size={18} color={hasGuidesToPay ? '#ef4444' : '#f59e0b'} />}
-                                                onPress={() => router.push('/admin/finance' as any)}
-                                                highlight={hasGuidesToPay}
-                                                trailingIcon={hasGuidesToPay
-                                                    ? <CountBadge value={guidesToPay} />
-                                                    : <CreditCard size={16} color="#9CA3AF" />}
-                                            />
-                                        );
-                                    })()}
+                                    <ActionCard
+                                        title="Finance & Paiements"
+                                        subtitle={`${overview?.guidesToPay || 0} guides à payer`}
+                                        icon={<Wallet size={18} color="#f59e0b" />}
+                                        onPress={() => router.push('/admin/finance' as any)}
+                                        trailingIcon={<CreditCard size={16} color="#9CA3AF" />}
+                                        attention={Number(overview?.guidesToPay || 0) > 0 || Number(overview?.guidesToDistribute || 0) > 0}
+                                    />
                                     <ActionCard
                                         title="Cagnottes utilisateurs"
                                         subtitle="Rechercher et ajuster guides / pèlerins"
@@ -245,42 +235,50 @@ function ActionCard({
     icon,
     onPress,
     trailingIcon,
-    highlight = false,
+    attention = false,
 }: {
     title: string;
     subtitle: string;
     icon: React.ReactNode;
     onPress: () => void;
     trailingIcon?: React.ReactNode;
-    highlight?: boolean;
+    attention?: boolean;
 }) {
-    return (
-        <TouchableOpacity
-            onPress={onPress}
-            className={`rounded-2xl p-4 flex-row items-center justify-between border ${highlight
-                ? 'bg-red-500/10 border-red-500/50'
-                : 'bg-white dark:bg-zinc-800 border-gray-100 dark:border-white/10'
-                }`}
-        >
-            <View className="flex-row items-center flex-1 mr-3">
-                <View className={`w-10 h-10 rounded-xl items-center justify-center mr-3 ${highlight ? 'bg-red-500/20' : 'bg-gray-100 dark:bg-zinc-700'
-                    }`}>
-                    {icon}
-                </View>
-                <View className="flex-1">
-                    <Text className={`font-semibold ${highlight ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'}`}>{title}</Text>
-                    <Text className={`text-xs mt-0.5 ${highlight ? 'text-red-500 font-medium' : 'text-gray-500'}`}>{subtitle}</Text>
-                </View>
-            </View>
-            {trailingIcon || <Text className="text-gray-400">{'>'}</Text>}
-        </TouchableOpacity>
-    );
-}
+    const pulse = React.useRef(new Animated.Value(1)).current;
 
-function CountBadge({ value }: { value: number }) {
+    React.useEffect(() => {
+        if (!attention) {
+            pulse.setValue(1);
+            return;
+        }
+
+        const animation = Animated.loop(
+            Animated.sequence([
+                Animated.timing(pulse, { toValue: 0.55, duration: 650, useNativeDriver: true }),
+                Animated.timing(pulse, { toValue: 1, duration: 650, useNativeDriver: true }),
+            ])
+        );
+        animation.start();
+        return () => animation.stop();
+    }, [attention, pulse]);
+
     return (
-        <View className="min-w-[24px] h-6 px-2 rounded-full bg-red-500 items-center justify-center">
-            <Text className="text-white text-xs font-bold">{value}</Text>
-        </View>
+        <Animated.View style={{ opacity: pulse }}>
+            <TouchableOpacity
+                onPress={onPress}
+                className={`bg-white dark:bg-zinc-800 border rounded-2xl p-4 flex-row items-center justify-between ${attention ? 'border-amber-400' : 'border-gray-100 dark:border-white/10'}`}
+            >
+                <View className="flex-row items-center flex-1 mr-3">
+                    <View className={`w-10 h-10 rounded-xl items-center justify-center mr-3 ${attention ? 'bg-amber-500/15' : 'bg-gray-100 dark:bg-zinc-700'}`}>
+                        {icon}
+                    </View>
+                    <View className="flex-1">
+                        <Text className="text-gray-900 dark:text-white font-semibold">{title}</Text>
+                        <Text className={attention ? 'text-amber-500 text-xs mt-0.5 font-semibold' : 'text-gray-500 text-xs mt-0.5'}>{subtitle}</Text>
+                    </View>
+                </View>
+                {trailingIcon || <Text className="text-gray-400">{'>'}</Text>}
+            </TouchableOpacity>
+        </Animated.View>
     );
 }

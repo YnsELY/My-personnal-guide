@@ -43,7 +43,7 @@ const inferServicePriceCodeFromBasePrice = (params: GuideTariffParams): ServiceP
     const isVisite = text.includes('visite');
     const isOmra = text.includes('omra');
     const isSolo = text.includes('seul') || text.includes('couple');
-    const isFamille = text.includes('famille') || text.includes('3 a 7') || text.includes('3 à 7');
+    const isFamille = text.includes('famille') || text.includes('amie') || text.includes('ami') || text.includes('3 a 7') || text.includes('3 à 7');
     const isGroupe = text.includes('groupe');
 
     if (isBadal) {

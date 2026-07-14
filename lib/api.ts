@@ -104,6 +104,13 @@ export const updateCurrentProfile = async (fields: {
         .eq('id', user.id);
 
     if (error) throw error;
+
+    if (fields.full_name !== undefined) {
+        const { error: authError } = await supabase.auth.updateUser({
+            data: { full_name: fields.full_name },
+        });
+        if (authError) throw authError;
+    }
 };
 
 export const updateCurrentEmail = async (newEmail: string) => {

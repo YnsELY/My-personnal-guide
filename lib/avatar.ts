@@ -1,58 +1,55 @@
 import type { ImageSourcePropType } from 'react-native';
 
-export type Gender = 'male' | 'female';
-export type Role = 'pilgrim' | 'guide' | 'admin';
-export type AvatarPresetId = '16' | '17' | '18' | 'f1' | 'f2' | 'f3';
+export type AvatarPresetId = '16' | '17' | '18' | 'female-16' | 'female-17' | 'female-18';
+type LegacyAvatarPresetId = '1' | '2' | '3';
+type ProfileRole = 'guide' | 'pilgrim' | 'admin' | string | null | undefined;
+type ProfileGender = 'male' | 'female' | string | null | undefined;
 
-// Les avatars femmes ne sont proposés qu'aux guides femmes
-const useFemaleAvatars = (gender?: Gender | null, role?: Role | null): boolean =>
-  gender === 'female' && role === 'guide';
-
-const MALE_PRESET_IDS: AvatarPresetId[] = ['16', '17', '18'];
-const FEMALE_PRESET_IDS: AvatarPresetId[] = ['f1', 'f2', 'f3'];
-
-// Défaut historique (homme) — conservé pour la rétro-compatibilité
 export const DEFAULT_AVATAR_PRESET_ID: AvatarPresetId = '18';
-export const DEFAULT_FEMALE_AVATAR_PRESET_ID: AvatarPresetId = 'f1';
 const AVATAR_PRESET_PREFIX = 'preset://';
 
 const AVATAR_PRESET_SOURCES: Record<AvatarPresetId, ImageSourcePropType> = {
   '16': require('@/assets/images/Profile/16_11zon.jpg'),
   '17': require('@/assets/images/Profile/17_11zon.jpg'),
   '18': require('@/assets/images/Profile/18_11zon.jpg'),
-  'f1': require('@/assets/images/Profile/femme/f1.jpeg'),
-  'f2': require('@/assets/images/Profile/femme/f2.jpeg'),
-  'f3': require('@/assets/images/Profile/femme/f3.jpeg'),
+  'female-16': require('@/assets/images/Profile/16.png'),
+  'female-17': require('@/assets/images/Profile/17.png'),
+  'female-18': require('@/assets/images/Profile/18.png'),
 };
 
-const VALID_PRESET_IDS = new Set<string>([...MALE_PRESET_IDS, ...FEMALE_PRESET_IDS]);
+const LEGACY_AVATAR_PRESET_ID_MAP: Record<LegacyAvatarPresetId, AvatarPresetId> = {
+  '1': '16',
+  '2': '17',
+  '3': '18',
+};
 
-export type AvatarPresetOption = {
+export const AVATAR_PRESET_OPTIONS: {
   id: AvatarPresetId;
   label: string;
   source: ImageSourcePropType;
-};
-
-const MALE_AVATAR_OPTIONS: AvatarPresetOption[] = [
+}[] = [
   { id: '16', label: 'Avatar 1', source: AVATAR_PRESET_SOURCES['16'] },
   { id: '17', label: 'Avatar 2', source: AVATAR_PRESET_SOURCES['17'] },
   { id: '18', label: 'Avatar 3', source: AVATAR_PRESET_SOURCES['18'] },
 ];
 
-const FEMALE_AVATAR_OPTIONS: AvatarPresetOption[] = [
-  { id: 'f1', label: 'Avatar 1', source: AVATAR_PRESET_SOURCES['f1'] },
-  { id: 'f2', label: 'Avatar 2', source: AVATAR_PRESET_SOURCES['f2'] },
-  { id: 'f3', label: 'Avatar 3', source: AVATAR_PRESET_SOURCES['f3'] },
+export const FEMALE_GUIDE_AVATAR_PRESET_OPTIONS: {
+  id: AvatarPresetId;
+  label: string;
+  source: ImageSourcePropType;
+}[] = [
+  { id: 'female-16', label: 'Avatar femme 1', source: AVATAR_PRESET_SOURCES['female-16'] },
+  { id: 'female-17', label: 'Avatar femme 2', source: AVATAR_PRESET_SOURCES['female-17'] },
+  { id: 'female-18', label: 'Avatar femme 3', source: AVATAR_PRESET_SOURCES['female-18'] },
 ];
 
-// Export historique (jeu homme) conservé pour la rétro-compatibilité
-export const AVATAR_PRESET_OPTIONS = MALE_AVATAR_OPTIONS;
+export const getAvatarPresetOptionsForProfile = (role: ProfileRole, gender: ProfileGender) => {
+  if (role === 'guide' && gender === 'female') {
+    return FEMALE_GUIDE_AVATAR_PRESET_OPTIONS;
+  }
 
-export const getAvatarPresetOptions = (gender?: Gender | null, role?: Role | null): AvatarPresetOption[] =>
-  useFemaleAvatars(gender, role) ? FEMALE_AVATAR_OPTIONS : MALE_AVATAR_OPTIONS;
-
-export const getDefaultAvatarPresetId = (gender?: Gender | null, role?: Role | null): AvatarPresetId =>
-  useFemaleAvatars(gender, role) ? DEFAULT_FEMALE_AVATAR_PRESET_ID : DEFAULT_AVATAR_PRESET_ID;
+  return AVATAR_PRESET_OPTIONS;
+};
 
 export const toAvatarPresetUrl = (presetId: AvatarPresetId): string => `${AVATAR_PRESET_PREFIX}${presetId}`;
 
@@ -61,15 +58,27 @@ export const getAvatarPresetIdFromUrl = (avatarUrl?: string | null): AvatarPrese
   const trimmed = avatarUrl.trim();
   if (!trimmed.startsWith(AVATAR_PRESET_PREFIX)) return null;
 
-  const presetId = trimmed.slice(AVATAR_PRESET_PREFIX.length);
-  return VALID_PRESET_IDS.has(presetId) ? (presetId as AvatarPresetId) : null;
+  const rawPresetId = trimmed.slice(AVATAR_PRESET_PREFIX.length);
+  const legacyPresetId = LEGACY_AVATAR_PRESET_ID_MAP[rawPresetId as LegacyAvatarPresetId];
+  if (legacyPresetId) {
+    return legacyPresetId;
+  }
+
+  const presetId = rawPresetId as AvatarPresetId;
+  if (
+    presetId === '16'
+    || presetId === '17'
+    || presetId === '18'
+    || presetId === 'female-16'
+    || presetId === 'female-17'
+    || presetId === 'female-18'
+  ) {
+    return presetId;
+  }
+  return null;
 };
 
-export const resolveProfileAvatarSource = (
-  avatarUrl?: string | null,
-  gender?: Gender | null,
-  role?: Role | null,
-): ImageSourcePropType => {
+export const resolveProfileAvatarSource = (avatarUrl?: string | null): ImageSourcePropType => {
   const presetId = getAvatarPresetIdFromUrl(avatarUrl);
   if (presetId) {
     return AVATAR_PRESET_SOURCES[presetId];
@@ -79,6 +88,5 @@ export const resolveProfileAvatarSource = (
     return { uri: avatarUrl.trim() };
   }
 
-  // Aucune photo choisie : défaut femme uniquement pour les guides femmes
-  return AVATAR_PRESET_SOURCES[getDefaultAvatarPresetId(gender, role)];
+  return AVATAR_PRESET_SOURCES[DEFAULT_AVATAR_PRESET_ID];
 };

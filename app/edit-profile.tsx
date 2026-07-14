@@ -1,10 +1,9 @@
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { signIn as apiSignIn, updateCurrentEmail, updateCurrentPassword, updateCurrentProfile } from '@/lib/api';
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown, ChevronLeft, Globe2, Lock, Mail, User } from 'lucide-react-native';
-import { Stack } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
     Alert,

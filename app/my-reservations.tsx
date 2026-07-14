@@ -373,7 +373,7 @@ export default function ReservationsScreen() {
                                             {transportSummary(item)}
                                         </Text>
 
-                                        {item.status === 'confirmed' && !item.guideStartConfirmedAt && (
+                                        {item.status === 'confirmed' && !isBadalReservation(item) && !item.guideStartConfirmedAt && (
                                             <View className="mb-4 bg-gray-100 dark:bg-zinc-700 border border-gray-200 dark:border-white/10 rounded-xl px-3 py-2">
                                                 <Text className="text-gray-500 dark:text-gray-300 text-xs">
                                                     En attente: le guide doit d&apos;abord lancer la visite.
@@ -381,7 +381,7 @@ export default function ReservationsScreen() {
                                             </View>
                                         )}
 
-                                        {item.status === 'confirmed' && item.guideStartConfirmedAt && !item.pilgrimStartConfirmedAt && (
+                                        {item.status === 'confirmed' && !isBadalReservation(item) && item.guideStartConfirmedAt && !item.pilgrimStartConfirmedAt && (
                                             <TouchableOpacity
                                                 className="mb-4 bg-[#b39164] rounded-xl py-3 items-center"
                                                 onPress={() => setPendingAction({ type: 'start', reservation: item })}

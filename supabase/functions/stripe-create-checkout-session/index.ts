@@ -147,7 +147,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (!serviceId || !guideId || !startDate || !visitTime || !successUrl || !cancelUrl) {
+    if (!serviceId || !guideId || !startDate || !successUrl || !cancelUrl) {
       return new Response(JSON.stringify({ error: 'Missing required fields.' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

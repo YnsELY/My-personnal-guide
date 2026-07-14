@@ -106,9 +106,8 @@ discrétion et sens du service.
 Il représente l’application, la mission religieuse et l’image de l’Islam dans les Lieux Saints.
 
 Article 9 – Engagement à honorer
-Dans le cadre d’une Omra Badal, le guide a l’obligation de réaliser une courte vidéo au
-moment de l’entrée en état de sacralisation (ihram), ainsi qu’une seconde vidéo après
-l’accomplissement complet de la Omra. Ces vidéos doivent être transmises au demandeur
+Dans le cadre d’une Omra Badal, le guide a l’obligation de réaliser 2 à 3 vidéos
+pendant les étapes essentielles de la prestation. Ces vidéos doivent être transmises au demandeur
 afin d’attester de la bonne exécution de la mission.
 Toute mission acceptée doit être pleinement honorée.
 Toute tâche, mission ou prestation acceptée par le guide via l’application doit être
@@ -400,7 +399,7 @@ The guide must demonstrate at all times respect, patience, benevolence, discreti
 They represent the application, the religious mission and the image of Islam in the Holy Places.
 
 Article 9 - Commitment to Honor
-For Omra Badal services, the guide is required to produce a short video upon entering the state of ihram, and a second video after full completion of the Omra. These videos must be transmitted to the requester to attest to the proper execution of the mission.
+For Omra Badal services, the guide is required to produce 2 to 3 videos during the essential steps of the service. These videos must be transmitted to the requester to attest to the proper execution of the mission.
 Every accepted mission must be fully honored.
 Any task, mission or service accepted by the guide via the application must be fully honored, except in cases of duly justified force majeure.
 Acceptance of a mission constitutes a moral, religious and professional commitment.

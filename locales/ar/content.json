@@ -1,25 +1,25 @@
 {
   "categories": {
-    "omraAccompagnee": "عمرة مع مرافق",
+    "omraAccompagnee": "عمرة",
     "omraBadal": "عمرة بالنيابة",
     "visitesGuidees": "زيارات مع مرشد",
     "transportVIP": "نقل VIP",
     "hebergement": "إقامة"
   },
   "serviceOptions": {
-    "omraAccompagneeHorsRamadan": "عمرة مع مرافق (خارج رمضان)",
-    "omraAccompagneeRamadan": "عمرة مع مرافق رمضان",
+    "omraAccompagneeHorsRamadan": "عمرة",
+    "omraAccompagneeRamadan": "عمرة رمضان",
     "omraBadal": "عمرة بالنيابة",
     "visitesGuideesLegiferees": "زيارات شرعية المدينة أو مكة",
     "seulOuCouple": "عمرة فردية أو زوجية",
     "famille": "عمرة عائلية (3 إلى 7 أشخاص)",
-    "groupe": "عمرة جماعية",
+    "groupe": "عمرة عائلية أو مع الصديقات",
     "standard": "عادي",
     "ramadan": "رمضان"
   },
   "services": {
     "omraAccompagne": {
-      "title": "عمرة مع مرافق",
+      "title": "عمرة",
       "shortDescription": "عِش عمرتك بطمأنينة",
       "description": "أدِّ عمرتك بكل ثقة برفقة مرشدينا المؤهلين والمعروفين بجديتهم وعلمهم وأخلاقهم. حاضرون في كل خطوة، يرافقونك بعطف لتعيش هذه الرحلة المقدسة في سكينة وموافقة للمناسك وطلب صادق لرضا الله.",
       "mainText": "أدِّ عمرتك بكل ثقة برفقة مرشدينا المؤهلين والمعروفين بجديتهم وعلمهم وأخلاقهم.",

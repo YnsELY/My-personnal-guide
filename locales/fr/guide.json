@@ -126,6 +126,8 @@
     "selectType": "Sélectionner un type",
     "option": "Option",
     "selectOption": "Sélectionner une option",
+    "publishedDescription": "Description publiée",
+    "descriptionLocked": "Cette description est identique à la page service côté pèlerin et ne peut pas être modifiée.",
     "fixedGuidePay": "Part guide fixe",
     "maxParticipants": "Nombre de personnes maximum",
     "location": "Lieu",

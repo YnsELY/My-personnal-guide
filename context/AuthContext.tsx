@@ -82,9 +82,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     .catch(() => undefined);
 
                 if (effectiveRole === 'guide') {
-                    const approval = await getGuideApprovalInfo(u.id);
-                    setGuideApprovalStatus(approval.status);
-                    setIsGuideApproved(approval.isApproved);
+                    try {
+                        const approval = await getGuideApprovalInfo(u.id);
+                        setGuideApprovalStatus(approval.status);
+                        setIsGuideApproved(approval.isApproved);
+                    } catch (approvalError) {
+                        console.error("Guide approval status load error:", approvalError);
+                        setGuideApprovalStatus('pending_review');
+                        setIsGuideApproved(false);
+                    }
                 } else {
                     setGuideApprovalStatus('approved');
                     setIsGuideApproved(true);

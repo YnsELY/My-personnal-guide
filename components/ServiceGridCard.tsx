@@ -7,9 +7,10 @@ import { formatEUR } from '@/lib/pricing';
 
 interface ServiceGridCardProps {
     service: any; // Using any for simplicity or define interface
+    highlighted?: boolean;
 }
 
-export function ServiceGridCard({ service }: ServiceGridCardProps) {
+export function ServiceGridCard({ service, highlighted = false }: ServiceGridCardProps) {
     const formattedDate = service.startDate
         ? new Date(service.startDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) + (service.endDate ? ' - ' + new Date(service.endDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : '')
         : 'Date à définir';
@@ -28,9 +29,9 @@ export function ServiceGridCard({ service }: ServiceGridCardProps) {
                 serviceId: service.id // Add this
             }
         }} asChild>
-            <TouchableOpacity className="w-[48%] bg-white dark:bg-zinc-800 rounded-2xl mb-4 shadow-sm border border-gray-100 dark:border-white/5 overflow-hidden">
+            <TouchableOpacity className={`${highlighted ? 'w-full rounded-3xl' : 'w-[48%] rounded-2xl'} bg-white dark:bg-zinc-800 mb-4 shadow-sm border border-gray-100 dark:border-white/5 overflow-hidden`}>
                 {/* Image / Placeholder */}
-                <View className="h-32 bg-gray-200 dark:bg-zinc-700 relative">
+                <View className={`${highlighted ? 'h-40' : 'h-32'} bg-gray-200 dark:bg-zinc-700 relative`}>
                     {service.image ? (
                         <Image source={service.image} className="w-full h-full" resizeMode="cover" />
                     ) : (
@@ -45,17 +46,17 @@ export function ServiceGridCard({ service }: ServiceGridCardProps) {
                 </View>
 
                 {/* Content */}
-                <View className="p-3">
+                <View className={highlighted ? 'p-5' : 'p-3'}>
                     {/* Category */}
                     <Text className="text-[#b39164] text-xs font-bold uppercase mb-1">{service.category}</Text>
 
                     {/* Title */}
-                    <Text className="text-gray-900 dark:text-white font-bold text-sm mb-1" numberOfLines={2}>
+                    <Text className={`text-gray-900 dark:text-white font-bold mb-1 ${highlighted ? 'text-xl' : 'text-sm'}`} numberOfLines={2}>
                         {service.title}
                     </Text>
 
                     {!!service.description && (
-                        <Text className="text-gray-500 dark:text-gray-400 text-[11px] leading-4 mb-2" numberOfLines={3}>
+                        <Text className={`text-gray-500 dark:text-gray-400 mb-2 ${highlighted ? 'text-sm leading-5' : 'text-[11px] leading-4'}`} numberOfLines={highlighted ? 4 : 3}>
                             {service.description}
                         </Text>
                     )}
@@ -63,10 +64,10 @@ export function ServiceGridCard({ service }: ServiceGridCardProps) {
                     {/* Guide Info */}
                     <View className="flex-row items-center mt-1 mb-2">
                         <Image
-                            source={resolveProfileAvatarSource(service.guideAvatar, service.guideGender, 'guide')}
-                            className="w-5 h-5 rounded-full mr-2"
+                            source={resolveProfileAvatarSource(service.guideAvatar)}
+                            className={`${highlighted ? 'w-8 h-8' : 'w-5 h-5'} rounded-full mr-2`}
                         />
-                        <Text className="text-gray-500 dark:text-gray-400 text-xs flex-1" numberOfLines={1}>
+                        <Text className={`text-gray-700 dark:text-gray-200 flex-1 ${highlighted ? 'text-base font-semibold' : 'text-xs'}`} numberOfLines={1}>
                             {service.guideName}
                         </Text>
                     </View>

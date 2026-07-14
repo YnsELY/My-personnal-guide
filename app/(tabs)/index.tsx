@@ -1,4 +1,3 @@
-import { GuideCard } from '@/components/GuideCard';
 import { HadithWidget } from '@/components/HadithWidget';
 import { PrayerTimesWidget } from '@/components/PrayerTimesWidget';
 import { SlideToConfirmModal } from '@/components/SlideToConfirmModal';
@@ -7,14 +6,13 @@ import { useLanguage } from '@/context/LanguageContext';
 import { useReservations } from '@/context/ReservationsContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { directionStyle, flipChevron, rowStyle, textStart } from '@/lib/rtl';
-import { getRecommendedGuides } from '@/lib/api';
 import { formatSAR, toSar } from '@/lib/pricing';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { ArrowUpRight, CalendarCheck, Check, ChevronRight, Clock, MapPin, MessageCircle, User, X } from 'lucide-react-native';
+import { ArrowUpRight, CalendarCheck, Check, ChevronRight, Clock, MapPin, Menu, MessageCircle, User, X } from 'lucide-react-native';
 import React, { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Animated, Image, ImageBackground, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Animated, Image, ImageBackground, Modal, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
@@ -24,19 +22,57 @@ export default function HomeScreen() {
   const { isRTL } = useLanguage();
   const { profile, user } = useAuth();
   const { getReservationsByRole, updateReservationStatus, confirmVisitStartAsGuide, confirmVisitEndAsGuide } = useReservations();
-  const [guides, setGuides] = React.useState<any[]>([]);
-  const [isLoadingRecommendedGuides, setIsLoadingRecommendedGuides] = React.useState(false);
+  const [isServicesMenuOpen, setIsServicesMenuOpen] = React.useState(false);
   const fullName = (profile?.full_name || user?.user_metadata?.full_name || '').trim();
   const firstName = fullName ? fullName.split(/\s+/)[0] : '';
 
-  useEffect(() => {
-    if (profile?.role !== 'pilgrim') return;
-    setIsLoadingRecommendedGuides(true);
-    getRecommendedGuides(5)
-      .then(setGuides)
-      .catch(console.error)
-      .finally(() => setIsLoadingRecommendedGuides(false));
-  }, [profile]);
+  const openServicePlanning = (serviceType: string, serviceLabel: string) => {
+    router.push({
+      pathname: '/date-select',
+      params: {
+        serviceType,
+        serviceLabel,
+      },
+    });
+  };
+
+  const serviceBanners = [
+    {
+      id: 'omra-badal',
+      title: 'Omra Badel',
+      subtitle: 'Choisir un créneau puis un guide',
+      serviceType: 'omra-badal',
+      accent: ['#7f5539', '#b08968'] as const,
+    },
+    {
+      id: 'visite-medine',
+      title: 'Visite de Médine',
+      subtitle: 'Planning des visites disponibles',
+      serviceType: 'visite-medine',
+      accent: ['#0f766e', '#14b8a6'] as const,
+    },
+    {
+      id: 'visite-makkah',
+      title: 'Visite de Makkah',
+      subtitle: 'Réserver une visite guidée',
+      serviceType: 'visite-makkah',
+      accent: ['#1d4ed8', '#60a5fa'] as const,
+    },
+    {
+      id: 'visite-masjid-nabawi',
+      title: 'Visite du Masgid Nabawi',
+      subtitle: 'Créneaux avec guides disponibles',
+      serviceType: 'visite-masjid-nabawi',
+      accent: ['#047857', '#34d399'] as const,
+    },
+    {
+      id: 'omra',
+      title: 'Omra',
+      subtitle: 'Accompagnement complet sur place',
+      serviceType: 'omra',
+      accent: ['#9333ea', '#c084fc'] as const,
+    },
+  ];
 
   const serviceShowcaseCards = [
     {
@@ -48,18 +84,29 @@ export default function HomeScreen() {
       badge: t('serviceCard.omraBadal.badge'),
       cta: t('serviceCard.omraBadal.cta'),
       accent: ['#5a4529', '#b39164'] as const,
-      onPress: () => router.push('/service/omra-badal'),
+      onPress: () => openServicePlanning('omra-badal', 'Omra Badel'),
     },
     {
-      id: 'visite-guidee',
-      title: t('serviceCard.visitGuidee.title'),
+      id: 'visite-medine',
+      title: 'Visite de Médine',
       subtitle: t('serviceCard.visitGuidee.subtitle'),
       description: t('serviceCard.visitGuidee.description'),
       image: require('@/assets/images/medina.jpeg'),
       badge: t('serviceCard.visitGuidee.badge'),
       cta: t('serviceCard.visitGuidee.cta'),
       accent: ['#365b64', '#6aa9ba'] as const,
-      onPress: () => router.push('/service/visite-guidee'),
+      onPress: () => openServicePlanning('visite-medine', 'Visite de Médine'),
+    },
+    {
+      id: 'visite-makkah',
+      title: 'Visite de Makkah',
+      subtitle: 'Makkah',
+      description: 'Découvrez les lieux marquants de Makkah avec un guide qui vous accompagne pas à pas, selon vos dates et vos besoins.',
+      image: require('@/assets/images/mecca.jpg'),
+      badge: t('serviceCard.visitGuidee.badge'),
+      cta: t('serviceCard.visitGuidee.cta'),
+      accent: ['#2d3e5d', '#4f6d9c'] as const,
+      onPress: () => openServicePlanning('visite-makkah', 'Visite de Makkah'),
     },
     {
       id: 'visite-masjid-nabawi',
@@ -70,29 +117,18 @@ export default function HomeScreen() {
       badge: t('serviceCard.visiteMasjidNabawi.badge'),
       cta: t('serviceCard.visiteMasjidNabawi.cta'),
       accent: ['#365b64', '#6aa9ba'] as const,
-      onPress: () => router.push('/service/visite-masjid-nabawi'),
+      onPress: () => openServicePlanning('visite-masjid-nabawi', 'Visite du Masgid Nabawi'),
     },
     {
       id: 'omra-accompagne',
-      title: t('serviceCard.omraAccompagne.title'),
+      title: 'Omra',
       subtitle: t('serviceCard.omraAccompagne.subtitle'),
       description: t('serviceCard.omraAccompagne.description'),
       image: require('@/assets/images/mecca.jpg'),
       badge: t('serviceCard.omraAccompagne.badge'),
       cta: t('serviceCard.omraAccompagne.cta'),
       accent: ['#5a4529', '#b39164'] as const,
-      onPress: () => router.push('/service/omra-accompagne'),
-    },
-    {
-      id: 'all-services',
-      title: t('serviceCard.allServices.title'),
-      subtitle: t('serviceCard.allServices.subtitle'),
-      description: t('serviceCard.allServices.description'),
-      image: require('@/assets/images/hero.jpg'),
-      badge: t('serviceCard.allServices.badge'),
-      cta: t('serviceCard.allServices.cta'),
-      accent: ['#2d3e5d', '#4f6d9c'] as const,
-      onPress: () => router.push('/date-select'),
+      onPress: () => openServicePlanning('omra', 'Omra'),
     },
   ];
 
@@ -144,7 +180,7 @@ export default function HomeScreen() {
         await confirmVisitEndAsGuide(pendingAction.reservationId);
       }
       setPendingAction(null);
-    } catch (e) {
+    } catch {
       Alert.alert(t('common:error'), t('actionError'));
     } finally {
       setIsActionSubmitting(false);
@@ -188,9 +224,17 @@ export default function HomeScreen() {
           {/* Content Overlay */}
           <SafeAreaView className="absolute inset-0 px-6 pt-2">
             <View className="flex-row justify-between items-center mb-6" style={rowStyle(isRTL)}>
-              <TouchableOpacity onPress={() => router.back()}>
-                {/* <ChevronLeft color="white" size={28} /> */}
-              </TouchableOpacity>
+              {profile?.role === 'pilgrim' ? (
+                <TouchableOpacity
+                  onPress={() => setIsServicesMenuOpen(true)}
+                  className="w-12 h-12 rounded-full bg-black/28 items-center justify-center border border-white/20"
+                  activeOpacity={0.85}
+                >
+                  <Menu color="white" size={27} />
+                </TouchableOpacity>
+              ) : (
+                <View />
+              )}
             </View>
 
             <View className="mt-12">
@@ -207,6 +251,39 @@ export default function HomeScreen() {
         <View className="-mt-12 px-6">
           {profile?.role === 'pilgrim' && (
             <>
+              <View className="mb-5">
+                {serviceBanners.map((banner) => (
+                  <TouchableOpacity
+                    key={banner.id}
+                    className="mb-3 rounded-2xl overflow-hidden"
+                    activeOpacity={0.9}
+                    onPress={() => openServicePlanning(banner.serviceType, banner.title)}
+                    style={{ shadowColor: banner.accent[0], shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.18, shadowRadius: 12, elevation: 3 }}
+                  >
+                    <LinearGradient
+                      colors={banner.accent}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={{ paddingHorizontal: 18, paddingVertical: 18 }}
+                    >
+                      <View className="flex-row items-center justify-between" style={rowStyle(isRTL)}>
+                        <View className="flex-1 pr-3">
+                          <Text className="text-white text-2xl font-bold" style={textStart(isRTL)}>
+                            {banner.title}
+                          </Text>
+                          <Text className="text-white/85 text-sm mt-1 font-medium" style={textStart(isRTL)}>
+                            {banner.subtitle}
+                          </Text>
+                        </View>
+                        <View className="w-11 h-11 rounded-full bg-white/18 items-center justify-center">
+                          <ChevronRight color="white" size={22} style={flipChevron(isRTL)} />
+                        </View>
+                      </View>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
               {/* Primary Action Card (Permis in design -> Find Guide here) */}
               <TouchableOpacity
                 className="bg-white dark:bg-zinc-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-white/5 mb-4 overflow-hidden relative"
@@ -315,57 +392,7 @@ export default function HomeScreen() {
           {/* Pilgrim Sections */}
           {profile?.role === 'pilgrim' && (
             <>
-              {/* Services Section */}
-              <View className="flex-row items-end justify-between mb-4" style={rowStyle(isRTL)}>
-                <Text className="text-gray-900 dark:text-white text-lg font-bold" style={textStart(isRTL)}>{t('ourServices')}</Text>
-                <Text className="text-[#b39164] text-xs font-semibold uppercase tracking-wide">{t('premiumSelection')}</Text>
-              </View>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-8" contentContainerStyle={{ gap: 16, paddingRight: 20 }}>
-                {serviceShowcaseCards.map((card) => (
-                  <TouchableOpacity
-                    key={card.id}
-                    className="rounded-3xl w-80 bg-white dark:bg-zinc-800 shadow-sm border border-gray-100 dark:border-white/5 overflow-hidden"
-                    onPress={card.onPress}
-                    activeOpacity={0.9}
-                  >
-                    <View className="h-52 relative">
-                      <Image source={card.image} className="w-full h-full object-cover" />
-                      <LinearGradient
-                        colors={['rgba(9, 9, 11, 0.02)', 'rgba(9, 9, 11, 0.2)', 'rgba(9, 9, 11, 0.45)']}
-                        locations={[0.2, 0.6, 1]}
-                        className="absolute inset-0"
-                      />
-                    </View>
-
-                    <View className="px-5 pt-4 pb-5">
-                      <Text className="text-gray-900 dark:text-white text-2xl font-serif font-semibold">{card.title}</Text>
-                      <Text className="text-[#b39164] text-xs font-semibold uppercase tracking-widest mt-1">{card.subtitle}</Text>
-                      <Text className="text-gray-600 dark:text-zinc-300 text-sm leading-6 mt-3" numberOfLines={3}>
-                        {card.description}
-                      </Text>
-
-                      <View className="flex-row items-center justify-between mt-4 rounded-2xl border px-4 py-3 border-gray-200 dark:border-white/15 bg-gray-50 dark:bg-zinc-700/30">
-                        <Text className="text-sm font-semibold text-gray-900 dark:text-white">
-                          {card.cta}
-                        </Text>
-                        <ArrowUpRight size={16} color={isDark ? '#ffffff' : '#18181b'} />
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-
-              {/* Recommended Section (Mini) */}
-              <Text className="text-gray-900 dark:text-white text-lg font-bold mb-4" style={textStart(isRTL)}>{t('recommendedGuides')}</Text>
-              {isLoadingRecommendedGuides ? (
-                <Text className="text-gray-500 text-sm" style={textStart(isRTL)}>{t('loadingGuides')}</Text>
-              ) : guides.length > 0 ? (
-                guides.slice(0, 5).map((guide) => (
-                  <GuideCard key={guide.id} guide={guide} />
-                ))
-              ) : (
-                <Text className="text-gray-500 text-sm" style={textStart(isRTL)}>{t('noRecommendedGuides')}</Text>
-              )}
+              <View className="mb-4" />
             </>
           )}
 
@@ -454,6 +481,7 @@ export default function HomeScreen() {
                   <View key={visit.id} className="bg-white dark:bg-zinc-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-white/5">
                     {(() => {
                       const isWaitingStartConfirmation = isWaitingPilgrimStartConfirmation(visit);
+                      const isBadalVisit = isBadalReservation(visit);
                       return (
                         <>
                     <View className="flex-row items-center mb-3">
@@ -469,16 +497,24 @@ export default function HomeScreen() {
                         </View>
                       </View>
                       <View className="items-end">
-                        <Text className="text-gray-900 dark:text-white font-bold">{visit.time}</Text>
+                        <Text className="text-gray-900 dark:text-white font-bold">{visit.time || t('modal.timeIndifferent', { ns: 'booking' })}</Text>
                         <View className={`px-2 py-0.5 rounded-full mt-1 ${isWaitingStartConfirmation ? 'bg-amber-500/20' : 'bg-green-500/20'}`}>
                           <Text className={`text-[10px] font-medium ${isWaitingStartConfirmation ? 'text-amber-600' : 'text-green-600'}`}>
-                            {isWaitingStartConfirmation ? t('waitingStart') : t('confirmed')}
+                            {isWaitingStartConfirmation && !isBadalVisit ? t('waitingStart') : t('confirmed')}
                           </Text>
                         </View>
                       </View>
                     </View>
 
-                    {isWaitingStartConfirmation ? (
+                    {isBadalVisit ? (
+                      <TouchableOpacity
+                        onPress={() => router.push(`/guide/proofs/${visit.id}` as any)}
+                        className="bg-indigo-500/10 border border-indigo-500/20 py-2.5 rounded-xl items-center"
+                        activeOpacity={0.8}
+                      >
+                        <Text className="text-indigo-500 font-semibold text-sm">{t('submitBadalProofs')}</Text>
+                      </TouchableOpacity>
+                    ) : isWaitingStartConfirmation ? (
                       <View className="bg-amber-100 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 py-2.5 rounded-xl items-center">
                         <Text className="text-amber-700 dark:text-amber-300 font-semibold text-xs text-center">
                           {t('waitingPilgrimStartConfirmation')}
@@ -491,16 +527,6 @@ export default function HomeScreen() {
                         activeOpacity={0.8}
                       >
                         <Text className="text-white font-semibold text-sm">{t('startVisit')}</Text>
-                      </TouchableOpacity>
-                    )}
-
-                    {isBadalReservation(visit) && (
-                      <TouchableOpacity
-                        onPress={() => router.push(`/guide/proofs/${visit.id}` as any)}
-                        className="mt-2 bg-indigo-500/10 border border-indigo-500/20 py-2.5 rounded-xl items-center"
-                        activeOpacity={0.8}
-                      >
-                        <Text className="text-indigo-500 font-semibold text-sm">Déposer les preuves Omra Badal</Text>
                       </TouchableOpacity>
                     )}
                         </>
@@ -598,6 +624,81 @@ export default function HomeScreen() {
           isProcessing={isActionSubmitting}
         />
       )}
+
+      <Modal
+        visible={isServicesMenuOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsServicesMenuOpen(false)}
+      >
+        <View className="flex-1 bg-black/45" style={directionStyle(isRTL)}>
+          <TouchableOpacity className="absolute inset-0" activeOpacity={1} onPress={() => setIsServicesMenuOpen(false)} />
+          <SafeAreaView className="flex-1" pointerEvents="box-none">
+            <View className="w-[88%] max-w-[420px] flex-1 bg-white dark:bg-zinc-900 rounded-r-3xl overflow-hidden shadow-xl" pointerEvents="auto">
+              <View className="px-5 pt-4 pb-3 border-b border-gray-100 dark:border-white/10">
+                <View className="flex-row items-center justify-between" style={rowStyle(isRTL)}>
+                  <View>
+                    <Text className="text-gray-900 dark:text-white text-2xl font-bold" style={textStart(isRTL)}>
+                      Services
+                    </Text>
+                    <Text className="text-gray-500 dark:text-gray-400 text-sm mt-1" style={textStart(isRTL)}>
+                      Choisissez un service puis votre créneau.
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => setIsServicesMenuOpen(false)}
+                    className="w-10 h-10 rounded-full bg-gray-100 dark:bg-zinc-800 items-center justify-center"
+                    activeOpacity={0.8}
+                  >
+                    <X size={21} color={isDark ? '#fff' : '#111827'} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <ScrollView className="flex-1" contentContainerStyle={{ padding: 20, gap: 14, paddingBottom: 36 }}>
+                {serviceShowcaseCards.map((card) => (
+                  <TouchableOpacity
+                    key={card.id}
+                    className="rounded-2xl overflow-hidden bg-gray-50 dark:bg-zinc-800 border border-gray-100 dark:border-white/10"
+                    onPress={() => {
+                      setIsServicesMenuOpen(false);
+                      card.onPress();
+                    }}
+                    activeOpacity={0.9}
+                  >
+                    <View className="h-36 relative">
+                      <Image source={card.image} className="w-full h-full object-cover" />
+                      <LinearGradient
+                        colors={['rgba(9, 9, 11, 0.02)', 'rgba(9, 9, 11, 0.38)']}
+                        className="absolute inset-0"
+                      />
+                      <View className="absolute bottom-3 left-4 right-4">
+                        <Text className="text-white text-xl font-bold" style={textStart(isRTL)}>
+                          {card.title}
+                        </Text>
+                      </View>
+                    </View>
+                    <View className="p-4">
+                      <Text className="text-[#b39164] text-xs font-bold uppercase tracking-widest" style={textStart(isRTL)}>
+                        {card.subtitle}
+                      </Text>
+                      <Text className="text-gray-600 dark:text-zinc-300 text-sm leading-5 mt-2" numberOfLines={4} style={textStart(isRTL)}>
+                        {card.description}
+                      </Text>
+                      <View className="flex-row items-center mt-4" style={rowStyle(isRTL)}>
+                        <Text className="text-gray-900 dark:text-white font-bold text-base" style={textStart(isRTL)}>
+                          Voir le planning
+                        </Text>
+                        <ArrowUpRight size={17} color={isDark ? '#ffffff' : '#18181b'} style={{ marginLeft: 8 }} />
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </SafeAreaView>
+        </View>
+      </Modal>
 
       {/* Floating Support Button with Aura Effect */}
       <View className="absolute bottom-6 right-6 flex-row items-center justify-end pointer-events-box-none">

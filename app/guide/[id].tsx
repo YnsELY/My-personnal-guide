@@ -118,7 +118,7 @@ export default function GuideDetails() {
                 ? selectedServicePrice
                 : undefined,
         location: selectedServiceLocationParam,
-        category: 'Omra accompagnée', // Fallback? Or try to deduce? Best to rely on serviceId fetch.
+        category: 'Omra', // Fallback? Or try to deduce? Best to rely on serviceId fetch.
         meetingPoints: []
     } : null);
     const displayedServicePrice = Number.isFinite(Number(activeService?.price))

@@ -126,6 +126,8 @@
     "selectType": "اختر نوعاً",
     "option": "الخيار",
     "selectOption": "اختر خياراً",
+    "publishedDescription": "الوصف المنشور",
+    "descriptionLocked": "هذا الوصف مطابق لصفحة الخدمة لدى الحاج ولا يمكن تعديله.",
     "fixedGuidePay": "حصة المرشد الثابتة",
     "maxParticipants": "الحد الأقصى لعدد الأشخاص",
     "location": "الموقع",

@@ -43,8 +43,8 @@ export default function ServiceDetailsScreen() {
                     'Suivi clair du début à la fin',
                 ],
                 steps: [
-                    { title: 'Validation', description: 'Nous confirmons la demande et le profil du guide chargé de la Omra Badal.' },
-                    { title: 'Début du rite', description: 'Vous recevez une confirmation visuelle à l’entrée en état de sacralisation.' },
+                    { title: 'Période choisie', description: 'Vous indiquez une fourchette d’une semaine, sans choix d’heure, pour l’accomplissement de la Omra Badal.' },
+                    { title: 'Début du rite', description: 'Le guide vous transmet une preuve visuelle à l’entrée en état de sacralisation.' },
                     { title: 'Réalisation', description: 'La Omra est effectuée avec sérieux en respectant les rites prescrits.' },
                     { title: 'Clôture', description: 'Un retour final vous est transmis pour valider l’achèvement du service.' },
                 ],

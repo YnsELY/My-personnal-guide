@@ -16,7 +16,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
-import { getAvatarPresetOptions, getDefaultAvatarPresetId, getAvatarPresetIdFromUrl, type AvatarPresetId, resolveProfileAvatarSource } from '@/lib/avatar';
+import { DEFAULT_AVATAR_PRESET_ID, getAvatarPresetIdFromUrl, getAvatarPresetOptionsForProfile, type AvatarPresetId, resolveProfileAvatarSource } from '@/lib/avatar';
 import { deleteMyAccount, getGuideWalletSummary, getPilgrimWalletSummary } from '@/lib/api';
 import { formatEUR, formatSAR } from '@/lib/pricing';
 import { directionStyle, flipChevron, forceLTRText, rowStyle, textEnd, textStart } from '@/lib/rtl';
@@ -87,9 +87,9 @@ export default function ProfileScreen() {
         }, [loadGuideWalletSummary, loadPilgrimWalletSummary])
     );
 
-    const avatarPresetOptions = getAvatarPresetOptions(profile?.gender, profile?.role);
-    const currentAvatarPresetId = getAvatarPresetIdFromUrl(profile?.avatar_url) || getDefaultAvatarPresetId(profile?.gender, profile?.role);
-    const profileAvatarSource = resolveProfileAvatarSource(profile?.avatar_url, profile?.gender, profile?.role);
+    const currentAvatarPresetId = getAvatarPresetIdFromUrl(profile?.avatar_url) || DEFAULT_AVATAR_PRESET_ID;
+    const profileAvatarSource = resolveProfileAvatarSource(profile?.avatar_url);
+    const avatarPresetOptions = getAvatarPresetOptionsForProfile(profile?.role, profile?.gender);
 
     const handleSelectAvatar = async (presetId: AvatarPresetId) => {
         if (isAvatarUpdating) return;
@@ -207,7 +207,7 @@ export default function ProfileScreen() {
                         {isAvatarPickerOpen && (
                             <View className="mt-4 bg-white dark:bg-zinc-800 rounded-2xl border border-gray-200 dark:border-white/10 p-3 w-[92%]">
                                 <Text className="text-gray-500 dark:text-gray-300 text-xs mb-3" style={textStart(isRTL)}>{t('chooseAvatar')}</Text>
-                                <View className="flex-row items-center justify-between" style={rowStyle(isRTL)}>
+                                <View className="flex-row items-center flex-wrap gap-3" style={rowStyle(isRTL)}>
                                     {avatarPresetOptions.map((avatar) => {
                                         const isSelected = currentAvatarPresetId === avatar.id;
                                         return (
@@ -319,14 +319,18 @@ export default function ProfileScreen() {
                             <MenuItem
                                 icon={User}
                                 label={t('editInfo')}
-                                onPress={() => {
-                                    if (profile?.role === 'guide') {
-                                        router.push('/guide/complete-profile');
-                                    } else {
-                                        router.push('/edit-profile');
-                                    }
-                                }}
+                                onPress={() => router.push('/edit-profile')}
                             />
+                            {profile?.role === 'guide' && (
+                                <>
+                                    <Separator />
+                                    <MenuItem
+                                        icon={User}
+                                        label={t('guideProfile')}
+                                        onPress={() => router.push('/guide/complete-profile')}
+                                    />
+                                </>
+                            )}
                             <Separator />
                             {profile?.role === 'guide' ? (
                                 <MenuItem

@@ -102,7 +102,7 @@ export async function sendBookingNotifications(params: {
     }));
 
     try {
-        await fetch('https://exp.host/push/send', {
+        await fetch('https://exp.host/--/api/v2/push/send', {
             method: 'POST',
             headers: {
                 Accept: 'application/json',

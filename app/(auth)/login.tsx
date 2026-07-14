@@ -1,7 +1,7 @@
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { directionStyle, endSpacing, forceLTRText, rowStyle, textStart } from '@/lib/rtl';
-import { getCurrentProfile, getCurrentUser, getGuideApprovalInfo } from '@/lib/api';
+import { getCurrentUser } from '@/lib/api';
 import { Link, useRouter } from 'expo-router';
 import { Lock, Mail } from 'lucide-react-native';
 import React, { useState } from 'react';
@@ -26,18 +26,9 @@ export default function LoginScreen() {
         setLoading(true);
         try {
             await signIn(email, password);
-            const profile = await getCurrentProfile();
-            const user = await getCurrentUser();
-            const effectiveRole = profile?.role || user?.user_metadata?.role;
-            if (profile?.role === 'admin') {
+            const signedInUser = await getCurrentUser();
+            if (signedInUser?.user_metadata?.role === 'admin') {
                 router.replace('/(tabs)/admin-dashboard' as any);
-            } else if (effectiveRole === 'guide') {
-                const approval = await getGuideApprovalInfo(user?.id);
-                if (!approval.isApproved) {
-                    router.replace('/guide/pending-approval');
-                } else {
-                    router.replace('/(tabs)');
-                }
             } else {
                 router.replace('/(tabs)');
             }

@@ -2,14 +2,13 @@ import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { CustomTabBar } from '@/components/CustomTabBar';
 import { supabase } from '@/lib/supabase';
-import { Redirect, Tabs, usePathname, useRouter } from 'expo-router';
+import { Redirect, Tabs, usePathname } from 'expo-router';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { textStart } from '@/lib/rtl';
 
 export default function TabLayout() {
-  const router = useRouter();
   const pathname = usePathname();
   const { isRTL } = useLanguage();
   const { user, profile, isLoading, isGuideApproved } = useAuth();
@@ -91,16 +90,7 @@ export default function TabLayout() {
         headerShown: false,
       }}>
       <Tabs.Screen name="index" options={{ title: tTabs('home') }} />
-      <Tabs.Screen
-        name="search"
-        options={{ title: tTabs('explore') }}
-        listeners={() => ({
-          tabPress: (e) => {
-            e.preventDefault();
-            router.push('/date-select');
-          },
-        })}
-      />
+      <Tabs.Screen name="search" options={{ title: tTabs('explore') }} />
       <Tabs.Screen name="messages" options={{ title: tTabs('messages') }} />
       <Tabs.Screen name="guide-dashboard" options={{ title: tTabs('management') }} />
       <Tabs.Screen name="admin-dashboard" options={{ title: tTabs('admin') }} />

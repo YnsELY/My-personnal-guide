@@ -2,7 +2,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { textStart } from '@/lib/rtl';
-import { Briefcase, Home, LayoutDashboard, MessageCircle, Search, User } from 'lucide-react-native';
+import { Briefcase, CalendarCheck, Home, LayoutDashboard, MessageCircle, User } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Animated, Text, TouchableOpacity, View } from 'react-native';
@@ -10,7 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const TAB_ICONS: Record<string, any> = {
     index: Home,
-    search: Search,
+    search: CalendarCheck,
     messages: MessageCircle,
     'guide-dashboard': Briefcase,
     'admin-dashboard': LayoutDashboard,

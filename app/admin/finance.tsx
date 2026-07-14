@@ -5,7 +5,7 @@ import { formatEUR } from '@/lib/pricing';
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import { ArrowLeft, CreditCard, RefreshCw, Wallet } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, StatusBar, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Animated, FlatList, StatusBar, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const PERIOD_OPTIONS = [30, 90, 180];
@@ -176,15 +176,11 @@ export default function AdminFinanceScreen() {
                                     </View>
 
                                     {item.dueAmount > 0 ? (
-                                        <TouchableOpacity
-                                            className="mt-3 rounded-xl bg-[#b39164] py-2.5 items-center"
+                                        <PayoutButton
+                                            label={isPayingGuideId === item.guideId ? 'Traitement...' : 'Marquer payé'}
                                             onPress={() => handlePayGuide(item)}
                                             disabled={isPayingGuideId === item.guideId}
-                                        >
-                                            <Text className="text-white font-semibold text-sm">
-                                                {isPayingGuideId === item.guideId ? 'Traitement...' : 'Marquer payé'}
-                                            </Text>
-                                        </TouchableOpacity>
+                                        />
                                     ) : (
                                         <View className="mt-3 rounded-xl bg-green-500/10 border border-green-500/20 py-2.5 items-center">
                                             <Text className="text-green-500 font-semibold text-sm">Aucun reste à payer</Text>
@@ -217,6 +213,38 @@ function SummaryCard({ label, value, icon }: { label: string; value: string; ico
             <Text className="text-gray-900 dark:text-white font-semibold">{value}</Text>
             <Text className="text-gray-500 text-xs mt-1">{label}</Text>
         </View>
+    );
+}
+
+function PayoutButton({ label, onPress, disabled }: { label: string; onPress: () => void; disabled?: boolean }) {
+    const pulse = React.useRef(new Animated.Value(1)).current;
+
+    React.useEffect(() => {
+        if (disabled) {
+            pulse.setValue(1);
+            return;
+        }
+
+        const animation = Animated.loop(
+            Animated.sequence([
+                Animated.timing(pulse, { toValue: 0.55, duration: 650, useNativeDriver: true }),
+                Animated.timing(pulse, { toValue: 1, duration: 650, useNativeDriver: true }),
+            ])
+        );
+        animation.start();
+        return () => animation.stop();
+    }, [disabled, pulse]);
+
+    return (
+        <Animated.View style={{ opacity: pulse }}>
+            <TouchableOpacity
+                className="mt-3 rounded-xl bg-[#b39164] border border-amber-300 py-2.5 items-center"
+                onPress={onPress}
+                disabled={disabled}
+            >
+                <Text className="text-white font-semibold text-sm">{label}</Text>
+            </TouchableOpacity>
+        </Animated.View>
     );
 }
 

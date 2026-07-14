@@ -1,5 +1,5 @@
 export const CATEGORIES = [
-    { id: '1', name: 'Omra accompagnée', icon: 'users' },
+    { id: '1', name: 'Omra', icon: 'users' },
     { id: '2', name: 'Omra Badal', icon: 'user-check' }, // Changed icon to valid Lucide icon name if needed, or keep 'hands-praying' if valid in set
     { id: '3', name: 'Visites guidées', icon: 'map' },
     { id: '4', name: 'Transport VIP', icon: 'car' },
@@ -14,19 +14,10 @@ const buildServiceOption = (label: string, price: number, guideNetSar: number) =
 
 export const SERVICE_OPTIONS = [
     {
-        category: 'Omra accompagnée (hors Ramadan)',
+        category: 'Omra',
         options: [
             buildServiceOption('Omra seul ou en couple', 200, 530),
-            buildServiceOption('Omra en famille (3 à 7 personnes)', 250, 665),
-            buildServiceOption('Omra en groupe', 300, 800),
-        ]
-    },
-    {
-        category: 'Omra accompagnée Ramadan',
-        options: [
-            buildServiceOption('Omra seul ou en couple', 300, 800),
-            buildServiceOption('Omra en famille (3 à 7 personnes)', 350, 930),
-            buildServiceOption('Omra en groupe', 400, 1060),
+            buildServiceOption('Omra en famille ou entre amies', 250, 665),
         ]
     },
     {
@@ -46,6 +37,13 @@ export const SERVICE_OPTIONS = [
         category: 'Visite du Masjid Nabawi',
         options: [
             buildServiceOption('Standard', 50, 130),
+        ]
+    },
+    {
+        category: 'Omra Ramadan',
+        options: [
+            buildServiceOption('Omra Ramadan seul ou en couple', 300, 800),
+            buildServiceOption('Omra Ramadan en famille ou entre amies', 350, 930),
         ]
     }
 ];
@@ -205,8 +203,8 @@ const MAKKAH_HADITHS = [
 export const SERVICES = [
     {
         id: 'omra-accompagne',
-        title: 'Omra accompagné',
-        titleArabic: 'Omra accompagnée',
+        title: 'Omra',
+        titleArabic: 'Omra',
         shortDescription: 'Vivez votre Omra avec sérénité',
         description: 'Accomplissez votre Omra en toute confiance aux côtés de nos guides qualifiés et reconnus pour leur sérieux, leur science et leur éthique. Présents à chaque étape, ils vous accompagnent avec bienveillance afin que vous viviez ce voyage sacré dans la sérénité, la conformité aux rites et la recherche sincère de l\'agrément d\'Allah.',
         mainText: 'Accomplissez votre Omra en toute confiance aux côtés de nos guides qualifiés et reconnus pour leur sérieux, leur science et leur éthique.',
@@ -220,7 +218,7 @@ export const SERVICES = [
         title: 'Omra Badal',
         titleArabic: 'Omra par Procuration',
         shortDescription: 'Une Miséricorde pour vos proches',
-        description: 'Confiez-nous votre Omra Badal : une adoration accomplie avec sérieux, transparence et sincérité. Votre guide vous enverra deux à trois courtes vidéos, à l\'entrée en état de sacralisation (Ihram) ainsi qu\'à la fin de la Omra, pour vous permettre de vivre chaque étape en toute confiance.',
+        description: 'Confiez-nous votre Omra Badal : une adoration accomplie avec sérieux, transparence et sincérité. Votre guide vous enverra 2 à 3 vidéos pendant les étapes essentielles, pour vous permettre de vivre la prestation en toute confiance.',
         mainText: 'Un voyage de foi vers les lieux les plus purs de la Terre, qui efface les péchés et purifie le cœur. De l\'Ihram au Tawaf autour de la Kaaba, jusqu\'au Sa\'i entre Safa et Marwa.',
         details: 'Félicitations à vous pour ce voyage de foi grandiose. Vous laissez derrière vous les soucis d\'ici-bas pour atteindre La Mecque honorée, la terre bénie qu\'Allah a magnifiée.',
         hadith: null,

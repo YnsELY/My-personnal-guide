@@ -29,6 +29,12 @@ interface BookingModalProps {
 
 const formatCurrency = (value: number) => formatEUR(value || 0);
 const getLocale = () => i18n.language === 'ar' ? 'ar-SA' : 'fr-FR';
+const addDays = (timestamp: number, days: number) => {
+    const date = new Date(timestamp);
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() + days);
+    return date.getTime();
+};
 
 export default function BookingModal({ visible, onClose, startDate, endDate, guideName, guideId, guideGender, basePrice = 200, service }: BookingModalProps) {
     const { t } = useTranslation('booking');
@@ -38,6 +44,8 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
     // Default to service category or title. 
     // User says "Service que propose le guide" so we stick to that.
     const [selectedService, setSelectedService] = useState(service?.category || CATEGORIES[1].name);
+    const activeService = service;
+    const isBadal = (selectedService || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().includes('badal');
 
     // Re-sync if service changes
     useEffect(() => {
@@ -55,13 +63,9 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
     const [hotelDistanceKm, setHotelDistanceKm] = useState('');
     const [transportWarningAcknowledged, setTransportWarningAcknowledged] = useState(false);
     const [visitDate, setVisitDate] = useState<number | null>(startDate || null);
+    const [visitEndDate, setVisitEndDate] = useState<number | null>(endDate || (startDate ? addDays(startDate, 6) : null));
     const [visitTime, setVisitTime] = useState<string | null>(null);
-    const [badalBeneficiaryName, setBadalBeneficiaryName] = useState('');
     const [showCalendar, setShowCalendar] = useState(false);
-
-    // Omra Badal : prestation à distance, sans créneau horaire (fourchette d'une semaine, heure indifférente)
-    const isBadal = (selectedService || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().includes('badal');
-    const BADAL_WINDOW_DAYS = 7;
     const [loading, setLoading] = useState(false);
     const [showCharterModal, setShowCharterModal] = useState(false);
     const [pilgrimCharterAccepted, setPilgrimCharterAccepted] = useState(false);
@@ -70,13 +74,17 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
     const [walletLoading, setWalletLoading] = useState(false);
     const [reservedTimeSlots, setReservedTimeSlots] = useState<string[]>([]);
     const [reservedSlotsLoading, setReservedSlotsLoading] = useState(false);
+    const [badalBeneficiaryName, setBadalBeneficiaryName] = useState('');
+
+    const accountDisplayName = (profile?.full_name && profile.full_name.trim()) || t('myself');
 
     // Sync state with props when modal opens/changes
     useEffect(() => {
         if (startDate) {
             setVisitDate(startDate);
+            setVisitEndDate(isBadal ? addDays(startDate, 6) : endDate || null);
         }
-    }, [startDate]);
+    }, [startDate, endDate, isBadal]);
 
     useEffect(() => {
         if (!visible) return;
@@ -90,6 +98,8 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
         setUseWalletBalance(false);
         setPilgrimCharterAccepted(false);
         setBadalBeneficiaryName('');
+        setVisitTime((current) => isBadal ? null : current);
+        setPilgrims([{ name: accountDisplayName, age: '' }]);
         setWalletLoading(true);
         getPilgrimWalletSummary()
             .then((summary) => {
@@ -110,12 +120,13 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
         return () => {
             isMounted = false;
         };
-    }, [visible]);
+    }, [visible, accountDisplayName, isBadal]);
 
     useEffect(() => {
-        // Omra Badal : aucune validation de créneau (heure indifférente)
         if (!visible || !guideId || !visitDate || isBadal) {
             setReservedTimeSlots([]);
+            setReservedSlotsLoading(false);
+            if (isBadal) setVisitTime(null);
             return;
         }
 
@@ -142,9 +153,6 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
         };
     }, [visible, guideId, visitDate, isBadal]);
 
-    // Use passed service directly
-    const activeService = service;
-
     // Price logic (EUR): base service + transport
     const normalizedHotelDistanceInput = hotelDistanceKm.replace(',', '.');
     const parsedHotelDistanceKm = Number(normalizedHotelDistanceInput);
@@ -163,11 +171,8 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
     const isFemalePilgrim = profile?.role === 'pilgrim' && profile?.gender === 'female';
     const isMaleGuide = guideGender === 'male';
     const requiresFemaleCompanionForMaleGuide = isFemalePilgrim && isMaleGuide;
-    // Omra Badal : prestation à distance par procuration → la règle d'accompagnement ne s'applique pas
     const isFemaleSoloWithMaleGuideBlocked = !isBadal && requiresFemaleCompanionForMaleGuide && pilgrims.length < 2;
-    // Pour l'Omra Badal, on remplace la section "pèlerins" par un champ bénéficiaire dédié
-    const shouldShowPilgrimsSection = !isBadal && (selectedService !== 'Omra seule' || requiresFemaleCompanionForMaleGuide || pilgrims.length > 1);
-    const badalBeneficiaryProvided = badalBeneficiaryName.trim().length > 0;
+    const shouldShowPilgrimsSection = selectedService !== 'Omra seule' || requiresFemaleCompanionForMaleGuide || pilgrims.length > 1;
     const isHotelFlowValid = transportPickupType !== 'hotel'
         || (
             hotelAddress.trim().length > 0
@@ -177,7 +182,14 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                 || (hotelOver2KmByCar === false && transportWarningAcknowledged)
             )
         );
-    const canOpenConfirmation = (isBadal || !!transportPickupType) && !!visitDate && (isBadal || !!visitTime) && !isFemaleSoloWithMaleGuideBlocked && (isBadal || isHotelFlowValid) && (!isBadal || badalBeneficiaryProvided) && pilgrimCharterAccepted;
+    const hasValidBadalBeneficiary = badalBeneficiaryName.trim().length > 0;
+    const hasValidBadalRange = !!visitDate && !!visitEndDate;
+    const canOpenConfirmation = (isBadal || !!transportPickupType)
+        && !!visitDate
+        && (isBadal ? hasValidBadalRange && hasValidBadalBeneficiary : !!visitTime)
+        && !isFemaleSoloWithMaleGuideBlocked
+        && (isBadal || isHotelFlowValid)
+        && pilgrimCharterAccepted;
 
     const handleAddPilgrim = () => {
         if (newPilgrimName.trim().length > 0) {
@@ -194,6 +206,14 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
     };
 
     const handleValidate = async () => {
+        if (isBadal && !badalBeneficiaryName.trim()) {
+            Alert.alert(t('modal.alertBadalBeneficiaryRequired'), t('modal.alertBadalBeneficiaryRequiredMsg'));
+            return;
+        }
+        if (isBadal && (!visitDate || !visitEndDate)) {
+            Alert.alert(t('modal.alertBadalDateRangeMissing'), t('modal.alertBadalDateRangeMissingMsg'));
+            return;
+        }
         if (!isBadal) {
             if (!transportPickupType) {
                 Alert.alert(t('modal.alertTransportMissing'), t('modal.alertTransportMissingMsg'));
@@ -220,24 +240,17 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
             Alert.alert(t('modal.alertDateMissing'), t('modal.alertDateMissingMsg'));
             return;
         }
-        if (isBadal && !badalBeneficiaryProvided) {
-            Alert.alert(t('modal.alertBadalBeneficiaryRequired'), t('modal.alertBadalBeneficiaryRequiredMsg'));
-            return;
-        }
         if (!pilgrimCharterAccepted) {
             Alert.alert(t('modal.alertCharterRequired'), t('modal.alertCharterRequiredMsg'));
             return;
         }
-        // Omra Badal : heure indifférente → pas de sélection ni de validation de créneau
-        if (!isBadal) {
-            if (!visitTime) {
-                Alert.alert(t('modal.alertTimeMissing'), t('modal.alertTimeMissingMsg'));
-                return;
-            }
-            if (reservedTimeSlots.includes(visitTime)) {
-                Alert.alert(t('modal.alertSlotTaken'), t('modal.alertSlotTakenMsg'));
-                return;
-            }
+        if (!isBadal && !visitTime) {
+            Alert.alert(t('modal.alertTimeMissing'), t('modal.alertTimeMissingMsg'));
+            return;
+        }
+        if (!isBadal && visitTime && reservedTimeSlots.includes(visitTime)) {
+            Alert.alert(t('modal.alertSlotTaken'), t('modal.alertSlotTakenMsg'));
+            return;
         }
         if (isFemaleSoloWithMaleGuideBlocked) {
             Alert.alert(t('modal.alertBookingBlocked'), t('femaleSoloWithMaleGuide'));
@@ -256,17 +269,12 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                 }
             }
 
-            // Omra Badal : fourchette d'une semaine, sans heure. Le bénéficiaire devient le "pèlerin" enregistré.
-            const badalStartDate = visitDate;
-            const badalEndDate = visitDate + (BADAL_WINDOW_DAYS - 1) * 24 * 60 * 60 * 1000;
-            const submittedStartDate = badalStartDate;
-            const submittedEndDate = isBadal ? badalEndDate : visitDate;
-            const submittedVisitTime = isBadal ? null : visitTime;
-
-            // Format pilgrims as string for now: "Name (Age ans)" or just Name if no age
             const formattedPilgrims = isBadal
                 ? [badalBeneficiaryName.trim()]
                 : pilgrims.map(p => p.age ? `${p.name} (${p.age} ans)` : p.name);
+            const reservationStartDate = visitDate;
+            const reservationEndDate = isBadal ? visitEndDate || visitDate : visitDate;
+            const resolvedVisitTime = isBadal ? null : visitTime;
             const normalizedHotelDistanceKm = transportPickupType === 'hotel' && hotelOver2KmByCar === true
                 ? parsedHotelDistanceKm
                 : null;
@@ -283,11 +291,11 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                     serviceId: String(activeService?.id || ''),
                     guideId,
                     serviceName: resolvedServiceName,
-                    startDate: submittedStartDate,
-                    endDate: submittedEndDate,
+                    startDate: reservationStartDate,
+                    endDate: reservationEndDate,
                     totalPrice,
                     location: resolvedLocation,
-                    visitTime: submittedVisitTime,
+                    visitTime: resolvedVisitTime,
                     pilgrims: formattedPilgrims,
                     transportPickupType: (transportPickupType ?? 'haram') as 'haram' | 'hotel',
                     hotelAddress: normalizedHotelAddress,
@@ -319,12 +327,12 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
             const createdReservation = await createReservation({
                 guideId,
                 serviceName: resolvedServiceName,
-                date: submittedStartDate,
-                startDate: submittedStartDate,
-                endDate: submittedEndDate,
+                date: reservationStartDate,
+                startDate: reservationStartDate,
+                endDate: reservationEndDate,
                 price: totalPrice,
                 location: resolvedLocation,
-                visitTime: submittedVisitTime,
+                visitTime: resolvedVisitTime,
                 pilgrims: formattedPilgrims,
                 transportPickupType: (transportPickupType ?? 'haram') as 'haram' | 'hotel',
                 hotelAddress: normalizedHotelAddress,
@@ -347,10 +355,8 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                 params: {
                     reservationId: createdReservation?.id,
                     serviceName: resolvedServiceName,
-                    date: submittedStartDate,
-                    endDate: submittedEndDate,
-                    time: submittedVisitTime ?? '',
-                    isBadal: isBadal ? '1' : '',
+                    date: isBadal && formattedBadalDateRange ? formattedBadalDateRange : visitDate,
+                    time: isBadal ? t('modal.timeIndifferent') : visitTime,
                     price: totalPrice,
                     walletAmountUsed: walletUsed,
                     cardAmountPaid: cardPaid,
@@ -392,13 +398,11 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
     const formattedVisitDate = visitDate
         ? new Date(visitDate).toLocaleDateString(getLocale(), { day: 'numeric', month: 'long', year: 'numeric' })
         : null;
-    // Omra Badal : fourchette d'une semaine à partir de la date choisie
-    const badalWindowEndMs = visitDate ? visitDate + (BADAL_WINDOW_DAYS - 1) * 24 * 60 * 60 * 1000 : null;
-    const formattedBadalStart = visitDate
-        ? new Date(visitDate).toLocaleDateString(getLocale(), { day: 'numeric', month: 'long' })
+    const formattedVisitEndDate = visitEndDate
+        ? new Date(visitEndDate).toLocaleDateString(getLocale(), { day: 'numeric', month: 'long', year: 'numeric' })
         : null;
-    const formattedBadalEnd = badalWindowEndMs
-        ? new Date(badalWindowEndMs).toLocaleDateString(getLocale(), { day: 'numeric', month: 'long', year: 'numeric' })
+    const formattedBadalDateRange = formattedVisitDate && formattedVisitEndDate
+        ? t('dateRangeFromTo', { start: formattedVisitDate, end: formattedVisitEndDate })
         : null;
 
     return (
@@ -428,32 +432,31 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                         <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
 
                             {/* Date Selection */}
-                            <Text className="text-white font-bold text-lg mb-4">
-                                {isBadal ? t('modal.badalWeekTitle') : t('modal.visitDate')}
-                            </Text>
+                            <Text className="text-white font-bold text-lg mb-4">{isBadal ? t('modal.badalDateRange') : t('modal.visitDate')}</Text>
                             <TouchableOpacity
                                 onPress={() => setShowCalendar(true)}
-                                className={`flex-row items-center bg-zinc-800 border ${visitDate ? 'border-[#b39164]' : 'border-white/5'} rounded-xl p-4 ${isBadal ? 'mb-2' : 'mb-8'}`}
+                                className={`flex-row items-center bg-zinc-800 border ${visitDate ? 'border-[#b39164]' : 'border-white/5'} rounded-xl p-4 ${isBadal ? 'mb-3' : 'mb-8'}`}
                             >
                                 <Calendar color={visitDate ? "#b39164" : "#A1A1AA"} size={20} className="mr-3" />
                                 <Text className={`font-medium text-base flex-1 ${visitDate ? 'text-[#b39164]' : 'text-zinc-400'}`}>
                                     {isBadal
-                                        ? (formattedBadalStart && formattedBadalEnd
-                                            ? t('modal.badalWeekRange', { start: formattedBadalStart, end: formattedBadalEnd })
-                                            : t('modal.badalWeekSelect'))
-                                        : (formattedVisitDate ? t('modal.dateOn', { date: formattedVisitDate }) : t('modal.selectDate'))}
+                                        ? formattedBadalDateRange || t('modal.badalSelectDate')
+                                        : formattedVisitDate ? t('modal.dateOn', { date: formattedVisitDate }) : t('modal.selectDate')}
                                 </Text>
                             </TouchableOpacity>
+                            {isBadal && (
+                                <Text className="text-zinc-400 text-xs leading-5 mb-6">
+                                    {t('modal.badalDateRangeHint')}
+                                </Text>
+                            )}
 
                             {isBadal ? (
-                                <View className="mb-8 rounded-xl border border-[#b39164]/25 bg-[#b39164]/10 px-4 py-3">
-                                    <Text className="text-[#b39164] text-xs leading-5">
-                                        {t('modal.badalWeekHint')}
-                                    </Text>
+                                <View className="bg-zinc-800 rounded-2xl p-4 mb-8 border border-white/5">
+                                    <Text className="text-white font-bold text-base">{t('modal.timeIndifferent')}</Text>
+                                    <Text className="text-zinc-400 text-xs leading-5 mt-1">{t('modal.badalTimeIndifferent')}</Text>
                                 </View>
                             ) : (
                                 <>
-                                    {/* Time Selection */}
                                     <Text className="text-white font-bold text-lg mb-4">{t('modal.visitTime')}</Text>
                                     <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-8" contentContainerStyle={{ paddingRight: 20 }}>
                                         {Array.from({ length: 15 }, (_, i) => i + 8).map((hour) => {
@@ -488,26 +491,29 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                                 </>
                             )}
 
+
                             {isBadal && (
                                 <>
-                                    <Text className="text-white font-bold text-lg mb-4">{t('modal.badalBeneficiaryTitle')}</Text>
-                                    <View className="bg-zinc-800 rounded-xl px-4 py-3 mb-2 flex-row items-center border border-white/5">
-                                        <User size={18} color="#71717A" />
-                                        <TextInput
-                                            placeholder={t('modal.badalBeneficiaryPlaceholder')}
-                                            placeholderTextColor="#52525B"
-                                            className="flex-1 ml-3 text-white text-base"
-                                            value={badalBeneficiaryName}
-                                            onChangeText={setBadalBeneficiaryName}
-                                        />
+                                    <Text className="text-white font-bold text-lg mb-4">{t('modal.badalBeneficiary')}</Text>
+                                    <View className="bg-zinc-800 rounded-2xl p-4 mb-8 border border-white/5">
+                                        <Text className="text-zinc-400 text-xs mb-3">{t('modal.badalAccountHint')}</Text>
+                                        <View className={`bg-zinc-900 rounded-xl px-4 py-3 flex-row items-center border ${hasValidBadalBeneficiary ? 'border-[#b39164]' : 'border-white/5'}`}>
+                                            <User size={18} color="#71717A" />
+                                            <TextInput
+                                                placeholder={t('modal.badalBeneficiaryNamePlaceholder')}
+                                                placeholderTextColor="#52525B"
+                                                className="flex-1 ml-3 text-white text-base"
+                                                value={badalBeneficiaryName}
+                                                onChangeText={setBadalBeneficiaryName}
+                                                autoCapitalize="words"
+                                            />
+                                        </View>
+                                        <Text className="text-zinc-500 text-xs mt-2">{t('modal.badalBeneficiaryRequiredHint')}</Text>
                                     </View>
-                                    <Text className="text-zinc-500 text-xs mb-8">
-                                        {t('modal.badalBeneficiaryHint')}
-                                    </Text>
                                 </>
                             )}
 
-                            {shouldShowPilgrimsSection && (
+                            {!isBadal && shouldShowPilgrimsSection && (
                                 <>
                                     <Text className="text-white font-bold text-lg mb-4">{t('modal.pilgrims', { count: pilgrims.length })}</Text>
                                     <View className="bg-zinc-800 rounded-2xl p-4 mb-2 border border-white/5">
@@ -732,9 +738,16 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                                         Alert.alert(t('modal.alertBookingBlocked'), t('femaleSoloWithMaleGuide'));
                                         return;
                                     }
-                                    if (!visitDate || (!isBadal && !visitTime)) { Alert.alert(t('modal.alertIncomplete'), t('modal.alertIncompleteMsg')); return; }
-                                    if (isBadal && !badalBeneficiaryProvided) {
+                                    if (isBadal && !hasValidBadalBeneficiary) {
                                         Alert.alert(t('modal.alertBadalBeneficiaryRequired'), t('modal.alertBadalBeneficiaryRequiredMsg'));
+                                        return;
+                                    }
+                                    if (isBadal && !hasValidBadalRange) {
+                                        Alert.alert(t('modal.alertBadalDateRangeMissing'), t('modal.alertBadalDateRangeMissingMsg'));
+                                        return;
+                                    }
+                                    if (!isBadal && (!visitDate || !visitTime)) {
+                                        Alert.alert(t('modal.alertIncomplete'), t('modal.alertIncompleteMsg'));
                                         return;
                                     }
                                     if (!isBadal && !isHotelFlowValid) { Alert.alert(t('modal.alertTransportIncomplete'), t('modal.alertTransportIncompleteMsg')); return; }
@@ -816,9 +829,12 @@ export default function BookingModal({ visible, onClose, startDate, endDate, gui
                             onCancel={() => setShowCalendar(false)}
                             onConfirm={(start, end) => {
                                 setVisitDate(start);
+                                setVisitEndDate(isBadal && start ? addDays(start, 6) : end);
                                 setShowCalendar(false);
                             }}
                             initialStart={visitDate}
+                            initialEnd={visitEndDate}
+                            title={isBadal ? t('modal.badalDateRange') : t('dateSelectTitle')}
                         />
                     </View>
                 </View>

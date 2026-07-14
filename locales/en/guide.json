@@ -126,6 +126,8 @@
     "selectType": "Select a type",
     "option": "Option",
     "selectOption": "Select an option",
+    "publishedDescription": "Published description",
+    "descriptionLocked": "This description is identical to the pilgrim service page and cannot be edited.",
     "fixedGuidePay": "Fixed guide share",
     "maxParticipants": "Maximum number of people",
     "location": "Location",

@@ -21,6 +21,25 @@ const normalizeGuideLocation = (value?: string | null) => {
     return '';
 };
 
+const normalizeSearchText = (value?: string | null) =>
+    (value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase();
+
+const isMasjidNabawiService = (value?: string | null) => {
+    const normalized = normalizeSearchText(value);
+    return normalized.includes('masjid nabawi') || normalized.includes('nabawi');
+};
+
+const getInitialLocation = (serviceToEdit: any) => {
+    if (isMasjidNabawiService(`${serviceToEdit?.title || ''} ${serviceToEdit?.category || ''}`)) {
+        return 'Médine';
+    }
+
+    return normalizeGuideLocation(serviceToEdit?.location);
+};
+
 
 const getLocale = () => i18n.language === 'ar' ? 'ar-SA' : 'fr-FR';
 
@@ -35,7 +54,7 @@ export default function CreateServiceScreen() {
     const [title, setTitle] = useState(serviceToEdit?.title || '');
     const [category, setCategory] = useState(serviceToEdit?.category || CATEGORIES[1].name);
     const [price, setPrice] = useState(serviceToEdit?.price?.toString() || '');
-    const [location, setLocation] = useState(normalizeGuideLocation(serviceToEdit?.location));
+    const [location, setLocation] = useState(getInitialLocation(serviceToEdit));
     const [maxParticipants, setMaxParticipants] = useState(serviceToEdit?.maxParticipants?.toString() || '');
 
     // Date Range State
@@ -57,6 +76,11 @@ export default function CreateServiceScreen() {
             serviceBasePriceEur: Number(price),
         })
         : null;
+    const serviceDescriptionPreview = getFixedServiceDescription({
+        title,
+        category,
+        location,
+    });
 
     const handleCreateOrUpdate = async () => {
         if (!title || !price || !location || !startDate) {
@@ -150,6 +174,9 @@ export default function CreateServiceScreen() {
                                                         setCategory(opt.category); // Map to DB category field
                                                         setSelectedServiceOption(null); // Reset option
                                                         setPrice('');
+                                                        if (isMasjidNabawiService(opt.category)) {
+                                                            setLocation('Médine');
+                                                        }
                                                         setCategoryDropdownOpen(false);
                                                     }}
                                                     className="px-4 py-3 border-b border-gray-100 dark:border-white/5 flex-row items-center justify-between active:bg-gray-50 dark:active:bg-zinc-700"
@@ -186,7 +213,11 @@ export default function CreateServiceScreen() {
                                                     onPress={() => {
                                                         setSelectedServiceOption(opt);
                                                         setPrice(opt.price.toString());
-                                                        setTitle(`${selectedServiceCategory} - ${opt.label}`); // Auto-set title
+                                                        const nextTitle = `${selectedServiceCategory} - ${opt.label}`;
+                                                        setTitle(nextTitle); // Auto-set title
+                                                        if (isMasjidNabawiService(`${selectedServiceCategory} ${opt.label}`)) {
+                                                            setLocation('Médine');
+                                                        }
                                                         setOptionDropdownOpen(false);
                                                     }}
                                                     className="px-4 py-3 border-b border-gray-100 dark:border-white/5 active:bg-gray-50 dark:active:bg-zinc-700 flex-row justify-between"
@@ -199,6 +230,20 @@ export default function CreateServiceScreen() {
                                             ))}
                                         </View>
                                     )}
+                                </View>
+                            )}
+
+                            {!!serviceDescriptionPreview && (
+                                <View className="bg-[#b39164]/10 border border-[#b39164]/20 rounded-xl p-4">
+                                    <Text className="text-gray-900 dark:text-white font-semibold mb-2">
+                                        {t('createService.publishedDescription')}
+                                    </Text>
+                                    <Text className="text-gray-600 dark:text-gray-300 text-sm leading-6">
+                                        {serviceDescriptionPreview}
+                                    </Text>
+                                    <Text className="text-[#b39164] text-xs font-semibold mt-3">
+                                        {t('createService.descriptionLocked')}
+                                    </Text>
                                 </View>
                             )}
 
